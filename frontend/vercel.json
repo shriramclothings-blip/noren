@@ -26,7 +26,7 @@
     },
     {
       "source": "/sitemap.xml",
-      "destination": "https://noren-fashion-backend.onrender.com/sitemap.xml"
+      "destination": "https://noren-iqk3.onrender.com/sitemap.xml"
     },
     {
       "source": "/(.*\\.(?:js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|webp|avif|map|json|txt|xml))",
