@@ -1,0 +1,476 @@
+const { pool } = require('../config/db');
+
+const getProducts = async (req, res) => {
+  const { search, category, page = 1, limit = 12, featured, trending, sort = 'newest', seller, gender } = req.query;
+  const offset = (page - 1) * limit;
+  const conditions = [`p.status = 'approved'`, `p.deleted_at IS NULL`];
+  const values = [];
+  let idx = 1;
+
+  if (search) { conditions.push(`(p.title ILIKE $${idx} OR p.description ILIKE $${idx})`); values.push(`%${search}%`); idx++; }
+  if (category) { conditions.push(`c.slug = $${idx}`); values.push(category); idx++; }
+  if (featured === 'true') { conditions.push(`p.is_featured = TRUE`); }
+  if (trending === 'true') { conditions.push(`p.is_trending = TRUE`); }
+  if (seller) { conditions.push(`p.seller_id = $${idx}`); values.push(seller); idx++; }
+  if (gender) { conditions.push(`p.gender = $${idx}`); values.push(gender); idx++; }
+
+  const orderMap = { newest: 'p.created_at DESC', oldest: 'p.created_at ASC', price_asc: 'p.price ASC', price_desc: 'p.price DESC', popular: 'p.views DESC' };
+  const orderBy = orderMap[sort] || 'p.created_at DESC';
+
+  const where = conditions.join(' AND ');
+  try {
+    const countRes = await pool.query(
+      `SELECT COUNT(*) FROM src_products p LEFT JOIN src_categories c ON p.category_id = c.id WHERE ${where}`,
+      values
+    );
+    const total = parseInt(countRes.rows[0].count);
+
+    values.push(limit, offset);
+    const result = await pool.query(
+      `SELECT p.*, c.name as category_name, c.slug as category_slug,
+        u.name as seller_name, u.avatar_url as seller_avatar,
+        (SELECT image_url FROM src_product_images WHERE product_id=p.id AND is_primary=TRUE LIMIT 1) as primary_image,
+        (SELECT AVG(rating)::NUMERIC(3,1) FROM src_reviews WHERE product_id=p.id AND is_hidden=FALSE) as avg_rating,
+        (SELECT COUNT(*) FROM src_reviews WHERE product_id=p.id AND is_hidden=FALSE) as review_count
+       FROM src_products p
+       LEFT JOIN src_categories c ON p.category_id = c.id
+       LEFT JOIN src_users u ON p.seller_id = u.id
+       WHERE ${where} ORDER BY ${orderBy} LIMIT $${idx} OFFSET $${idx + 1}`,
+      values
+    );
+    res.json({ products: result.rows, total, page: Number(page), limit: Number(limit) });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+const getProduct = async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT p.*, c.name as category_name, c.slug as category_slug,
+        u.name as seller_name, u.avatar_url as seller_avatar, u.id as seller_id,
+        (SELECT AVG(r.rating)::NUMERIC(3,1) FROM src_reviews r WHERE r.product_id=p.id AND r.is_hidden=FALSE) as avg_rating,
+        (SELECT COUNT(*) FROM src_reviews r WHERE r.product_id=p.id AND r.is_hidden=FALSE) as review_count
+       FROM src_products p
+       LEFT JOIN src_categories c ON p.category_id = c.id
+       LEFT JOIN src_users u ON p.seller_id = u.id
+       WHERE p.id=$1 AND p.deleted_at IS NULL`,
+      [req.params.id]
+    );
+    if (!result.rows.length) return res.status(404).json({ message: 'Product not found' });
+    const product = result.rows[0];
+
+    const [images, variants, reviews] = await Promise.all([
+      pool.query('SELECT * FROM src_product_images WHERE product_id=$1 ORDER BY is_primary DESC, sort_order ASC', [product.id]),
+      pool.query('SELECT * FROM src_product_variants WHERE product_id=$1 ORDER BY CASE size WHEN \'XS\' THEN 1 WHEN \'S\' THEN 2 WHEN \'M\' THEN 3 WHEN \'L\' THEN 4 WHEN \'XL\' THEN 5 WHEN \'XXL\' THEN 6 ELSE 7 END', [product.id]),
+      pool.query(`SELECT r.*, u.name as user_name, u.avatar_url FROM src_reviews r JOIN src_users u ON r.user_id=u.id WHERE r.product_id=$1 AND r.is_hidden=FALSE ORDER BY r.is_pinned DESC, r.created_at DESC LIMIT 20`, [product.id]),
+    ]);
+
+    await pool.query('UPDATE src_products SET views=views+1 WHERE id=$1', [product.id]);
+    res.json({ ...product, images: images.rows, variants: variants.rows, reviews: reviews.rows });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+const createProduct = async (req, res) => {
+  const { title, description, price, discount_percent = 0, category_id, sizes, gender = 'men' } = req.body;
+  if (!title || !price) return res.status(400).json({ message: 'Title and price are required' });
+  if (!req.files?.length) return res.status(400).json({ message: 'At least one image is required' });
+
+  // All admin-type roles auto-approve; only regular sellers go to pending
+  const ADMIN_ROLES = ['admin', 'super_admin', 'business_owner', 'store_admin', 'store_manager'];
+  const isAdminRole = ADMIN_ROLES.includes(req.user.role);
+
+  try {
+    const status = isAdminRole ? 'approved' : 'pending';
+    const result = await pool.query(
+      `INSERT INTO src_products (title, description, price, discount_percent, category_id, seller_id, status, gender)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
+      [title, description, price, discount_percent, category_id || null, req.user.id, status, gender]
+    );
+    const product = result.rows[0];
+
+    // Insert images
+    for (let i = 0; i < req.files.length; i++) {
+      await pool.query(
+        'INSERT INTO src_product_images (product_id, image_url, is_primary, sort_order) VALUES ($1,$2,$3,$4)',
+        [product.id, req.files[i].path, i === 0, i]
+      );
+    }
+
+    // Insert size variants
+    if (sizes) {
+      const parsedSizes = typeof sizes === 'string' ? JSON.parse(sizes) : sizes;
+      for (const s of parsedSizes) {
+        await pool.query(
+          'INSERT INTO src_product_variants (product_id, size, stock, extra_price) VALUES ($1,$2,$3,$4)',
+          [product.id, s.size, s.stock || 0, s.extra_price || 0]
+        );
+      }
+    }
+
+    res.status(201).json({ ...product, message: status === 'pending' ? 'Product submitted for review' : 'Product published' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+const ADMIN_ROLES = ['admin', 'super_admin', 'business_owner', 'store_admin', 'store_manager'];
+
+const updateProduct = async (req, res) => {
+  const { title, description, price, discount_percent, category_id, sizes, is_featured, is_trending, status, admin_message, gender } = req.body;
+  try {
+    const existing = await pool.query('SELECT * FROM src_products WHERE id=$1', [req.params.id]);
+    if (!existing.rows.length) return res.status(404).json({ message: 'Product not found' });
+    const p = existing.rows[0];
+
+    const isAdmin = ADMIN_ROLES.includes(req.user.role);
+    if (!isAdmin && p.seller_id !== req.user.id)
+      return res.status(403).json({ message: 'Not authorized' });
+
+    const fields = [], values = [];
+    let idx = 1;
+    if (title)                         { fields.push(`title=$${idx++}`);             values.push(title); }
+    if (description !== undefined)     { fields.push(`description=$${idx++}`);       values.push(description); }
+    if (price)                         { fields.push(`price=$${idx++}`);             values.push(price); }
+    if (discount_percent !== undefined){ fields.push(`discount_percent=$${idx++}`);  values.push(discount_percent); }
+    if (category_id !== undefined)     { fields.push(`category_id=$${idx++}`);       values.push(category_id || null); }
+    if (gender !== undefined)          { fields.push(`gender=$${idx++}`);            values.push(gender); }
+    // Admin-only fields — available to all admin roles
+    if (isAdmin) {
+      if (is_featured !== undefined)   { fields.push(`is_featured=$${idx++}`);       values.push(is_featured); }
+      if (is_trending !== undefined)   { fields.push(`is_trending=$${idx++}`);       values.push(is_trending); }
+      if (status)                      { fields.push(`status=$${idx++}`);            values.push(status); }
+      if (admin_message !== undefined) { fields.push(`admin_message=$${idx++}`);     values.push(admin_message); }
+    }
+
+    let result;
+    if (fields.length) {
+      values.push(req.params.id);
+      result = await pool.query(
+        `UPDATE src_products SET ${fields.join(',')} WHERE id=$${idx} RETURNING *`,
+        values
+      );
+    } else {
+      result = await pool.query('SELECT * FROM src_products WHERE id=$1', [req.params.id]);
+    }
+
+    // Replace images if new ones uploaded
+    if (req.files && req.files.length > 0) {
+      await pool.query('DELETE FROM src_product_images WHERE product_id=$1', [req.params.id]);
+      for (let i = 0; i < req.files.length; i++) {
+        await pool.query(
+          'INSERT INTO src_product_images (product_id, image_url, is_primary, sort_order) VALUES ($1,$2,$3,$4)',
+          [req.params.id, req.files[i].path, i === 0, i]
+        );
+      }
+    }
+
+    // Replace size variants if provided
+    if (sizes) {
+      const parsedSizes = typeof sizes === 'string' ? JSON.parse(sizes) : sizes;
+      if (parsedSizes.length > 0) {
+        await pool.query('DELETE FROM src_product_variants WHERE product_id=$1', [req.params.id]);
+        for (const s of parsedSizes) {
+          await pool.query(
+            'INSERT INTO src_product_variants (product_id, size, stock, extra_price) VALUES ($1,$2,$3,$4)',
+            [req.params.id, s.size, s.stock || 0, s.extra_price || 0]
+          );
+        }
+      }
+    }
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+const deleteProduct = async (req, res) => {
+  try {
+    const existing = await pool.query('SELECT seller_id FROM src_products WHERE id=$1', [req.params.id]);
+    if (!existing.rows.length) return res.status(404).json({ message: 'Product not found' });
+    const isAdmin = ADMIN_ROLES.includes(req.user.role);
+    if (!isAdmin && existing.rows[0].seller_id !== req.user.id)
+      return res.status(403).json({ message: 'Not authorized' });
+    await pool.query('UPDATE src_products SET deleted_at=NOW() WHERE id=$1', [req.params.id]);
+    res.json({ message: 'Product deleted' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+const getRatingLabel = rating => rating >= 5 ? 'Excellent' : rating === 4 ? 'Very Good' : 'Good';
+const positiveBlacklist = ['bad','poor','worst','terrible','awful','hate','sucks','disappointed','not good','never again'];
+
+const addReview = async (req, res) => {
+  const rating = Number(req.body.rating);
+  const comment = req.body.comment?.trim() || null;
+  const suggestion = req.body.suggestion?.trim() || null;
+  if (!rating || rating < 3 || rating > 5) return res.status(400).json({ message: 'Rating must be Good, Very Good or Excellent' });
+  if (comment && positiveBlacklist.some(word => comment.toLowerCase().includes(word))) {
+    return res.status(400).json({ message: 'Please keep reviews positive and constructive' });
+  }
+  try {
+    const image_url = req.file?.path || null;
+    const rating_label = getRatingLabel(rating);
+    const result = await pool.query(
+      `INSERT INTO src_reviews (user_id, product_id, rating, rating_label, suggestion, comment, image_url)
+       VALUES ($1,$2,$3,$4,$5,$6,$7)
+       ON CONFLICT (user_id, product_id) DO UPDATE SET
+         rating=$3,
+         rating_label=$4,
+         suggestion=$5,
+         comment=$6,
+         image_url=COALESCE($7, src_reviews.image_url),
+         updated_at=NOW()
+       RETURNING *`,
+      [req.user.id, req.params.id, rating, rating_label, suggestion, comment, image_url]
+    );
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+const getProductReviews = async (req, res) => {
+  const page = Number(req.query.page) || 1;
+  const limit = Number(req.query.limit) || 8;
+  const offset = (page - 1) * limit;
+  try {
+    const reviews = await pool.query(
+      `SELECT r.*, u.name as user_name, u.avatar_url, p.title as product_title
+       FROM src_reviews r
+       JOIN src_users u ON r.user_id = u.id
+       JOIN src_products p ON r.product_id = p.id
+       WHERE r.product_id=$1 AND r.is_hidden=FALSE
+       ORDER BY r.is_pinned DESC, r.created_at DESC
+       LIMIT $2 OFFSET $3`,
+      [req.params.id, limit, offset]
+    );
+    const count = await pool.query('SELECT COUNT(*) FROM src_reviews WHERE product_id=$1 AND is_hidden=FALSE', [req.params.id]);
+    res.json({ reviews: reviews.rows, total: parseInt(count.rows[0].count), page, limit });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+const getCategories = async (req, res) => {
+  const { gender } = req.query;
+  try {
+    const conditions = ['c.is_active=TRUE'];
+    const values = [];
+    let idx = 1;
+    if (gender) {
+      conditions.push(`(c.gender = $${idx} OR c.gender IS NULL)`);
+      values.push(gender);
+      idx++;
+    }
+    const where = conditions.join(' AND ');
+    const result = await pool.query(
+      `SELECT c.*, COUNT(p.id) as product_count
+       FROM src_categories c
+       LEFT JOIN src_products p ON p.category_id=c.id AND p.status='approved' AND p.deleted_at IS NULL
+       WHERE ${where} GROUP BY c.id ORDER BY c.sort_order ASC`,
+      values
+    );
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// ── Add images to existing product ───────────────────────────────────────────
+const addProductImages = async (req, res) => {
+  if (!req.files?.length) return res.status(400).json({ message: 'No images provided' });
+  try {
+    const existing = await pool.query('SELECT COUNT(*) FROM src_product_images WHERE product_id=$1', [req.params.id]);
+    const currentCount = parseInt(existing.rows[0].count);
+    const canAdd = 10 - currentCount;
+    if (canAdd <= 0) return res.status(400).json({ message: 'Maximum 10 images allowed per product' });
+    const filesToAdd = req.files.slice(0, canAdd);
+    const sortRes = await pool.query('SELECT COALESCE(MAX(sort_order), -1) as max_order FROM src_product_images WHERE product_id=$1', [req.params.id]);
+    let sortOrder = parseInt(sortRes.rows[0].max_order) + 1;
+    const hasPrimary = await pool.query('SELECT id FROM src_product_images WHERE product_id=$1 AND is_primary=TRUE', [req.params.id]);
+    for (let i = 0; i < filesToAdd.length; i++) {
+      await pool.query(
+        'INSERT INTO src_product_images (product_id, image_url, is_primary, sort_order) VALUES ($1,$2,$3,$4)',
+        [req.params.id, filesToAdd[i].path, hasPrimary.rows.length === 0 && i === 0, sortOrder++]
+      );
+    }
+    const images = await pool.query('SELECT * FROM src_product_images WHERE product_id=$1 ORDER BY is_primary DESC, sort_order ASC', [req.params.id]);
+    res.json(images.rows);
+  } catch (err) { res.status(500).json({ message: err.message }); }
+};
+
+// ── Delete single product image ───────────────────────────────────────────────
+const deleteProductImage = async (req, res) => {
+  try {
+    const img = await pool.query('SELECT * FROM src_product_images WHERE id=$1 AND product_id=$2', [req.params.imageId, req.params.id]);
+    if (!img.rows.length) return res.status(404).json({ message: 'Image not found' });
+    await pool.query('DELETE FROM src_product_images WHERE id=$1', [req.params.imageId]);
+    // If deleted image was primary, set next image as primary
+    if (img.rows[0].is_primary) {
+      await pool.query('UPDATE src_product_images SET is_primary=TRUE WHERE product_id=$1 AND id=(SELECT id FROM src_product_images WHERE product_id=$1 ORDER BY sort_order ASC LIMIT 1)', [req.params.id]);
+    }
+    const images = await pool.query('SELECT * FROM src_product_images WHERE product_id=$1 ORDER BY is_primary DESC, sort_order ASC', [req.params.id]);
+    res.json(images.rows);
+  } catch (err) { res.status(500).json({ message: err.message }); }
+};
+
+// ── Set primary image ─────────────────────────────────────────────────────────
+const setPrimaryImage = async (req, res) => {
+  try {
+    await pool.query('UPDATE src_product_images SET is_primary=FALSE WHERE product_id=$1', [req.params.id]);
+    await pool.query('UPDATE src_product_images SET is_primary=TRUE WHERE id=$1 AND product_id=$2', [req.params.imageId, req.params.id]);
+    const images = await pool.query('SELECT * FROM src_product_images WHERE product_id=$1 ORDER BY is_primary DESC, sort_order ASC', [req.params.id]);
+    res.json(images.rows);
+  } catch (err) { res.status(500).json({ message: err.message }); }
+};
+
+// ── Admin: Get all reviews ───────────────────────────────────────────────────────────────────────────────────
+const getAdminReviews = async (req, res) => {
+  const { page = 1, limit = 20, search, filter, product_id, sort } = req.query;
+  const offset = (page - 1) * limit;
+  const conditions = [];
+  const values = [];
+  let idx = 1;
+  if (search) { conditions.push(`(u.name ILIKE $${idx} OR r.comment ILIKE $${idx} OR p.title ILIKE $${idx})`); values.push(`%${search}%`); idx++; }
+  if (filter === 'hidden')  { conditions.push(`r.is_hidden = TRUE`); }
+  if (filter === 'visible') { conditions.push(`r.is_hidden = FALSE`); }
+  if (filter === 'pinned')  { conditions.push(`r.is_pinned = TRUE`); }
+  if (filter === '5') { conditions.push(`r.rating = 5`); }
+  if (filter === '4') { conditions.push(`r.rating = 4`); }
+  if (filter === '3') { conditions.push(`r.rating = 3`); }
+  if (product_id) { conditions.push(`r.product_id = $${idx}`); values.push(product_id); idx++; }
+  const where = conditions.length ? 'WHERE ' + conditions.join(' AND ') : '';
+  values.push(limit, offset);
+  const orderMap = {
+    recent: 'r.created_at DESC',
+    oldest: 'r.created_at ASC',
+    rating_desc: 'r.rating DESC',
+    rating_asc: 'r.rating ASC',
+    product: 'p.title ASC',
+  };
+  const orderBy = orderMap[sort] || 'r.is_pinned DESC, r.created_at DESC';
+  try {
+    const result = await pool.query(
+      `SELECT r.*, u.name as user_name, u.email as user_email, u.avatar_url,
+        p.title as product_title,
+        (SELECT image_url FROM src_product_images WHERE product_id=p.id AND is_primary=TRUE LIMIT 1) as product_image
+       FROM src_reviews r
+       JOIN src_users u ON r.user_id = u.id
+       JOIN src_products p ON r.product_id = p.id
+       ${where}
+       ORDER BY ${orderBy}
+       LIMIT $${idx} OFFSET $${idx+1}`,
+      values
+    );
+    const count = await pool.query(`SELECT COUNT(*) FROM src_reviews r JOIN src_users u ON r.user_id=u.id JOIN src_products p ON r.product_id=p.id ${where}`, values.slice(0, -2));
+    res.json({ reviews: result.rows, total: parseInt(count.rows[0].count) });
+  } catch (err) { res.status(500).json({ message: err.message }); }
+};
+
+const exportReviews = async (req, res) => {
+  const { search, filter, product_id, sort, format = 'csv' } = req.query;
+  const conditions = [];
+  const values = [];
+  let idx = 1;
+  if (search) { conditions.push(`(u.name ILIKE $${idx} OR r.comment ILIKE $${idx} OR p.title ILIKE $${idx})`); values.push(`%${search}%`); idx++; }
+  if (filter === 'hidden')  { conditions.push(`r.is_hidden = TRUE`); }
+  if (filter === 'visible') { conditions.push(`r.is_hidden = FALSE`); }
+  if (filter === 'pinned')  { conditions.push(`r.is_pinned = TRUE`); }
+  if (filter === '5') { conditions.push(`r.rating = 5`); }
+  if (filter === '4') { conditions.push(`r.rating = 4`); }
+  if (filter === '3') { conditions.push(`r.rating = 3`); }
+  if (product_id) { conditions.push(`r.product_id = $${idx}`); values.push(product_id); idx++; }
+  const where = conditions.length ? 'WHERE ' + conditions.join(' AND ') : '';
+  const orderMap = {
+    recent: 'r.created_at DESC',
+    oldest: 'r.created_at ASC',
+    rating_desc: 'r.rating DESC',
+    rating_asc: 'r.rating ASC',
+    product: 'p.title ASC',
+  };
+  const orderBy = orderMap[sort] || 'r.is_pinned DESC, r.created_at DESC';
+  try {
+    const result = await pool.query(
+      `SELECT r.id, u.name as user_name, u.email as user_email, p.title as product_title,
+        r.rating, r.rating_label, r.suggestion, r.comment, r.is_hidden, r.is_pinned, r.admin_note, r.created_at
+       FROM src_reviews r
+       JOIN src_users u ON r.user_id = u.id
+       JOIN src_products p ON r.product_id = p.id
+       ${where}
+       ORDER BY ${orderBy}`,
+      values
+    );
+    if (format === 'csv') {
+      const rows = result.rows;
+      const csv = [
+        'Review ID,Customer,Email,Product,Rating,Label,Suggestion,Comment,Hidden,Pinned,Admin Note,Created At',
+        ...rows.map(r => [r.id, r.user_name, r.user_email, r.product_title, r.rating, r.rating_label, (r.suggestion||'').replace(/"/g,'""'), (r.comment||'').replace(/"/g,'""'), r.is_hidden, r.is_pinned, (r.admin_note||'').replace(/"/g,'""'), r.created_at.toISOString()].map(v => `"${v}"`).join(',')),
+      ].join('\n');
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', 'attachment; filename="reviews-export.csv"');
+      return res.send(csv);
+    }
+    res.json({ reviews: result.rows });
+  } catch (err) { res.status(500).json({ message: err.message }); }
+};
+
+const updateReview = async (req, res) => {
+  const { is_hidden, is_pinned, admin_note, remove_media } = req.body;
+  try {
+    const fields = [], values = [];
+    let idx = 1;
+    if (is_hidden !== undefined) { fields.push(`is_hidden=$${idx++}`); values.push(is_hidden); }
+    if (is_pinned !== undefined) { fields.push(`is_pinned=$${idx++}`); values.push(is_pinned); }
+    if (admin_note !== undefined) { fields.push(`admin_note=$${idx++}`); values.push(admin_note); }
+    if (remove_media === true || remove_media === 'true') { fields.push('image_url=NULL'); }
+    if (!fields.length) return res.status(400).json({ message: 'Nothing to update' });
+    values.push(req.params.reviewId);
+    const result = await pool.query(`UPDATE src_reviews SET ${fields.join(',')} WHERE id=$${idx} RETURNING *`, values);
+    if (!result.rows.length) return res.status(404).json({ message: 'Review not found' });
+    res.json(result.rows[0]);
+  } catch (err) { res.status(500).json({ message: err.message }); }
+};
+
+const deleteReview = async (req, res) => {
+  try {
+    await pool.query('DELETE FROM src_reviews WHERE id=$1', [req.params.reviewId]);
+    res.json({ message: 'Review deleted' });
+  } catch (err) { res.status(500).json({ message: err.message }); }
+};
+
+const getReviewStats = async (req, res) => {
+  try {
+    const summary = await pool.query(`
+      SELECT
+        COUNT(*) as total,
+        COUNT(*) FILTER (WHERE is_hidden = FALSE) as visible,
+        COUNT(*) FILTER (WHERE is_hidden = TRUE) as hidden,
+        COUNT(*) FILTER (WHERE is_pinned = TRUE) as pinned,
+        COUNT(*) FILTER (WHERE rating = 5) as five_star,
+        COUNT(*) FILTER (WHERE rating = 4) as four_star,
+        COUNT(*) FILTER (WHERE rating = 3) as three_star,
+        ROUND(AVG(rating)::NUMERIC, 1) as avg_rating
+      FROM src_reviews
+    `);
+    const topProducts = await pool.query(`
+      SELECT p.id, p.title as product_title,
+        (SELECT image_url FROM src_product_images WHERE product_id=p.id AND is_primary=TRUE LIMIT 1) as product_image,
+        COUNT(r.id) as review_count,
+        ROUND(AVG(r.rating)::NUMERIC, 1) as avg_rating
+      FROM src_reviews r
+      JOIN src_products p ON r.product_id = p.id
+      WHERE r.is_hidden = FALSE
+      GROUP BY p.id
+      ORDER BY review_count DESC, avg_rating DESC
+      LIMIT 6
+    `);
+    res.json({ ...summary.rows[0], top_products: topProducts.rows });
+  } catch (err) { res.status(500).json({ message: err.message }); }
+};
+
+module.exports = { getProducts, getProduct, createProduct, updateProduct, deleteProduct, addReview, getProductReviews, getCategories, deleteProductImage, setPrimaryImage, addProductImages, getAdminReviews, exportReviews, updateReview, deleteReview, getReviewStats };

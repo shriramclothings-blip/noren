@@ -1,0 +1,93 @@
+const router = require('express').Router();
+const { auth, requireRole } = require('../middleware/auth');
+const { uploadProduct } = require('../config/cloudinary');
+const admin = require('../controllers/adminController');
+const { updateProduct, deleteProduct: deleteProductCtrl } = require('../controllers/productController');
+
+const guard = [auth, requireRole('admin', 'super_admin')];
+
+router.get('/stats', ...guard, admin.getStats);
+router.get('/analytics', ...guard, admin.getAnalytics);
+router.get('/analytics/export', ...guard, admin.exportAnalytics);
+router.get('/users', ...guard, admin.getUsers);
+router.get('/users/stats', ...guard, admin.getUserStats);
+router.get('/users/export', ...guard, admin.exportUsers);
+router.get('/users/free-delivery', ...guard, admin.getFreeDeliveryUsers);
+router.get('/users/:id', ...guard, admin.getUserDetail);
+router.put('/users/:id/ban', ...guard, admin.banUser);
+router.put('/users/:id/free-delivery', ...guard, admin.setFreeDelivery);
+router.post('/users/:id/notify', ...guard, admin.sendUserNotification);
+router.delete('/users/:id', ...guard, admin.deleteUser);
+router.get('/products', ...guard, admin.getAdminProducts);
+// Full product update (title, price, images, sizes) — uses productController
+router.put('/products/:id', ...guard, uploadProduct.array('images', 10), updateProduct);
+router.delete('/products/:id', ...guard, admin.deleteAdminProduct);
+router.get('/orders', ...guard, admin.getAdminOrders);
+router.put('/orders/:id/status', ...guard, admin.updateOrderStatus);
+router.get('/categories', ...guard, admin.getAdminCategories);
+router.post('/categories', ...guard, uploadProduct.single('image'), admin.createCategory);
+router.put('/categories/:id', ...guard, uploadProduct.single('image'), admin.updateCategory);
+router.get('/coupons', ...guard, admin.getCoupons);
+router.post('/coupons', ...guard, admin.createCoupon);
+router.put('/coupons/:id/toggle', ...guard, admin.toggleCoupon);
+router.delete('/coupons/:id', ...guard, admin.deleteCoupon);
+router.get('/logs', ...guard, admin.getActivityLogs);
+
+// ── Customer Queries ──────────────────────────────────────────────────────────
+const cloud = require('../controllers/adminCloudController');
+const q = require('../controllers/queryController');
+const multer = require('multer');
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
+const { cloudinary } = require('../config/cloudinary');
+const attachStorage = new CloudinaryStorage({ cloudinary, params: { folder: 'shriram-clothings/attachments', allowed_formats: ['jpg','jpeg','png','pdf','webp'], transformation: [{ quality: 'auto' }] } });
+const uploadAttach = multer({ storage: attachStorage, limits: { fileSize: 5 * 1024 * 1024 } });
+
+const buildResourceFolder = (mimetype) => {
+  if (mimetype.startsWith('image/')) return 'admin-cloud/images';
+  if (mimetype.startsWith('video/')) return 'admin-cloud/videos';
+  if (mimetype.startsWith('audio/')) return 'admin-cloud/audio';
+  if (mimetype === 'application/pdf') return 'admin-cloud/documents';
+  if (mimetype.includes('word') || mimetype.includes('excel') || mimetype.includes('spreadsheet') || mimetype.includes('text') || mimetype.includes('json')) return 'admin-cloud/documents';
+  if (mimetype.includes('zip') || mimetype.includes('rar') || mimetype.includes('compressed')) return 'admin-cloud/backups';
+  return 'admin-cloud/private';
+};
+
+const adminCloudStorage = new CloudinaryStorage({
+  cloudinary,
+  params: async (req, file) => ({
+    folder: buildResourceFolder(file.mimetype),
+    allowed_formats: ['jpg','jpeg','png','webp','gif','mp4','mov','mkv','pdf','doc','docx','xls','xlsx','csv','txt','json','zip','rar','mp3','wav','ogg'],
+    resource_type: 'auto',
+    type: 'authenticated',
+    transformation: [{ quality: 'auto', fetch_format: 'auto' }],
+  }),
+});
+const uploadCloud = multer({ storage: adminCloudStorage, limits: { fileSize: 200 * 1024 * 1024 } });
+
+// Public
+router.post('/queries', uploadAttach.single('attachment'), q.submitQuery);
+router.get('/queries/track', q.trackQuery);
+// Admin
+router.get('/queries',          ...guard, q.getQueries);
+router.get('/queries/stats',    ...guard, q.getQueryStats);
+router.get('/queries/export',   ...guard, q.exportQueries);
+router.get('/queries/:id',      ...guard, q.getQuery);
+router.put('/queries/:id',      ...guard, q.updateQuery);
+router.post('/queries/:id/reply', ...guard, q.replyQuery);
+router.delete('/queries/:id',   ...guard, q.deleteQuery);
+
+// Admin cloud storage
+router.get('/cloud/folders', ...guard, cloud.getFolders);
+router.post('/cloud/folders', ...guard, cloud.createFolder);
+router.put('/cloud/folders/:id', ...guard, cloud.updateFolder);
+router.get('/cloud/files', ...guard, cloud.listFiles);
+router.post('/cloud/files/upload', ...guard, uploadCloud.array('files', 20), cloud.uploadFiles);
+router.get('/cloud/files/:id', ...guard, cloud.getFile);
+router.get('/cloud/files/:id/secure-url', ...guard, cloud.getSecureUrl);
+router.put('/cloud/files/:id', ...guard, cloud.updateFile);
+router.delete('/cloud/files/:id', ...guard, cloud.trashFile);
+router.put('/cloud/files/:id/restore', ...guard, cloud.restoreFile);
+router.get('/cloud/analytics', ...guard, cloud.getAnalytics);
+router.get('/cloud/upload-signature', ...guard, cloud.getUploadSignature);
+
+module.exports = router;

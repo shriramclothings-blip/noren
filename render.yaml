@@ -1,0 +1,106 @@
+services:
+  - type: web
+    name: noren-fashion-backend
+    runtime: node
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+
+      # ── Database ────────────────────────────────────────────────────────────
+      - key: DATABASE_URL_1
+        sync: false
+      - key: DATABASE_URL_2
+        sync: false
+      - key: DATABASE_URL_3
+        sync: false
+      - key: DATABASE_SSL
+        value: "true"
+
+      # ── App URLs ────────────────────────────────────────────────────────────
+      # Set FRONTEND_URL to your Vercel app URL after first deploy
+      # e.g. https://noren-fashion.vercel.app
+      - key: FRONTEND_URL
+        sync: false
+      - key: SITE_URL
+        sync: false
+
+      # ── Auth ────────────────────────────────────────────────────────────────
+      - key: JWT_SECRET
+        sync: false
+      - key: ADMIN_SECRET_KEY
+        sync: false
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+
+      # ── Cloudinary ──────────────────────────────────────────────────────────
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+
+      # ── Email ───────────────────────────────────────────────────────────────
+      - key: EMAIL_USER
+        sync: false
+      - key: EMAIL_PASS
+        sync: false
+
+      # ── Google OAuth ────────────────────────────────────────────────────────
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+
+      # ── Web Push / VAPID ────────────────────────────────────────────────────
+      - key: VAPID_PUBLIC_KEY
+        sync: false
+      - key: VAPID_PRIVATE_KEY
+        sync: false
+      - key: VAPID_EMAIL
+        sync: false
+
+      # ── Paytm ───────────────────────────────────────────────────────────────
+      - key: PAYTM_MID
+        sync: false
+      - key: PAYTM_MKEY
+        sync: false
+      - key: PAYTM_WEBSITE
+        sync: false
+      - key: PAYTM_INDUSTRY_TYPE
+        sync: false
+      - key: PAYTM_CHANNEL_ID
+        sync: false
+      - key: PAYTM_CALLBACK_URL
+        sync: false
+      - key: PAYTM_FRONTEND_URL
+        sync: false
+      - key: PAYTM_ENV
+        sync: false
+
+      # ── Delhivery ───────────────────────────────────────────────────────────
+      - key: DELHIVERY_API_TOKEN
+        sync: false
+      - key: DELHIVERY_MODE
+        value: staging
+      - key: DELHIVERY_PICKUP_NAME
+        sync: false
+      - key: DELHIVERY_RETURN_PINCODE
+        sync: false
+      - key: DELHIVERY_RETURN_CITY
+        sync: false
+      - key: DELHIVERY_RETURN_STATE
+        sync: false
+      - key: DELHIVERY_RETURN_ADDRESS
+        sync: false
+      - key: DELHIVERY_RETURN_PHONE
+        sync: false
+      - key: DELHIVERY_GST
+        sync: false

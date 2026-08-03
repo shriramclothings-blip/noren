@@ -1,0 +1,30 @@
+const router = require('express').Router();
+const { auth, requirePermission } = require('../middleware/auth');
+const n = require('../controllers/notificationController');
+
+const optionalAuth = (req, res, next) => {
+  const token = req.headers.authorization?.split(' ')[1];
+  if (token) {
+    try { req.user = require('jsonwebtoken').verify(token, process.env.JWT_SECRET); } catch {}
+  }
+  next();
+};
+
+const guard = [auth, requirePermission('erp.manage_notifications')];
+
+// Public
+router.get('/vapid-key',    n.getVapidKey);
+router.post('/subscribe',   optionalAuth, n.subscribe);
+router.post('/unsubscribe', n.unsubscribe);
+
+// Admin
+router.get('/admin/stats',                ...guard, n.getNotifStats);
+router.get('/admin/campaigns',            ...guard, n.getCampaigns);
+router.post('/admin/campaigns',           ...guard, n.createCampaign);
+router.post('/admin/campaigns/:id/send',  ...guard, n.sendCampaign);
+router.delete('/admin/campaigns/:id',     ...guard, n.deleteCampaign);
+router.post('/admin/request-push',        ...guard, n.requestPushFromUsers);
+router.post('/admin/send',                ...guard, n.sendNotification);
+router.get('/admin/search-users',         ...guard, n.searchUsersForNotif);
+
+module.exports = router;
