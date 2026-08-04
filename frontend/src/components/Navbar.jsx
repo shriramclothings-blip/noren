@@ -5,21 +5,13 @@ import { useSiteSettings } from '../context/SiteSettingsContext';
 import { ShoppingBag, Search, Menu, X, User, LogOut, Package, LayoutDashboard, ChevronDown, Heart, Bell } from 'lucide-react';
 import api from '../utils/api';
 
-function NorenLogo() {
+function NorenLogo({ height = 40 }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <img
-        src="/logo.png"
-        alt="NOREN"
-        style={{
-          height: 46,
-          width: 'auto',
-          maxWidth: 160,
-          objectFit: 'contain',
-          display: 'block',
-        }}
-      />
-    </div>
+    <img
+      src="/logo.png"
+      alt="NOREN"
+      style={{ height, width: 'auto', maxWidth: 140, objectFit: 'contain', display: 'block' }}
+    />
   );
 }
 
@@ -235,11 +227,21 @@ export default function Navbar() {
     <header style={{ position: 'sticky', top: 0, zIndex: 200 }}>
 
       {/* ── Announcement bar ─────────────────────────── */}
-      <div style={{ background: '#1a1a18', padding: '9px 16px', textAlign: 'center' }}>
+      <div style={{ background: '#1a1a18', padding: '8px 16px', textAlign: 'center', overflow: 'hidden' }}>
         <p
-          style={{ fontSize: 11, fontWeight: 400, letterSpacing: '0.2em', textTransform: 'uppercase', color: '#9e9a94', margin: 0 }}
+          style={{
+            fontSize: 10,
+            fontWeight: 400,
+            letterSpacing: '0.14em',
+            textTransform: 'uppercase',
+            color: '#9e9a94',
+            margin: 0,
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+          }}
           dangerouslySetInnerHTML={{
-            __html: settings.announcement_text || 'Free Shipping on Prepaid Orders &nbsp;&middot;&nbsp; Easy Returns'
+            __html: settings.announcement_text || 'Free Shipping on Prepaid Orders &nbsp;&middot;&nbsp; Easy Returns &nbsp;&middot;&nbsp; COD Available'
           }}
         />
       </div>
@@ -251,9 +253,9 @@ export default function Navbar() {
         boxShadow: shadow,
         transition: 'background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease',
       }}>
-        <div className="wrap" style={{ display: 'flex', alignItems: 'center', height: 66, position: 'relative' }}>
+        <div className="wrap" style={{ display: 'flex', alignItems: 'center', height: 60, position: 'relative' }}>
 
-          {/* Left nav — desktop */}
+          {/* Left nav — desktop only */}
           <div className="hide-mobile" style={{ display: 'flex', alignItems: 'center', gap: 28, flex: 1 }}>
             {/* Men dropdown */}
             <div
@@ -419,10 +421,10 @@ export default function Navbar() {
             ))}
           </div>
 
-          {/* Center — Logo, always visible */}
-          <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', zIndex: 10 }}>
-            <Link to="/" style={{ textDecoration: 'none', display: 'block' }}>
-              <NorenLogo />
+          {/* Center — Logo */}
+          <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', zIndex: 10, pointerEvents: 'none' }}>
+            <Link to="/" style={{ textDecoration: 'none', display: 'block', pointerEvents: 'auto' }}>
+              <NorenLogo height={38} />
             </Link>
           </div>
 
@@ -436,8 +438,8 @@ export default function Navbar() {
 
             {user ? (
               <>
-                {/* Notifications */}
-                <div ref={notifRef} style={{ position: 'relative' }}>
+                {/* Notifications — desktop only, hidden on mobile */}
+                <div ref={notifRef} style={{ position: 'relative' }} className="hide-mobile">
                   <button onClick={() => setNotifOpen(o => !o)} style={iconBtn} title="Notifications">
                     <Bell size={17} />
                     {notifCount > 0 && <span style={badgeStyle}>{notifCount > 9 ? '9+' : notifCount}</span>}
@@ -445,54 +447,51 @@ export default function Navbar() {
                   {notifOpen && <NotifDropdown onClose={() => setNotifOpen(false)} />}
                 </div>
 
-                {/* Wishlist */}
-                <Link to="/wishlist" style={iconBtn} title="Wishlist">
+                {/* Wishlist — desktop only, hidden on mobile */}
+                <Link to="/wishlist" className="hide-mobile" style={iconBtn} title="Wishlist">
                   <Heart size={17} />
                   {wishlistCount > 0 && <span style={badgeStyle}>{wishlistCount > 9 ? '9+' : wishlistCount}</span>}
                 </Link>
 
-                {/* Cart */}
+                {/* Cart — always visible */}
                 <Link to="/cart" style={iconBtn} title="Cart">
                   <ShoppingBag size={17} />
                   {cartCount > 0 && <span style={badgeStyle}>{cartCount > 9 ? '9+' : cartCount}</span>}
                 </Link>
 
-                {/* User menu */}
-                <div ref={dropRef} style={{ position: 'relative', marginLeft: 4 }}>
+                {/* User avatar — always visible */}
+                <div ref={dropRef} style={{ position: 'relative', marginLeft: 2 }}>
                   <button
                     onClick={() => setDropOpen(d => !d)}
-                    style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 6px', background: 'none', border: 'none', cursor: 'pointer' }}>
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px', background: 'none', border: 'none', cursor: 'pointer', minHeight: 44, minWidth: 40 }}>
                     {user.avatar_url
-                      ? <img src={user.avatar_url} alt="" style={{ width: 30, height: 30, borderRadius: '50%', objectFit: 'cover', border: '1.5px solid #c9a96e' }} />
-                      : <div style={{ width: 30, height: 30, borderRadius: '50%', background: useDark ? 'rgba(201,169,110,0.2)' : '#1a1a18', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#c9a96e', fontSize: 12, fontWeight: 700 }}>
+                      ? <img src={user.avatar_url} alt="" style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover', border: '1.5px solid #c9a96e' }} />
+                      : <div style={{ width: 28, height: 28, borderRadius: '50%', background: useDark ? 'rgba(201,169,110,0.25)' : '#1a1a18', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#c9a96e', fontSize: 11, fontWeight: 700 }}>
                           {user.name?.[0]?.toUpperCase()}
                         </div>
                     }
-                    <ChevronDown size={11} color={textColor} />
                   </button>
 
                   {dropOpen && (
                     <div className="fade-in" style={{
                       position: 'absolute', right: 0, top: 'calc(100% + 8px)',
-                      width: 'min(210px, calc(100vw - 24px))', background: '#faf9f7',
+                      width: 'min(220px, calc(100vw - 24px))', background: '#faf9f7',
                       border: '1px solid #e6e0d8',
                       boxShadow: '0 12px 40px rgba(26,26,24,0.14)',
                       overflow: 'hidden', zIndex: 400,
                     }}>
-                      {/* User info header */}
                       <div style={{ padding: '14px 16px', borderBottom: '1px solid #e6e0d8', background: '#f5f0e8' }}>
                         <div style={{ fontSize: 13, fontWeight: 600, color: '#1a1a18', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.name}</div>
                         <div style={{ fontSize: 10, color: '#9e9a94', marginTop: 2, textTransform: 'capitalize', letterSpacing: '0.06em' }}>{(user.role || '').replace(/_/g, ' ')}</div>
                       </div>
 
-                      {/* Menu items */}
                       {[
                         { to: '/profile',  Icon: User,    label: 'My Profile' },
                         { to: '/orders',   Icon: Package, label: 'My Orders'  },
                         { to: '/wishlist', Icon: Heart,   label: 'Wishlist'   },
                       ].map(({ to, Icon, label }) => (
                         <Link key={to} to={to} onClick={() => setDropOpen(false)}
-                          style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 16px', fontSize: 13, color: '#2c2c29', textDecoration: 'none', borderBottom: '1px solid #f2ede6' }}
+                          style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', fontSize: 13, color: '#2c2c29', textDecoration: 'none', borderBottom: '1px solid #f2ede6' }}
                           onMouseEnter={e => e.currentTarget.style.background = '#f5f0e8'}
                           onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
                           <Icon size={13} color="#9e9a94" />
@@ -500,10 +499,9 @@ export default function Navbar() {
                         </Link>
                       ))}
 
-                      {/* Admin panel link */}
                       {['admin','super_admin','business_owner','store_admin','store_manager','cashier','warehouse_manager','accountant'].includes(user.role) && (
                         <Link to="/admin" onClick={() => setDropOpen(false)}
-                          style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 16px', fontSize: 13, color: '#c9a96e', fontWeight: 600, textDecoration: 'none', borderBottom: '1px solid #f2ede6' }}
+                          style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', fontSize: 13, color: '#c9a96e', fontWeight: 600, textDecoration: 'none', borderBottom: '1px solid #f2ede6' }}
                           onMouseEnter={e => e.currentTarget.style.background = '#f5f0e8'}
                           onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
                           <LayoutDashboard size={13} color="#c9a96e" />
@@ -511,10 +509,9 @@ export default function Navbar() {
                         </Link>
                       )}
 
-                      {/* Sign out */}
                       <button
                         onClick={() => { logout(); navigate('/'); setDropOpen(false); }}
-                        style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '11px 16px', fontSize: 13, color: '#991b1b', background: 'none', border: 'none', cursor: 'pointer' }}
+                        style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '12px 16px', fontSize: 13, color: '#991b1b', background: 'none', border: 'none', cursor: 'pointer' }}
                         onMouseEnter={e => e.currentTarget.style.background = '#fef2f2'}
                         onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
                         <LogOut size={13} color="#991b1b" />
@@ -525,7 +522,7 @@ export default function Navbar() {
                 </div>
               </>
             ) : (
-              /* Not logged in */
+              /* Not logged in — Login + Join on desktop, nothing extra on mobile (hamburger handles it) */
               <div className="hide-mobile-flex" style={{ display: 'flex', alignItems: 'center', gap: 10, marginLeft: 8 }}>
                 <Link to="/login"
                   style={{ fontSize: 11, fontWeight: 500, letterSpacing: '0.14em', textTransform: 'uppercase', color: subColor, textDecoration: 'none', padding: '6px 4px' }}
@@ -536,11 +533,11 @@ export default function Navbar() {
                 <Link to="/register"
                   style={{
                     display: 'inline-flex', alignItems: 'center',
-                    padding: '8px 18px',
+                    padding: '8px 16px',
                     background: useDark ? '#c9a96e' : '#1a1a18',
                     color: useDark ? '#1a1a18' : '#faf9f7',
                     fontSize: 11, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase',
-                    textDecoration: 'none', border: 'none', transition: 'all 0.2s',
+                    textDecoration: 'none', border: 'none', transition: 'all 0.2s', whiteSpace: 'nowrap',
                   }}
                   onMouseEnter={e => { e.currentTarget.style.background = '#c9a96e'; e.currentTarget.style.color = '#1a1a18'; }}
                   onMouseLeave={e => { e.currentTarget.style.background = useDark ? '#c9a96e' : '#1a1a18'; e.currentTarget.style.color = useDark ? '#1a1a18' : '#faf9f7'; }}>

@@ -164,7 +164,7 @@ export default function Footer() {
                 <img
                   src="/logo.png"
                   alt="NOREN"
-                  style={{ height: 56, width: 'auto', objectFit: 'contain', display: 'block', filter: 'brightness(0) invert(1)', marginBottom: 4 }}
+                  style={{ height: 52, width: 'auto', maxWidth: 160, objectFit: 'contain', display: 'block', marginBottom: 4 }}
                 />
               </div>
               <p style={{ fontSize: 13, lineHeight: 1.8, color: '#5a5750', marginBottom: 24, maxWidth: 240 }}>{description}</p>
