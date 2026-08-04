@@ -1,7 +1,37 @@
 ﻿import { useState, useEffect } from 'react';
-import { Plus, Pencil, Trash2, X, Zap, GripVertical, Eye, EyeOff } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, Zap, GripVertical, Eye, EyeOff, ChevronDown, ChevronUp, Star, TrendingUp, ExternalLink } from 'lucide-react';
 import api from '../../utils/api';
 import toast from 'react-hot-toast';
+
+// Maps each section type to the API query that fetches its products
+const SECTION_QUERY = {
+  new_arrivals:      { limit: 8, sort: 'newest' },
+  featured_products: { limit: 8, featured: 'true' },
+  trending_products: { limit: 8, trending: 'true' },
+  best_sellers:      { limit: 8, sort: 'popular' },
+  women_new_arrivals:{ limit: 8, gender: 'women', sort: 'newest' },
+  women_best_sellers:{ limit: 8, gender: 'women', sort: 'popular' },
+  women_trending:    { limit: 8, gender: 'women', trending: 'true' },
+  women_ethnic:      { limit: 8, gender: 'women', category: 'kurtis' },
+  women_western:     { limit: 8, gender: 'women', category: 'dresses' },
+};
+
+// Human-readable explanation of how each section picks products
+const SECTION_HOW = {
+  new_arrivals:      'Shows the 8 most recently added products (any gender).',
+  featured_products: 'Shows products with ⭐ Featured flag turned ON.',
+  trending_products: 'Shows products with 🔥 Trending flag turned ON (Men).',
+  best_sellers:      'Shows products sorted by most views (Men).',
+  women_new_arrivals:'Shows the 8 most recently added Women\'s products.',
+  women_best_sellers:'Shows Women\'s products sorted by most views.',
+  women_trending:    'Shows Women\'s products with 🔥 Trending flag ON.',
+  women_ethnic:      'Shows Women\'s products in the Kurtis category.',
+  women_western:     'Shows Women\'s products in the Dresses category.',
+  categories:        'Automatically shows all active product categories.',
+  offer_banner:      'Static editorial banner — uses the Title and Subtitle you set.',
+  women_collection_banner: 'Static Women\'s promo banner — no products.',
+  reels:             'Shows active Reels from the Reels tab.',
+};
 
 const SECTION_TYPES = [
   { value: 'new_arrivals',           label: '🆕 New Arrivals',                desc: 'Latest products sorted by date' },
@@ -37,6 +67,106 @@ const DEFAULT_SECTIONS = [
 const inp = { width: '100%', padding: '9px 12px', fontSize: 13, border: '1.5px solid #e5e7eb', borderRadius: 8, outline: 'none', fontFamily: 'inherit', color: '#111827', background: '#fff' };
 const blank = { type: 'new_arrivals', title: '', subtitle: '', sort_order: 0, is_active: true };
 
+/* ── Section Products Panel ─────────────────────────────── */
+function SectionProducts({ section }) {
+  const [products,  setProducts]  = useState([]);
+  const [loading,   setLoading]   = useState(true);
+  const [toggling,  setToggling]  = useState(null);
+
+  const query = SECTION_QUERY[section.type];
+
+  useEffect(() => {
+    if (!query) { setLoading(false); return; }
+    const p = new URLSearchParams(query);
+    api.get(`/products?${p}`)
+      .then(r => setProducts(r.data.products || []))
+      .catch(() => setProducts([]))
+      .finally(() => setLoading(false));
+  }, [section.type]);
+
+  const toggleFlag = async (product, field) => {
+    setToggling(product.id + field);
+    try {
+      await api.put(`/admin/products/${product.id}`, { [field]: !product[field] });
+      setProducts(prev => prev.map(p => p.id === product.id ? { ...p, [field]: !p[field] } : p));
+      toast.success(`${field === 'is_featured' ? 'Featured' : 'Trending'} ${!product[field] ? 'ON' : 'OFF'} for "${product.title}"`);
+    } catch { toast.error('Failed to update'); }
+    finally { setToggling(null); }
+  };
+
+  if (!query) {
+    return (
+      <div style={{ padding: '16px 20px', background: '#f9fafb', borderRadius: 10, fontSize: 13, color: '#6b7280', lineHeight: 1.6 }}>
+        <strong>How this section works:</strong> {SECTION_HOW[section.type] || 'This section has no product list.'}
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      {/* How it works info */}
+      <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: 8, padding: '10px 14px', fontSize: 12, color: '#0369a1', marginBottom: 14, lineHeight: 1.6 }}>
+        <strong>How products are selected:</strong> {SECTION_HOW[section.type]}
+        {(section.type === 'featured_products' || section.type === 'trending_products' || section.type === 'women_trending') && (
+          <span style={{ marginLeft: 6, color: '#0369a1' }}>
+            — Toggle the flags below to add/remove products from this section.
+          </span>
+        )}
+      </div>
+
+      {loading ? (
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          {[1,2,3,4].map(i => <div key={i} className="skeleton" style={{ width: 80, height: 100, borderRadius: 8 }} />)}
+        </div>
+      ) : products.length === 0 ? (
+        <div style={{ padding: '20px', textAlign: 'center', color: '#9ca3af', fontSize: 13, background: '#f9fafb', borderRadius: 8 }}>
+          No products in this section yet.
+          {section.type === 'featured_products' && ' Go to Products and toggle ⭐ Featured on products.'}
+          {section.type === 'trending_products' && ' Go to Products and toggle 🔥 Trending on products.'}
+          {section.type === 'women_trending'    && ' Go to Products and toggle 🔥 Trending on Women\'s products.'}
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {products.map(p => {
+            const isFeaturedSection = section.type === 'featured_products';
+            const isTrendingSection = ['trending_products','women_trending'].includes(section.type);
+            return (
+              <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 12, background: '#fff', border: '1px solid #f3f4f6', borderRadius: 10, padding: '8px 12px' }}>
+                <img src={p.primary_image || 'https://placehold.co/44x52/f9fafb/9ca3af?text=IMG'} alt=""
+                  style={{ width: 40, height: 48, objectFit: 'cover', borderRadius: 6, flexShrink: 0 }} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: '#111827', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.title}</div>
+                  <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 1 }}>
+                    ₹{p.discount_percent > 0 ? Math.round(p.price * (1 - p.discount_percent / 100)) : p.price}
+                    {p.category_name ? ` · ${p.category_name}` : ''}
+                    {p.gender ? ` · ${p.gender}` : ''}
+                  </div>
+                </div>
+                {/* Featured toggle */}
+                <button
+                  onClick={() => toggleFlag(p, 'is_featured')}
+                  disabled={toggling === p.id + 'is_featured'}
+                  title={p.is_featured ? 'Remove from Featured' : 'Add to Featured'}
+                  style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 10px', borderRadius: 7, border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 700, background: p.is_featured ? '#fef9c3' : '#f3f4f6', color: p.is_featured ? '#854d0e' : '#9ca3af', opacity: toggling === p.id + 'is_featured' ? 0.5 : 1, flexShrink: 0 }}>
+                  ⭐ {p.is_featured ? 'Featured' : 'Feature'}
+                </button>
+                {/* Trending toggle */}
+                <button
+                  onClick={() => toggleFlag(p, 'is_trending')}
+                  disabled={toggling === p.id + 'is_trending'}
+                  title={p.is_trending ? 'Remove from Trending' : 'Add to Trending'}
+                  style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 10px', borderRadius: 7, border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 700, background: p.is_trending ? '#fee2e2' : '#f3f4f6', color: p.is_trending ? '#991b1b' : '#9ca3af', opacity: toggling === p.id + 'is_trending' ? 0.5 : 1, flexShrink: 0 }}>
+                  🔥 {p.is_trending ? 'Trending' : 'Trend'}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function AdminSections() {
   const [sections, setSections] = useState([]);
   const [loading,  setLoading]  = useState(true);
@@ -45,6 +175,7 @@ export default function AdminSections() {
   const [form,     setForm]     = useState(blank);
   const [saving,   setSaving]   = useState(false);
   const [seeding,  setSeeding]  = useState(false);
+  const [expandedSection, setExpandedSection] = useState(null); // section id whose products are shown
 
   const load = async () => {
     try { const r = await api.get('/homepage/admin/sections'); setSections(r.data); }
@@ -206,7 +337,10 @@ export default function AdminSections() {
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {sections.map((s, idx) => (
-              <div key={s.id} style={{ background: '#fff', borderRadius: 12, border: `1.5px solid ${s.is_active ? '#f3f4f6' : '#fef3c7'}`, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 10, opacity: s.is_active ? 1 : 0.6, transition: 'opacity 0.2s' }}>
+              <div key={s.id} style={{ background: '#fff', borderRadius: 12, border: `1.5px solid ${s.is_active ? '#f3f4f6' : '#fef3c7'}`, overflow: 'hidden', opacity: s.is_active ? 1 : 0.7, transition: 'opacity 0.2s' }}>
+
+                {/* Row */}
+                <div style={{ padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
 
                 {/* Up / Down */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 2, flexShrink: 0 }}>
@@ -240,6 +374,17 @@ export default function AdminSections() {
                   {s.is_active ? <Eye size={14} color="#16a34a" /> : <EyeOff size={14} color="#d97706" />}
                 </button>
 
+                {/* View Products expand button */}
+                {!['categories','offer_banner','women_collection_banner','reels'].includes(s.type) && (
+                  <button
+                    onClick={() => setExpandedSection(expandedSection === s.id ? null : s.id)}
+                    title="View products in this section"
+                    style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 8, border: '1.5px solid #e5e7eb', background: expandedSection === s.id ? '#1a1a18' : '#fff', color: expandedSection === s.id ? '#c9a96e' : '#374151', cursor: 'pointer', fontSize: 11, fontWeight: 600, flexShrink: 0, whiteSpace: 'nowrap' }}>
+                    {expandedSection === s.id ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                    {expandedSection === s.id ? 'Hide' : 'View Products'}
+                  </button>
+                )}
+
                 {/* Edit + Delete */}
                 <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
                   <button onClick={() => openEdit(s)} title="Edit"
@@ -251,6 +396,14 @@ export default function AdminSections() {
                     <Trash2 size={13} />
                   </button>
                 </div>
+                </div>
+
+                {/* ── Expanded product panel ── */}
+                {expandedSection === s.id && (
+                  <div style={{ borderTop: '1px solid #f3f4f6', padding: '16px 16px 20px', background: '#fafafa' }}>
+                    <SectionProducts section={s} />
+                  </div>
+                )}
               </div>
             ))}
           </div>
