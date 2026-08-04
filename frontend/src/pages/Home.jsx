@@ -50,7 +50,7 @@ function StaticHero({ settings }) {
   );
 }
 
-//  Hero Banner Slider (when banners are configured) 
+//  Hero Banner Slider
 function HeroBanner({ banners, settings }) {
   const [current, setCurrent] = useState(0);
   const [isMobile, setIsMobile] = useState(() =>
@@ -58,52 +58,106 @@ function HeroBanner({ banners, settings }) {
   );
 
   useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth < 640);
-    window.addEventListener('resize', handleResize, { passive: true });
-    return () => window.removeEventListener('resize', handleResize);
+    const fn = () => setIsMobile(window.innerWidth < 640);
+    window.addEventListener('resize', fn, { passive: true });
+    return () => window.removeEventListener('resize', fn);
   }, []);
 
   useEffect(() => {
     if (banners.length <= 1) return;
-    const t = setInterval(() => setCurrent(c => (c + 1) % banners.length), 6000);
+    const t = setInterval(() => setCurrent(c => (c + 1) % banners.length), 5000);
     return () => clearInterval(t);
   }, [banners.length]);
 
   if (!banners.length) return <StaticHero settings={settings} />;
 
   return (
-    <section style={{ position: 'relative', overflow: 'hidden', background: '#1a1a18' }}>
-      <div style={{ position: 'relative', minHeight: 'clamp(480px, calc(100dvh - 84px), 860px)' }}>
+    <section style={{ position: 'relative', background: '#1a1a18', overflow: 'hidden' }}>
+
+      {/* Slide stack */}
+      <div style={{ position: 'relative', width: '100%', aspectRatio: isMobile ? '9/14' : '16/7', maxHeight: isMobile ? '85vh' : '90vh', minHeight: isMobile ? 480 : 420 }}>
+
         {banners.map((ban, i) => {
           const bgImg = (isMobile && ban.mobile_image) ? ban.mobile_image : ban.desktop_image;
+          const isActive = i === current;
           return (
-            <div key={ban.id} style={{ position: 'absolute', inset: 0, transition: 'opacity 0.8s ease', opacity: i === current ? 1 : 0, pointerEvents: i === current ? 'auto' : 'none' }}>
-              {bgImg && <img src={bgImg} alt={ban.heading || 'NOREN Collection'} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} loading="lazy" />}
-              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(26,26,24,0.85) 0%, rgba(26,26,24,0.4) 50%, rgba(26,26,24,0.15) 100%)' }} />
+            <div key={ban.id} style={{ position: 'absolute', inset: 0, transition: 'opacity 0.8s ease', opacity: isActive ? 1 : 0, pointerEvents: isActive ? 'auto' : 'none' }}>
+
+              {/* Background image */}
+              {bgImg
+                ? <img src={bgImg} alt={ban.heading || 'NOREN'} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top', display: 'block' }} loading={i === 0 ? 'eager' : 'lazy'} />
+                : <div style={{ width: '100%', height: '100%', background: '#1a1a18' }} />
+              }
+
+              {/* Dark overlay — stronger at bottom for text readability */}
+              <div style={{ position: 'absolute', inset: 0, background: isMobile
+                ? 'linear-gradient(to top, rgba(10,10,8,0.92) 0%, rgba(10,10,8,0.55) 45%, rgba(10,10,8,0.1) 100%)'
+                : 'linear-gradient(105deg, rgba(10,10,8,0.82) 0%, rgba(10,10,8,0.45) 55%, transparent 100%)'
+              }} />
+
+              {/* Text content */}
               {(ban.heading || ban.cta_text) && (
-                <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'flex-end', paddingBottom: 'clamp(32px, 6vw, 60px)' }}>
+                <div style={{
+                  position: 'absolute',
+                  bottom: isMobile ? 28 : 0,
+                  left: 0, right: 0,
+                  top: isMobile ? 'auto' : 0,
+                  display: 'flex',
+                  alignItems: isMobile ? 'flex-end' : 'center',
+                  padding: isMobile ? '0 0 12px 0' : '0',
+                }}>
                   <div className="wrap" style={{ width: '100%' }}>
-                    <div style={{ maxWidth: '90%' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 'clamp(10px, 2vw, 20px)' }}>
-                        <div style={{ width: 20, height: 1, background: '#c9a96e', flexShrink: 0 }} />
-                        <span style={{ fontSize: 9, fontWeight: 600, letterSpacing: '0.2em', textTransform: 'uppercase', color: '#c9a96e', whiteSpace: 'nowrap' }}>NOREN Collection</span>
+                    <div style={{ maxWidth: isMobile ? '100%' : 560 }}>
+
+                      {/* Label */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: isMobile ? 8 : 16 }}>
+                        <div style={{ width: 18, height: 1, background: '#c9a96e', flexShrink: 0 }} />
+                        <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', color: '#c9a96e' }}>NOREN</span>
                       </div>
+
+                      {/* Heading */}
                       {ban.heading && (
-                        <h2 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 'clamp(28px, 7vw, 72px)', fontWeight: 600, color: '#faf9f7', lineHeight: 1.1, marginBottom: 'clamp(8px, 2vw, 16px)', letterSpacing: '-0.01em', wordBreak: 'break-word', overflowWrap: 'break-word' }}>
+                        <h2 style={{
+                          fontFamily: "'Cormorant Garamond', Georgia, serif",
+                          fontSize: isMobile ? 'clamp(26px, 8vw, 42px)' : 'clamp(36px, 5vw, 72px)',
+                          fontWeight: 600,
+                          color: '#faf9f7',
+                          lineHeight: 1.1,
+                          marginBottom: isMobile ? 8 : 14,
+                          letterSpacing: '-0.01em',
+                          wordBreak: 'break-word',
+                          overflowWrap: 'break-word',
+                          textShadow: '0 2px 12px rgba(0,0,0,0.4)',
+                        }}>
                           {ban.heading}
                         </h2>
                       )}
-                      {ban.subheading && (
-                        <p style={{ fontSize: 'clamp(12px, 1.5vw, 15px)', color: 'rgba(250,249,247,0.7)', marginBottom: 'clamp(16px, 3vw, 28px)', lineHeight: 1.6, fontWeight: 300, maxWidth: 360 }}>{ban.subheading}</p>
+
+                      {/* Subheading — hidden on mobile to save space */}
+                      {ban.subheading && !isMobile && (
+                        <p style={{ fontSize: 'clamp(13px, 1.4vw, 16px)', color: 'rgba(250,249,247,0.72)', marginBottom: 24, lineHeight: 1.65, fontWeight: 300, maxWidth: 400 }}>
+                          {ban.subheading}
+                        </p>
                       )}
+
+                      {/* CTA Button */}
                       {ban.cta_text && (
-                        <Link to={ban.cta_link || '/shop'}
-                          style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: 'clamp(11px, 2vw, 14px) clamp(18px, 3vw, 28px)', background: '#faf9f7', color: '#1a1a18', fontSize: 11, fontWeight: 600, letterSpacing: '0.16em', textTransform: 'uppercase', textDecoration: 'none', transition: 'all 0.25s', minHeight: 44, whiteSpace: 'nowrap' }}
-                          onMouseEnter={e => e.currentTarget.style.background = '#c9a96e'}
-                          onMouseLeave={e => e.currentTarget.style.background = '#faf9f7'}>
+                        <Link to={ban.cta_link || '/shop'} style={{
+                          display: 'inline-flex', alignItems: 'center', gap: 8,
+                          padding: isMobile ? '11px 22px' : '13px 30px',
+                          background: '#faf9f7', color: '#1a1a18',
+                          fontSize: isMobile ? 11 : 11,
+                          fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase',
+                          textDecoration: 'none', transition: 'all 0.2s',
+                          minHeight: 44, whiteSpace: 'nowrap',
+                          boxShadow: '0 4px 20px rgba(0,0,0,0.25)',
+                        }}
+                          onMouseEnter={e => { e.currentTarget.style.background = '#c9a96e'; e.currentTarget.style.color = '#1a1a18'; }}
+                          onMouseLeave={e => { e.currentTarget.style.background = '#faf9f7'; e.currentTarget.style.color = '#1a1a18'; }}>
                           {ban.cta_text} <ArrowRight size={13} />
                         </Link>
                       )}
+
                     </div>
                   </div>
                 </div>
@@ -111,30 +165,40 @@ function HeroBanner({ banners, settings }) {
             </div>
           );
         })}
-      </div>
 
-      {banners.length > 1 && (
-        <>
-          <button onClick={() => setCurrent(c => (c - 1 + banners.length) % banners.length)}
-            style={{ position: 'absolute', left: 24, top: '50%', transform: 'translateY(-50%)', width: 44, height: 44, background: 'rgba(250,249,247,0.08)', border: '1px solid rgba(250,249,247,0.15)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#faf9f7', backdropFilter: 'blur(4px)', transition: 'all 0.2s' }}
-            onMouseEnter={e => e.currentTarget.style.background = 'rgba(201,169,110,0.2)'}
-            onMouseLeave={e => e.currentTarget.style.background = 'rgba(250,249,247,0.08)'}>
-            <ChevronLeft size={18} />
-          </button>
-          <button onClick={() => setCurrent(c => (c + 1) % banners.length)}
-            style={{ position: 'absolute', right: 24, top: '50%', transform: 'translateY(-50%)', width: 44, height: 44, background: 'rgba(250,249,247,0.08)', border: '1px solid rgba(250,249,247,0.15)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#faf9f7', backdropFilter: 'blur(4px)', transition: 'all 0.2s' }}
-            onMouseEnter={e => e.currentTarget.style.background = 'rgba(201,169,110,0.2)'}
-            onMouseLeave={e => e.currentTarget.style.background = 'rgba(250,249,247,0.08)'}>
-            <ChevronRight size={18} />
-          </button>
-          <div style={{ position: 'absolute', bottom: 32, right: 32, display: 'flex', gap: 8 }}>
+        {/* Prev / Next arrows — desktop only */}
+        {banners.length > 1 && !isMobile && (
+          <>
+            <button onClick={() => setCurrent(c => (c - 1 + banners.length) % banners.length)}
+              style={{ position: 'absolute', left: 20, top: '50%', transform: 'translateY(-50%)', width: 44, height: 44, background: 'rgba(250,249,247,0.1)', border: '1px solid rgba(250,249,247,0.2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#faf9f7', transition: 'all 0.2s', zIndex: 10 }}
+              onMouseEnter={e => e.currentTarget.style.background = 'rgba(201,169,110,0.3)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'rgba(250,249,247,0.1)'}>
+              <ChevronLeft size={18} />
+            </button>
+            <button onClick={() => setCurrent(c => (c + 1) % banners.length)}
+              style={{ position: 'absolute', right: 20, top: '50%', transform: 'translateY(-50%)', width: 44, height: 44, background: 'rgba(250,249,247,0.1)', border: '1px solid rgba(250,249,247,0.2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#faf9f7', transition: 'all 0.2s', zIndex: 10 }}
+              onMouseEnter={e => e.currentTarget.style.background = 'rgba(201,169,110,0.3)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'rgba(250,249,247,0.1)'}>
+              <ChevronRight size={18} />
+            </button>
+          </>
+        )}
+
+        {/* Dots indicator */}
+        {banners.length > 1 && (
+          <div style={{ position: 'absolute', bottom: isMobile ? 10 : 20, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 6, zIndex: 10 }}>
             {banners.map((_, i) => (
-              <button key={i} onClick={() => setCurrent(i)}
-                style={{ width: i === current ? 24 : 8, height: 2, background: i === current ? '#c9a96e' : 'rgba(250,249,247,0.3)', border: 'none', cursor: 'pointer', transition: 'all 0.3s', padding: 0 }} />
+              <button key={i} onClick={() => setCurrent(i)} style={{
+                width: i === current ? 20 : 6, height: 6,
+                borderRadius: 3,
+                background: i === current ? '#c9a96e' : 'rgba(250,249,247,0.4)',
+                border: 'none', cursor: 'pointer', transition: 'all 0.3s', padding: 0,
+              }} />
             ))}
           </div>
-        </>
-      )}
+        )}
+
+      </div>
     </section>
   );
 }
