@@ -211,16 +211,16 @@ export default function Navbar() {
 
           {/* ── LEFT: hamburger (mobile) + desktop nav links ── */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 4, flex: 1 }}>
-            {/* Mobile hamburger — left side */}
+            {/* Mobile hamburger — left side, CSS hides on desktop */}
             <button onClick={() => setMenuOpen(m => !m)}
-              style={{ ...iconBtn, display: 'flex' }}
               className="hide-desktop"
+              style={{ width: 40, height: 44, flexShrink: 0, alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', cursor: 'pointer', color: textClr, position: 'relative' }}
               aria-label="Menu">
               {menuOpen ? <X size={20} /> : <Menu size={20} />}
             </button>
 
-            {/* Desktop nav links */}
-            <div className="hide-mobile" style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
+            {/* Desktop nav links — CSS class hides on mobile, inline style removed so CSS wins */}
+            <div className="hide-mobile" style={{ alignItems: 'center', gap: 24 }}>
               {/* Men dropdown */}
               <div ref={menRef} style={{ position: 'relative' }}
                 onMouseEnter={() => { setMenOpen(true); setWomenOpen(false); }}
@@ -315,17 +315,17 @@ export default function Navbar() {
 
             {user ? (
               <>
-                {/* Bell — desktop only */}
+                {/* Bell — desktop only, CSS hides on mobile */}
                 <div ref={notifRef} style={{ position: 'relative' }} className="hide-mobile">
-                  <button onClick={() => setNotifOpen(o => !o)} style={iconBtn} aria-label="Notifications">
+                  <button onClick={() => setNotifOpen(o => !o)} style={{ ...iconBtn, display: undefined }} aria-label="Notifications">
                     <Bell size={18} />
                     {notifCount > 0 && <span style={badge}>{notifCount > 9 ? '9+' : notifCount}</span>}
                   </button>
                   {notifOpen && <NotifDropdown onClose={() => setNotifOpen(false)} />}
                 </div>
 
-                {/* Wishlist — desktop only */}
-                <Link to="/wishlist" className="hide-mobile" style={iconBtn} aria-label="Wishlist">
+                {/* Wishlist — desktop only, CSS hides on mobile */}
+                <Link to="/wishlist" className="hide-mobile" style={{ ...iconBtn, display: undefined }} aria-label="Wishlist">
                   <Heart size={18} />
                   {wishlistCount > 0 && <span style={badge}>{wishlistCount > 9 ? '9+' : wishlistCount}</span>}
                 </Link>
@@ -384,7 +384,7 @@ export default function Navbar() {
                   onMouseEnter={e => e.currentTarget.style.color = '#c9a96e'}
                   onMouseLeave={e => e.currentTarget.style.color = subClr}>Login</Link>
                 <Link to="/register" className="hide-mobile"
-                  style={{ display: 'inline-flex', alignItems: 'center', padding: '8px 14px', background: useDark ? '#c9a96e' : '#1a1a18', color: useDark ? '#1a1a18' : '#faf9f7', fontSize: 11, fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', textDecoration: 'none', whiteSpace: 'nowrap', marginLeft: 4 }}>
+                  style={{ alignItems: 'center', padding: '8px 14px', background: useDark ? '#c9a96e' : '#1a1a18', color: useDark ? '#1a1a18' : '#faf9f7', fontSize: 11, fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', textDecoration: 'none', whiteSpace: 'nowrap', marginLeft: 4 }}>
                   Join
                 </Link>
               </>

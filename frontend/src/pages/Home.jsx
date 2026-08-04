@@ -79,29 +79,29 @@ function HeroBanner({ banners, settings }) {
           return (
             <div key={ban.id} style={{ position: 'absolute', inset: 0, transition: 'opacity 0.8s ease', opacity: i === current ? 1 : 0, pointerEvents: i === current ? 'auto' : 'none' }}>
               {bgImg && <img src={bgImg} alt={ban.heading || 'NOREN Collection'} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} loading="lazy" />}
-              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, rgba(26,26,24,0.75) 0%, rgba(26,26,24,0.3) 55%, transparent 100%)' }} />
+              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(26,26,24,0.85) 0%, rgba(26,26,24,0.4) 50%, rgba(26,26,24,0.15) 100%)' }} />
               {(ban.heading || ban.cta_text) && (
-                <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center' }}>
-                  <div className="wrap">
-                    <div style={{ maxWidth: 580 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 'clamp(16px, 3vw, 28px)' }}>
-                        <div style={{ width: 28, height: 1, background: '#c9a96e' }} />
-                        <span style={{ fontSize: 10, fontWeight: 500, letterSpacing: '0.28em', textTransform: 'uppercase', color: '#c9a96e' }}>NOREN Collection</span>
+                <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'flex-end', paddingBottom: 'clamp(32px, 6vw, 60px)' }}>
+                  <div className="wrap" style={{ width: '100%' }}>
+                    <div style={{ maxWidth: '90%' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 'clamp(10px, 2vw, 20px)' }}>
+                        <div style={{ width: 20, height: 1, background: '#c9a96e', flexShrink: 0 }} />
+                        <span style={{ fontSize: 9, fontWeight: 600, letterSpacing: '0.2em', textTransform: 'uppercase', color: '#c9a96e', whiteSpace: 'nowrap' }}>NOREN Collection</span>
                       </div>
                       {ban.heading && (
-                        <h2 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 'clamp(32px, 6vw, 80px)', fontWeight: 600, color: '#faf9f7', lineHeight: 1.05, marginBottom: 'clamp(10px, 2vw, 18px)', letterSpacing: '-0.01em' }}>
+                        <h2 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 'clamp(28px, 7vw, 72px)', fontWeight: 600, color: '#faf9f7', lineHeight: 1.1, marginBottom: 'clamp(8px, 2vw, 16px)', letterSpacing: '-0.01em', wordBreak: 'break-word', overflowWrap: 'break-word' }}>
                           {ban.heading}
                         </h2>
                       )}
                       {ban.subheading && (
-                        <p style={{ fontSize: 'clamp(12px, 1.5vw, 16px)', color: 'rgba(250,249,247,0.65)', marginBottom: 'clamp(20px, 4vw, 36px)', lineHeight: 1.7, fontWeight: 300 }}>{ban.subheading}</p>
+                        <p style={{ fontSize: 'clamp(12px, 1.5vw, 15px)', color: 'rgba(250,249,247,0.7)', marginBottom: 'clamp(16px, 3vw, 28px)', lineHeight: 1.6, fontWeight: 300, maxWidth: 360 }}>{ban.subheading}</p>
                       )}
                       {ban.cta_text && (
                         <Link to={ban.cta_link || '/shop'}
-                          style={{ display: 'inline-flex', alignItems: 'center', gap: 10, padding: 'clamp(12px, 2vw, 15px) clamp(20px, 4vw, 32px)', background: '#faf9f7', color: '#1a1a18', fontSize: 11, fontWeight: 600, letterSpacing: '0.2em', textTransform: 'uppercase', textDecoration: 'none', transition: 'all 0.25s', minHeight: 44 }}
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: 'clamp(11px, 2vw, 14px) clamp(18px, 3vw, 28px)', background: '#faf9f7', color: '#1a1a18', fontSize: 11, fontWeight: 600, letterSpacing: '0.16em', textTransform: 'uppercase', textDecoration: 'none', transition: 'all 0.25s', minHeight: 44, whiteSpace: 'nowrap' }}
                           onMouseEnter={e => e.currentTarget.style.background = '#c9a96e'}
                           onMouseLeave={e => e.currentTarget.style.background = '#faf9f7'}>
-                          {ban.cta_text} <ArrowRight size={14} />
+                          {ban.cta_text} <ArrowRight size={13} />
                         </Link>
                       )}
                     </div>
