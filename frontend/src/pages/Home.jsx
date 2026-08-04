@@ -75,92 +75,107 @@ function HeroBanner({ banners, settings }) {
     <section style={{ position: 'relative', background: '#1a1a18', overflow: 'hidden' }}>
 
       {/* Slide stack */}
-      <div style={{ position: 'relative', width: '100%', aspectRatio: isMobile ? '9/14' : '16/7', maxHeight: isMobile ? '85vh' : '90vh', minHeight: isMobile ? 480 : 420 }}>
+      <div style={{
+        position: 'relative',
+        width: '100%',
+        height: isMobile ? 'auto' : undefined,
+        aspectRatio: isMobile ? 'auto' : '16/7',
+        maxHeight: isMobile ? 'none' : '90vh',
+        minHeight: isMobile ? 'auto' : 420,
+      }}>
 
         {banners.map((ban, i) => {
           const bgImg = (isMobile && ban.mobile_image) ? ban.mobile_image : ban.desktop_image;
           const isActive = i === current;
           return (
-            <div key={ban.id} style={{ position: 'absolute', inset: 0, transition: 'opacity 0.8s ease', opacity: isActive ? 1 : 0, pointerEvents: isActive ? 'auto' : 'none' }}>
+            <div key={ban.id} style={{
+              position: isMobile ? 'relative' : 'absolute',
+              inset: isMobile ? undefined : 0,
+              display: isMobile ? (isActive ? 'block' : 'none') : 'block',
+              transition: isMobile ? 'none' : 'opacity 0.8s ease',
+              opacity: isMobile ? 1 : (isActive ? 1 : 0),
+              pointerEvents: isActive ? 'auto' : 'none',
+              width: '100%',
+            }}>
 
-              {/* Background image */}
+              {/* Background image — scale down to fit full width on mobile */}
               {bgImg
-                ? <img src={bgImg} alt={ban.heading || 'NOREN'} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top', display: 'block' }} loading={i === 0 ? 'eager' : 'lazy'} />
+                ? <img
+                    src={bgImg}
+                    alt={ban.heading || 'NOREN'}
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: isMobile ? 'contain' : 'cover',
+                      objectPosition: 'center center',
+                      display: 'block',
+                      background: '#1a1a18',
+                    }}
+                    loading={i === 0 ? 'eager' : 'lazy'}
+                  />
                 : <div style={{ width: '100%', height: '100%', background: '#1a1a18' }} />
               }
 
-              {/* Dark overlay — stronger at bottom for text readability */}
-              <div style={{ position: 'absolute', inset: 0, background: isMobile
-                ? 'linear-gradient(to top, rgba(10,10,8,0.92) 0%, rgba(10,10,8,0.55) 45%, rgba(10,10,8,0.1) 100%)'
-                : 'linear-gradient(105deg, rgba(10,10,8,0.82) 0%, rgba(10,10,8,0.45) 55%, transparent 100%)'
-              }} />
+              {/* Dark overlay — only on desktop (on mobile image has its own design) */}
+              {!isMobile && (
+                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(105deg, rgba(10,10,8,0.82) 0%, rgba(10,10,8,0.45) 55%, transparent 100%)' }} />
+              )}
 
-              {/* Text content */}
+              {/* Text content — desktop: overlay on image | mobile: below image */}
               {(ban.heading || ban.cta_text) && (
-                <div style={{
-                  position: 'absolute',
-                  bottom: isMobile ? 28 : 0,
-                  left: 0, right: 0,
-                  top: isMobile ? 'auto' : 0,
-                  display: 'flex',
-                  alignItems: isMobile ? 'flex-end' : 'center',
-                  padding: isMobile ? '0 0 12px 0' : '0',
-                }}>
-                  <div className="wrap" style={{ width: '100%' }}>
-                    <div style={{ maxWidth: isMobile ? '100%' : 560 }}>
-
-                      {/* Label */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: isMobile ? 8 : 16 }}>
-                        <div style={{ width: 18, height: 1, background: '#c9a96e', flexShrink: 0 }} />
-                        <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', color: '#c9a96e' }}>NOREN</span>
+                isMobile ? (
+                  /* Mobile: text block below the image */
+                  <div style={{ background: '#1a1a18', padding: '20px 20px 28px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                      <div style={{ width: 18, height: 1, background: '#c9a96e', flexShrink: 0 }} />
+                      <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', color: '#c9a96e' }}>NOREN Collection</span>
+                    </div>
+                    {ban.heading && (
+                      <h2 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 28, fontWeight: 600, color: '#faf9f7', lineHeight: 1.15, marginBottom: 8, letterSpacing: '-0.01em' }}>
+                        {ban.heading}
+                      </h2>
+                    )}
+                    {ban.subheading && (
+                      <p style={{ fontSize: 13, color: 'rgba(250,249,247,0.65)', marginBottom: 18, lineHeight: 1.6, fontWeight: 300 }}>
+                        {ban.subheading}
+                      </p>
+                    )}
+                    {ban.cta_text && (
+                      <Link to={ban.cta_link || '/shop'} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '12px 24px', background: '#faf9f7', color: '#1a1a18', fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', textDecoration: 'none', minHeight: 44 }}>
+                        {ban.cta_text} <ArrowRight size={13} />
+                      </Link>
+                    )}
+                  </div>
+                ) : (
+                  /* Desktop: text overlaid on image */
+                  <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center' }}>
+                    <div className="wrap" style={{ width: '100%' }}>
+                      <div style={{ maxWidth: 560 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+                          <div style={{ width: 18, height: 1, background: '#c9a96e', flexShrink: 0 }} />
+                          <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', color: '#c9a96e' }}>NOREN Collection</span>
+                        </div>
+                        {ban.heading && (
+                          <h2 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 'clamp(36px, 5vw, 72px)', fontWeight: 600, color: '#faf9f7', lineHeight: 1.1, marginBottom: 14, letterSpacing: '-0.01em', textShadow: '0 2px 12px rgba(0,0,0,0.4)' }}>
+                            {ban.heading}
+                          </h2>
+                        )}
+                        {ban.subheading && (
+                          <p style={{ fontSize: 'clamp(13px, 1.4vw, 16px)', color: 'rgba(250,249,247,0.72)', marginBottom: 28, lineHeight: 1.65, fontWeight: 300, maxWidth: 400 }}>
+                            {ban.subheading}
+                          </p>
+                        )}
+                        {ban.cta_text && (
+                          <Link to={ban.cta_link || '/shop'} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '13px 30px', background: '#faf9f7', color: '#1a1a18', fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', textDecoration: 'none', transition: 'all 0.2s', minHeight: 44 }}
+                            onMouseEnter={e => e.currentTarget.style.background = '#c9a96e'}
+                            onMouseLeave={e => e.currentTarget.style.background = '#faf9f7'}>
+                            {ban.cta_text} <ArrowRight size={13} />
+                          </Link>
+                        )}
                       </div>
-
-                      {/* Heading */}
-                      {ban.heading && (
-                        <h2 style={{
-                          fontFamily: "'Cormorant Garamond', Georgia, serif",
-                          fontSize: isMobile ? 'clamp(26px, 8vw, 42px)' : 'clamp(36px, 5vw, 72px)',
-                          fontWeight: 600,
-                          color: '#faf9f7',
-                          lineHeight: 1.1,
-                          marginBottom: isMobile ? 8 : 14,
-                          letterSpacing: '-0.01em',
-                          wordBreak: 'break-word',
-                          overflowWrap: 'break-word',
-                          textShadow: '0 2px 12px rgba(0,0,0,0.4)',
-                        }}>
-                          {ban.heading}
-                        </h2>
-                      )}
-
-                      {/* Subheading — hidden on mobile to save space */}
-                      {ban.subheading && !isMobile && (
-                        <p style={{ fontSize: 'clamp(13px, 1.4vw, 16px)', color: 'rgba(250,249,247,0.72)', marginBottom: 24, lineHeight: 1.65, fontWeight: 300, maxWidth: 400 }}>
-                          {ban.subheading}
-                        </p>
-                      )}
-
-                      {/* CTA Button */}
-                      {ban.cta_text && (
-                        <Link to={ban.cta_link || '/shop'} style={{
-                          display: 'inline-flex', alignItems: 'center', gap: 8,
-                          padding: isMobile ? '11px 22px' : '13px 30px',
-                          background: '#faf9f7', color: '#1a1a18',
-                          fontSize: isMobile ? 11 : 11,
-                          fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase',
-                          textDecoration: 'none', transition: 'all 0.2s',
-                          minHeight: 44, whiteSpace: 'nowrap',
-                          boxShadow: '0 4px 20px rgba(0,0,0,0.25)',
-                        }}
-                          onMouseEnter={e => { e.currentTarget.style.background = '#c9a96e'; e.currentTarget.style.color = '#1a1a18'; }}
-                          onMouseLeave={e => { e.currentTarget.style.background = '#faf9f7'; e.currentTarget.style.color = '#1a1a18'; }}>
-                          {ban.cta_text} <ArrowRight size={13} />
-                        </Link>
-                      )}
-
                     </div>
                   </div>
-                </div>
+                )
               )}
             </div>
           );
@@ -184,21 +199,26 @@ function HeroBanner({ banners, settings }) {
           </>
         )}
 
-        {/* Dots indicator */}
-        {banners.length > 1 && (
-          <div style={{ position: 'absolute', bottom: isMobile ? 10 : 20, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 6, zIndex: 10 }}>
+        {/* Dots — desktop only (absolute), mobile dots shown below */}
+        {banners.length > 1 && !isMobile && (
+          <div style={{ position: 'absolute', bottom: 20, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 6, zIndex: 10 }}>
             {banners.map((_, i) => (
-              <button key={i} onClick={() => setCurrent(i)} style={{
-                width: i === current ? 20 : 6, height: 6,
-                borderRadius: 3,
-                background: i === current ? '#c9a96e' : 'rgba(250,249,247,0.4)',
-                border: 'none', cursor: 'pointer', transition: 'all 0.3s', padding: 0,
-              }} />
+              <button key={i} onClick={() => setCurrent(i)} style={{ width: i === current ? 20 : 6, height: 6, borderRadius: 3, background: i === current ? '#c9a96e' : 'rgba(250,249,247,0.4)', border: 'none', cursor: 'pointer', transition: 'all 0.3s', padding: 0 }} />
             ))}
           </div>
         )}
 
       </div>
+
+      {/* Mobile dots — below image+text */}
+      {banners.length > 1 && isMobile && (
+        <div style={{ background: '#1a1a18', display: 'flex', justifyContent: 'center', gap: 6, padding: '8px 0 18px' }}>
+          {banners.map((_, i) => (
+            <button key={i} onClick={() => setCurrent(i)} style={{ width: i === current ? 20 : 6, height: 6, borderRadius: 3, background: i === current ? '#c9a96e' : 'rgba(250,249,247,0.3)', border: 'none', cursor: 'pointer', transition: 'all 0.3s', padding: 0 }} />
+          ))}
+        </div>
+      )}
+
     </section>
   );
 }
