@@ -125,8 +125,8 @@ export default function Shop() {
 
       {/* Header */}
       <div style={{ background: '#fff', borderBottom: '1px solid #f3f4f6' }}>
-        <div className="wrap" style={{ paddingTop: 24, paddingBottom: 20 }}>
-          <h1 className="font-display" style={{ fontSize: 'clamp(22px, 4vw, 30px)', fontWeight: 900, color: '#111827', marginBottom: 16 }}>
+        <div className="wrap" style={{ paddingTop: 'clamp(14px, 3vw, 24px)', paddingBottom: 'clamp(12px, 2vw, 20px)' }}>
+          <h1 className="font-display" style={{ fontSize: 'clamp(20px, 4vw, 30px)', fontWeight: 900, color: '#111827', marginBottom: 14 }}>
             {pageTitle}
           </h1>
 
@@ -171,11 +171,11 @@ export default function Shop() {
       <div className="wrap" style={{ paddingTop: 24, paddingBottom: 48 }}>
 
         {/* Toolbar */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 10 }}>
           <p style={{ fontSize: 13, color: '#9ca3af' }}>{total} product{total !== 1 ? 's' : ''} found</p>
           <div style={{ position: 'relative' }}>
             <select value={sort} onChange={e => setParam('sort', e.target.value)}
-              style={{ appearance: 'none', background: '#fff', border: '1.5px solid #e5e7eb', borderRadius: 10, padding: '8px 36px 8px 14px', fontSize: 13, color: '#374151', cursor: 'pointer', outline: 'none', fontFamily: 'inherit' }}>
+              style={{ appearance: 'none', background: '#fff', border: '1.5px solid #e5e7eb', borderRadius: 10, padding: '9px 36px 9px 14px', fontSize: 14, color: '#374151', cursor: 'pointer', outline: 'none', fontFamily: 'inherit', minHeight: 40 }}>
               {SORTS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
             </select>
             <ChevronDown size={13} style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', color: '#9ca3af', pointerEvents: 'none' }} />
@@ -227,24 +227,24 @@ export default function Shop() {
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8, marginTop: 40 }}>
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 6, marginTop: 40, flexWrap: 'wrap' }}>
             <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
-              style={{ padding: '8px 16px', borderRadius: 10, border: '1.5px solid #e5e7eb', background: '#fff', fontSize: 13, color: '#374151', cursor: 'pointer', opacity: page === 1 ? 0.4 : 1 }}>
-               Prev
+              style={{ padding: '9px 14px', borderRadius: 10, border: '1.5px solid #e5e7eb', background: '#fff', fontSize: 13, color: '#374151', cursor: 'pointer', opacity: page === 1 ? 0.4 : 1, minHeight: 40 }}>
+              ← Prev
             </button>
             {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
               const n = page <= 3 ? i + 1 : page - 2 + i;
               if (n < 1 || n > totalPages) return null;
               return (
                 <button key={n} onClick={() => setPage(n)}
-                  style={{ width: 38, height: 38, borderRadius: 10, border: n === page ? 'none' : '1.5px solid #e5e7eb', background: n === page ? '#c9a96e' : '#fff', color: n === page ? '#fff' : '#374151', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                  style={{ width: 40, height: 40, borderRadius: 10, border: n === page ? 'none' : '1.5px solid #e5e7eb', background: n === page ? '#c9a96e' : '#fff', color: n === page ? '#fff' : '#374151', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
                   {n}
                 </button>
               );
             })}
             <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
-              style={{ padding: '8px 16px', borderRadius: 10, border: '1.5px solid #e5e7eb', background: '#fff', fontSize: 13, color: '#374151', cursor: 'pointer', opacity: page === totalPages ? 0.4 : 1 }}>
-              Next 
+              style={{ padding: '9px 14px', borderRadius: 10, border: '1.5px solid #e5e7eb', background: '#fff', fontSize: 13, color: '#374151', cursor: 'pointer', opacity: page === totalPages ? 0.4 : 1, minHeight: 40 }}>
+              Next →
             </button>
           </div>
         )}

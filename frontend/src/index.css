@@ -250,7 +250,8 @@ input, textarea, select { font-family: inherit; }
 ::-webkit-scrollbar-thumb:hover { background: var(--noren-stone); }
 
 /*  Container  */
-.wrap { width: 100%; max-width: 1380px; margin: 0 auto; padding: 0 20px; }
+.wrap { width: 100%; max-width: 1380px; margin: 0 auto; padding: 0 16px; }
+@media (min-width: 480px)  { .wrap { padding: 0 20px; } }
 @media (min-width: 640px)  { .wrap { padding: 0 32px; } }
 @media (min-width: 1024px) { .wrap { padding: 0 56px; } }
 
@@ -401,4 +402,249 @@ input, textarea, select { font-family: inherit; }
   text-transform: uppercase;
   padding: 3px 8px;
   border-radius: 1px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   MOBILE-FIRST RESPONSIVE OVERRIDES
+   Covers all screen sizes: 320px – 1440px+
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── Touch targets: ensure all interactive elements are ≥44px on mobile ── */
+@media (max-width: 767px) {
+  button, a, input, select, textarea, label[for] {
+    -webkit-tap-highlight-color: rgba(0,0,0,0);
+  }
+
+  /* ── Announcement bar: smaller text + padding on very small phones ── */
+  .announcement-bar {
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    padding: 8px 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* ── Nav: reduce height on mobile ── */
+  .nav-height-mobile { height: 58px !important; }
+
+  /* ── Hero section: fix the hardcoded 120px 56px padding ── */
+  .hero-static-wrap {
+    padding: 80px 20px 60px !important;
+  }
+
+  /* ── Hero headline clamping on tiny screens ── */
+  .hero-headline { font-size: clamp(36px, 9vw, 64px) !important; }
+
+  /* ── Hero CTA buttons: stack vertically on tiny phones ── */
+  .hero-cta-row {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+  .hero-cta-row a, .hero-cta-row button {
+    width: 100% !important;
+    justify-content: center !important;
+    text-align: center !important;
+  }
+
+  /* ── Brand Promise strip: 2-col grid on mobile ── */
+  .brand-promise-strip {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 0 !important;
+    border-left: none !important;
+  }
+  .brand-promise-strip > * {
+    border: 1px solid #e8ddd0 !important;
+  }
+
+  /* ── Product sections: tighter vertical padding ── */
+  .section-pad { padding: 40px 0 !important; }
+
+  /* ── Product section header row: stack on very small screens ── */
+  .product-section-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 8px !important;
+  }
+
+  /* ── Footer newsletter: stack input + button ── */
+  .newsletter-form {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    width: 100% !important;
+  }
+  .newsletter-form input {
+    width: 100% !important;
+    min-width: unset !important;
+  }
+  .newsletter-form button {
+    width: 100% !important;
+  }
+
+  /* ── Footer newsletter headline row: stack ── */
+  .newsletter-row {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+  }
+
+  /* ── Related products scroll row: smaller card width ── */
+  .related-scroll-item {
+    width: 160px !important;
+  }
+
+  /* ── Product detail: action buttons row – wishlist + share below main buttons ── */
+  .product-actions-row {
+    flex-wrap: wrap !important;
+  }
+
+  /* ── Cart/Checkout: full-width inputs ── */
+  .checkout-form input, .checkout-form select {
+    font-size: 16px !important; /* prevents iOS zoom */
+  }
+
+  /* ── Modals/Sheets: ensure bottom sheets work on small screens ── */
+  .bottom-sheet {
+    border-radius: 20px 20px 0 0 !important;
+    max-height: 92vh !important;
+  }
+
+  /* ── Pagination: tighter gaps ── */
+  .pagination-row { gap: 4px !important; }
+  .pagination-row button { min-width: 34px !important; height: 34px !important; font-size: 12px !important; }
+
+  /* ── Women's collection banner: full-width CTA grid ── */
+  .womens-banner-links {
+    grid-template-columns: 1fr 1fr !important;
+    width: 100% !important;
+  }
+
+  /* ── Reels section: smaller cards on mobile ── */
+  .reels-active-card { width: 140px !important; }
+  .reels-inactive-card { width: 96px !important; }
+
+  /* ── Size guide table: allow horizontal scroll ── */
+  .size-guide-table-wrap { overflow-x: auto !important; }
+
+  /* ── Section spacing in product sections ── */
+  .product-section-inner { padding: 40px 0 !important; }
+
+  /* ── Shop page header padding ── */
+  .shop-header { padding-top: 16px !important; padding-bottom: 12px !important; }
+
+  /* ── Footer bottom bar: stack ── */
+  .footer-bottom {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+  }
+  .footer-bottom-links {
+    gap: 6px 10px !important;
+  }
+  .footer-bottom-links a {
+    font-size: 11px !important;
+  }
+
+  /* ── Legal pages: readable padding ── */
+  .legal-content { padding: 24px 0 40px !important; }
+  .legal-content h1 { font-size: clamp(22px, 6vw, 32px) !important; }
+
+  /* ── Profile / Orders: stacked layout ── */
+  .profile-grid { grid-template-columns: 1fr !important; }
+
+  /* ── Scroll-to-top button: slightly higher to clear WhatsApp FAB ── */
+  .scroll-top-btn { bottom: 88px !important; }
+}
+
+/* ── Very small phones (320–374px) ── */
+@media (max-width: 374px) {
+  .wrap { padding: 0 12px; }
+  .grid-2-3-4 { gap: 10px; }
+  .grid-2-3-5 { gap: 10px; }
+  .btn-primary, .btn-gold, .btn-orange, .btn-outline {
+    padding: 11px 18px;
+    font-size: 11px;
+  }
+}
+
+/* ── Small phones (375–479px): 2-col product grid with tighter gap ── */
+@media (min-width: 375px) and (max-width: 479px) {
+  .grid-2-3-4 { gap: 12px; }
+}
+
+/* ── Tablets (768–1023px): show partial desktop layout ── */
+@media (min-width: 768px) and (max-width: 1023px) {
+  /* Tablet: show 2-col layout for checkout */
+  .checkout-grid { grid-template-columns: 1fr 1fr !important; }
+  .checkout-main { grid-column: 1 !important; }
+
+  /* Tablet: hero text slightly larger */
+  .hero-static-wrap { padding: 100px 48px 80px !important; }
+
+  /* Tablet: section padding */
+  .section-pad { padding: 64px 0 !important; }
+
+  /* Product sections */
+  .product-section-inner { padding: 64px 0 !important; }
+}
+
+/* ── Mobile landscape & small tablets (480–767px) ── */
+@media (min-width: 480px) and (max-width: 767px) {
+  .hero-static-wrap { padding: 90px 24px 64px !important; }
+  .section-pad { padding: 48px 0 !important; }
+}
+
+/* ── Safe area support for notch/home-indicator phones ── */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .floating-fab {
+    bottom: max(24px, env(safe-area-inset-bottom)) !important;
+  }
+  .mobile-menu-drawer {
+    padding-bottom: env(safe-area-inset-bottom) !important;
+  }
+}
+
+/* ── Prevent horizontal overflow on all pages ── */
+html, body {
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+/* ── iOS input zoom prevention: font-size ≥ 16px on inputs ── */
+@media (max-width: 767px) {
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="tel"],
+  input[type="number"],
+  input[type="search"],
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
+
+/* ── Improve tap target sizes on mobile ── */
+@media (max-width: 767px) {
+  .btn-primary, .btn-gold, .btn-orange, .btn-outline, .btn-ghost {
+    min-height: 44px;
+  }
+}
+
+/* ── Product card: always show wishlist button on mobile (no hover) ── */
+@media (hover: none) and (pointer: coarse) {
+  /* Wishlist icon always visible */
+  [data-wishlist-btn] { opacity: 1 !important; }
+  /* Quick-shop bar always visible (slightly) */
+  [data-quickshop-bar] { transform: translateY(0) !important; opacity: 0.92 !important; }
+}
+
+/* ── Smooth scroll behavior ── */
+html { scroll-behavior: smooth; }
+
+/* ── Image optimization: prevent layout shift ── */
+img {
+  height: auto;
+}
+img[width][height] {
+  height: auto;
 }

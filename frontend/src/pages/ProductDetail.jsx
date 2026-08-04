@@ -217,7 +217,7 @@ function RelatedProducts({ categoryId, categoryName, currentProductId, gender })
               <div key={i} className="skeleton" style={{ flexShrink: 0, width: 220, aspectRatio: '3/4', borderRadius: 12 }} />
             ))
           : products.map(p => (
-              <div key={p.id} style={{ flexShrink: 0, width: 220 }}>
+              <div key={p.id} style={{ flexShrink: 0, width: 'clamp(150px, 40vw, 220px)' }}>
                 <ProductCard product={p} />
               </div>
             ))
@@ -292,7 +292,7 @@ export default function ProductDetail() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#fff' }}>
-      <div className="wrap" style={{ paddingTop: 32, paddingBottom: 64 }}>
+      <div className="wrap" style={{ paddingTop: 'clamp(16px, 3vw, 32px)', paddingBottom: 'clamp(32px, 5vw, 64px)' }}>
 
         {/* Breadcrumb */}
         <nav style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: '#9ca3af', marginBottom: 28 }}>
@@ -416,20 +416,22 @@ export default function ProductDetail() {
               </div>
             </div>
 
-            <div style={{ display: 'flex', gap: 10 }}>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
               <button onClick={handleAddToCart} disabled={adding || !selectedVariant || selectedVariant?.stock < 1} className="btn-outline"
-                style={{ flex: 1, padding: '14px 12px', borderRadius: 12, fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, opacity: (adding || !selectedVariant || selectedVariant?.stock < 1) ? 0.4 : 1 }}>
+                style={{ flex: '1 1 120px', padding: '14px 12px', borderRadius: 12, fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, opacity: (adding || !selectedVariant || selectedVariant?.stock < 1) ? 0.4 : 1, minHeight: 48 }}>
                 <ShoppingCart size={16} /> {adding ? 'Adding...' : 'Add to Cart'}
               </button>
               <button onClick={handleBuyNow} disabled={!selectedVariant || selectedVariant?.stock < 1} className="btn-orange"
-                style={{ flex: 1, padding: '14px 12px', borderRadius: 12, fontSize: 13, opacity: (!selectedVariant || selectedVariant?.stock < 1) ? 0.4 : 1 }}>
+                style={{ flex: '1 1 120px', padding: '14px 12px', borderRadius: 12, fontSize: 13, minHeight: 48, opacity: (!selectedVariant || selectedVariant?.stock < 1) ? 0.4 : 1 }}>
                 Buy Now
               </button>
-              <button onClick={handleWishlist}
-                style={{ width: 52, height: 52, borderRadius: 12, border: `2px solid ${wishlisted ? '#fca5a5' : '#e5e7eb'}`, background: wishlisted ? '#fef2f2' : '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all 0.2s' }}>
-                <Heart size={18} color={wishlisted ? '#ef4444' : '#9ca3af'} fill={wishlisted ? '#ef4444' : 'none'} />
-              </button>
-              <ShareProductButton product={product} />
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button onClick={handleWishlist}
+                  style={{ width: 48, height: 48, borderRadius: 12, border: `2px solid ${wishlisted ? '#fca5a5' : '#e5e7eb'}`, background: wishlisted ? '#fef2f2' : '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all 0.2s' }}>
+                  <Heart size={18} color={wishlisted ? '#ef4444' : '#9ca3af'} fill={wishlisted ? '#ef4444' : 'none'} />
+                </button>
+                <ShareProductButton product={product} />
+              </div>
             </div>
 
             {product.description && (

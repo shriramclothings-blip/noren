@@ -70,7 +70,7 @@ export default function Cart() {
   );
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f9fafb', padding: '40px 0 60px' }}>
+    <div style={{ minHeight: '100vh', background: '#f9fafb', padding: 'clamp(20px, 4vw, 40px) 0 60px' }}>
       <div className="wrap">
         <div style={{ marginBottom: 28 }}>
           <h1 className="font-display" style={{ fontSize: 'clamp(22px, 4vw, 30px)', fontWeight: 900, color: '#111827' }}>Shopping Cart</h1>

@@ -49,7 +49,7 @@ function NotifDropdown({ onClose }) {
   return (
     <div ref={ref} className="fade-in" style={{
       position: 'absolute', right: 0, top: 'calc(100% + 10px)',
-      width: 340, maxHeight: 440, background: '#faf9f7',
+      width: 'min(340px, calc(100vw - 24px))', maxHeight: 440, background: '#faf9f7',
       border: '1px solid #e6e0d8', boxShadow: '0 16px 48px rgba(26,26,24,0.12)',
       zIndex: 300, display: 'flex', flexDirection: 'column', overflow: 'hidden',
     }}>
@@ -216,7 +216,7 @@ export default function Navbar() {
   const shadow     = scrolled ? '0 2px 24px rgba(26,26,24,0.1)' : 'none';
 
   const iconBtn = {
-    width: 38, height: 38,
+    width: 40, height: 44,
     display: 'flex', alignItems: 'center', justifyContent: 'center',
     background: 'none', border: 'none', cursor: 'pointer',
     color: textColor, transition: 'color 0.2s', position: 'relative',
@@ -474,7 +474,7 @@ export default function Navbar() {
                   {dropOpen && (
                     <div className="fade-in" style={{
                       position: 'absolute', right: 0, top: 'calc(100% + 8px)',
-                      width: 210, background: '#faf9f7',
+                      width: 'min(210px, calc(100vw - 24px))', background: '#faf9f7',
                       border: '1px solid #e6e0d8',
                       boxShadow: '0 12px 40px rgba(26,26,24,0.14)',
                       overflow: 'hidden', zIndex: 400,
@@ -553,7 +553,7 @@ export default function Navbar() {
             <button
               onClick={() => setMenuOpen(m => !m)}
               className="hide-desktop"
-              style={{ width: 38, height: 38, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', cursor: 'pointer', color: textColor, marginLeft: 4 }}>
+              style={{ width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', cursor: 'pointer', color: textColor, marginLeft: 2 }}>
               {menuOpen ? <X size={20} /> : <Menu size={20} />}
             </button>
           </div>
@@ -569,7 +569,7 @@ export default function Navbar() {
                 onChange={e => setSearchQ(e.target.value)}
                 placeholder="Search NOREN collections..."
                 style={{
-                  flex: 1, padding: '11px 16px', fontSize: 13,
+                  flex: 1, padding: '11px 16px', fontSize: 16,
                   background: useDark ? 'rgba(255,255,255,0.08)' : '#fff',
                   border: `1px solid ${useDark ? 'rgba(255,255,255,0.15)' : '#e6e0d8'}`,
                   color: useDark ? '#faf9f7' : '#1a1a18',
@@ -588,8 +588,8 @@ export default function Navbar() {
 
         {/* ── Mobile menu ───────────────────────────── */}
         {menuOpen && (
-          <div className="fade-in" style={{ borderTop: `1px solid ${navBorder}`, background: '#faf9f7' }}>
-            <div style={{ padding: '16px 20px' }}>
+          <div className="fade-in" style={{ borderTop: `1px solid ${navBorder}`, background: '#faf9f7', maxHeight: 'calc(100vh - 120px)', overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
+            <div style={{ padding: '16px 20px', paddingBottom: 'max(24px, env(safe-area-inset-bottom, 24px))' }}>
 
               {/* Men's Collections */}
               <p style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.22em', textTransform: 'uppercase', color: '#c9a96e', marginBottom: 10, marginTop: 0 }}>

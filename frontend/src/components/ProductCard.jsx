@@ -81,9 +81,10 @@ export default function ProductCard({ product }) {
 
         {/* Wishlist */}
         <button onClick={handleWishlist} title={wishlisted ? 'Remove from wishlist' : 'Save to wishlist'}
+          data-wishlist-btn
           style={{
-            position: 'absolute', top: 12, right: 12,
-            width: 34, height: 34,
+            position: 'absolute', top: 10, right: 10,
+            width: 36, height: 36,
             background: wishlisted ? '#1a1a18' : 'rgba(250,249,247,0.9)',
             border: 'none', cursor: toggling ? 'wait' : 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -101,14 +102,16 @@ export default function ProductCard({ product }) {
         </button>
 
         {/* Quick shop bar */}
-        <div style={{
-          position: 'absolute', bottom: 0, left: 0, right: 0,
-          background: '#1a1a18',
-          padding: '11px 14px',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-          transform: hovered ? 'translateY(0)' : 'translateY(100%)',
-          transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-        }}>
+        <div
+          data-quickshop-bar
+          style={{
+            position: 'absolute', bottom: 0, left: 0, right: 0,
+            background: '#1a1a18',
+            padding: '10px 14px',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            transform: hovered ? 'translateY(0)' : 'translateY(100%)',
+            transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+          }}>
           <ShoppingBag size={13} color="#c9a96e" />
           <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#faf9f7' }}>Select Size</span>
         </div>

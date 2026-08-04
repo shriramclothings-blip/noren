@@ -66,7 +66,7 @@ export function ScrollToTopBtn() {
   if (!visible) return null;
   return (
     <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-      style={{ position: 'fixed', bottom: 96, right: 22, width: 42, height: 42, background: '#1a1a18', border: '1px solid #3d3d39', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 998, transition: 'all 0.2s' }}
+      style={{ position: 'fixed', bottom: 96, right: 22, width: 44, height: 44, background: '#1a1a18', border: '1px solid #3d3d39', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 998, transition: 'all 0.2s' }}
       onMouseEnter={e => { e.currentTarget.style.background = '#c9a96e'; e.currentTarget.style.borderColor = '#c9a96e'; }}
       onMouseLeave={e => { e.currentTarget.style.background = '#1a1a18'; e.currentTarget.style.borderColor = '#3d3d39'; }}
       title="Back to top">
@@ -80,7 +80,7 @@ export function FloatingWhatsApp({ phone }) {
   return (
     <a href={`https://wa.me/${number}?text=Hi! I need help with my order.`}
       target="_blank" rel="noopener noreferrer"
-      style={{ position: 'fixed', bottom: 26, right: 22, width: 50, height: 50, background: '#25d366', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 20px rgba(37,211,102,0.4)', zIndex: 999, textDecoration: 'none', transition: 'all 0.2s', borderRadius: '50%' }}
+      style={{ position: 'fixed', bottom: 24, right: 20, width: 52, height: 52, background: '#25d366', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 20px rgba(37,211,102,0.4)', zIndex: 999, textDecoration: 'none', transition: 'all 0.2s', borderRadius: '50%' }}
       onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.08)'}
       onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
       title="Chat on WhatsApp">
@@ -129,25 +129,25 @@ export default function Footer() {
       <footer style={{ background: '#111110', color: '#6b6760', borderTop: '1px solid rgba(201,169,110,0.12)' }}>
 
         {/* Newsletter */}
-        <div style={{ borderBottom: '1px solid rgba(250,249,247,0.06)', padding: '40px 0' }}>
+        <div style={{ borderBottom: '1px solid rgba(250,249,247,0.06)', padding: 'clamp(28px, 5vw, 40px) 0' }}>
           <div className="wrap">
-            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 24 }}>
-              <div>
-                <p style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 22, fontWeight: 600, color: '#faf9f7', marginBottom: 6, letterSpacing: '0.04em' }}>Stay in the World of NOREN</p>
+            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 20 }}>
+              <div style={{ flex: '1 1 240px' }}>
+                <p style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 'clamp(18px, 3vw, 22px)', fontWeight: 600, color: '#faf9f7', marginBottom: 6, letterSpacing: '0.04em' }}>Stay in the World of NOREN</p>
                 <p style={{ fontSize: 13, color: '#5a5750', letterSpacing: '0.02em' }}>Exclusive drops, editorial stories and timeless style, delivered quietly.</p>
               </div>
-              <form onSubmit={handleSubscribe} style={{ display: 'flex', gap: 0, flexWrap: 'wrap' }}>
+              <form onSubmit={handleSubscribe} style={{ display: 'flex', gap: 0, flex: '1 1 280px', maxWidth: 480 }}>
                 <input type="email" value={email} onChange={e => setEmail(e.target.value)}
                   placeholder="Your email address"
-                  style={{ padding: '12px 20px', fontSize: 13, background: 'rgba(250,249,247,0.05)', border: '1px solid rgba(250,249,247,0.1)', outline: 'none', color: '#faf9f7', fontFamily: 'inherit', width: 260, borderRadius: 0 }}
+                  style={{ flex: 1, minWidth: 0, padding: '12px 16px', fontSize: 16, background: 'rgba(250,249,247,0.05)', border: '1px solid rgba(250,249,247,0.1)', outline: 'none', color: '#faf9f7', fontFamily: 'inherit', borderRadius: 0 }}
                   onFocus={e => e.target.style.borderColor = '#c9a96e'}
                   onBlur={e => e.target.style.borderColor = 'rgba(250,249,247,0.1)'}
                 />
                 <button type="submit" disabled={subscribing}
-                  style={{ padding: '12px 24px', background: '#c9a96e', color: '#1a1a18', border: 'none', fontSize: 11, fontWeight: 600, letterSpacing: '0.18em', textTransform: 'uppercase', cursor: subscribing ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 8, opacity: subscribing ? 0.7 : 1, transition: 'all 0.2s' }}
+                  style={{ flexShrink: 0, padding: '12px 20px', background: '#c9a96e', color: '#1a1a18', border: 'none', fontSize: 11, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', cursor: subscribing ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 6, opacity: subscribing ? 0.7 : 1, transition: 'all 0.2s', whiteSpace: 'nowrap' }}
                   onMouseEnter={e => { if (!subscribing) e.currentTarget.style.background = '#a8834a'; }}
                   onMouseLeave={e => e.currentTarget.style.background = '#c9a96e'}>
-                  <Send size={12} /> {subscribing ? 'Subscribing...' : 'Subscribe'}
+                  <Send size={12} /> {subscribing ? '...' : 'Subscribe'}
                 </button>
               </form>
             </div>
@@ -155,8 +155,8 @@ export default function Footer() {
         </div>
 
         {/* Main grid */}
-        <div className="wrap" style={{ paddingTop: 64, paddingBottom: 48 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '48px 32px', marginBottom: 56 }}>
+        <div className="wrap" style={{ paddingTop: 'clamp(40px, 6vw, 64px)', paddingBottom: 'clamp(32px, 5vw, 48px)' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 'clamp(32px, 5vw, 48px) clamp(20px, 3vw, 32px)', marginBottom: 'clamp(32px, 5vw, 56px)' }}>
 
             {/* Brand */}
             <div>
@@ -168,13 +168,13 @@ export default function Footer() {
                 />
               </div>
               <p style={{ fontSize: 13, lineHeight: 1.8, color: '#5a5750', marginBottom: 24, maxWidth: 240 }}>{description}</p>
-              <div style={{ display: 'flex', gap: 8 }}>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 {SOCIALS.map(({ href, Icon, label, hoverBg }) => (
                   <a key={label} href={href} target="_blank" rel="noopener noreferrer" title={label}
-                    style={{ width: 36, height: 36, background: 'rgba(250,249,247,0.05)', border: '1px solid rgba(250,249,247,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b6760', textDecoration: 'none', transition: 'all 0.2s' }}
+                    style={{ width: 40, height: 40, background: 'rgba(250,249,247,0.05)', border: '1px solid rgba(250,249,247,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b6760', textDecoration: 'none', transition: 'all 0.2s' }}
                     onMouseEnter={e => { e.currentTarget.style.background = hoverBg; e.currentTarget.style.color = '#fff'; e.currentTarget.style.borderColor = hoverBg; e.currentTarget.style.transform = 'translateY(-2px)'; }}
                     onMouseLeave={e => { e.currentTarget.style.background = 'rgba(250,249,247,0.05)'; e.currentTarget.style.color = '#6b6760'; e.currentTarget.style.borderColor = 'rgba(250,249,247,0.08)'; e.currentTarget.style.transform = 'translateY(0)'; }}>
-                    <Icon size={14} />
+                    <Icon size={15} />
                   </a>
                 ))}
               </div>
@@ -227,8 +227,8 @@ export default function Footer() {
           </div>
 
           {/* Bottom bar */}
-          <div style={{ borderTop: '1px solid rgba(250,249,247,0.12)', paddingTop: 32, paddingBottom: 8, display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}>
-            <div>
+          <div style={{ borderTop: '1px solid rgba(250,249,247,0.12)', paddingTop: 'clamp(20px, 4vw, 32px)', paddingBottom: 8, display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}>
+            <div style={{ flex: '1 1 260px' }}>
               <p style={{ fontSize: 14, color: '#d4c4b0', letterSpacing: '0.04em', marginBottom: 6, fontWeight: 400 }}>
                 &copy; {new Date().getFullYear()} NOREN. All Rights Reserved.
               </p>
@@ -236,7 +236,7 @@ export default function Footer() {
                 Platform Managed &amp; Operated by{' '}
                 <span style={{ color: '#b8a898' }}>Dinesh Global Enterprise Private Limited</span>
               </p>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 16px', marginTop: 12 }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 12px', marginTop: 12 }}>
                 {POLICY_LINKS.map(([label, to]) => (
                   <Link key={label} to={to}
                     style={{ fontSize: 12, color: '#6b6760', textDecoration: 'none', letterSpacing: '0.02em', transition: 'color 0.15s' }}

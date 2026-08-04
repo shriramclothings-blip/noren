@@ -13,7 +13,7 @@ const TABS = [
 ];
 
 const inp = {
-  width: '100%', padding: '11px 14px', fontSize: 14,
+  width: '100%', padding: '11px 14px', fontSize: 16,
   border: '1.5px solid #e5e7eb', borderRadius: 10,
   outline: 'none', fontFamily: 'inherit', color: '#111827', background: '#fff',
   transition: 'border-color 0.15s, box-shadow 0.15s',
@@ -168,7 +168,7 @@ export default function Profile() {
     `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || 'U')}&background=f97316&color=fff&size=80`;
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f9fafb', paddingTop: 32, paddingBottom: 64 }}>
+    <div style={{ minHeight: '100vh', background: '#f9fafb', paddingTop: 'clamp(16px, 3vw, 32px)', paddingBottom: 'clamp(40px, 6vw, 64px)' }}>
       <div className="wrap" style={{ maxWidth: 860 }}>
 
         {/*  Profile Header Card  */}
@@ -206,19 +206,19 @@ export default function Profile() {
         </div>
 
         {/*  Tabs  */}
-        <div style={{ display: 'flex', gap: 4, background: '#fff', borderRadius: 14, padding: 6, border: '1px solid #f3f4f6', marginBottom: 20, overflowX: 'auto' }}>
+        <div style={{ display: 'flex', gap: 4, background: '#fff', borderRadius: 14, padding: 6, border: '1px solid #f3f4f6', marginBottom: 20, overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
           {TABS.map(({ key, icon: Icon }) => (
             <button key={key} onClick={() => setTab(key)}
               style={{
-                flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                flex: '1 0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                 padding: '10px 12px', borderRadius: 10, border: 'none', cursor: 'pointer',
                 fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', transition: 'all 0.15s',
                 background: tab === key ? '#c9a96e' : 'transparent',
                 color: tab === key ? '#fff' : '#6b7280',
-                minWidth: 80,
+                minWidth: 70, minHeight: 44,
               }}>
               <Icon size={15} />
-              {key}
+              <span>{key}</span>
             </button>
           ))}
         </div>

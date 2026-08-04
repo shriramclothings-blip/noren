@@ -14,7 +14,7 @@ const FAQS = [
   { q: 'Do you offer Cash on Delivery?', a: 'Yes, we currently accept only Cash on Delivery (COD) for orders placed on this site.' },
 ];
 
-const inp = { width: '100%', padding: '11px 14px', fontSize: 14, border: '1.5px solid #e5e7eb', borderRadius: 10, outline: 'none', fontFamily: 'inherit', color: '#111827', background: '#fff', transition: 'border-color 0.15s, box-shadow 0.15s' };
+const inp = { width: '100%', padding: '11px 14px', fontSize: 16, border: '1.5px solid #e5e7eb', borderRadius: 10, outline: 'none', fontFamily: 'inherit', color: '#111827', background: '#fff', transition: 'border-color 0.15s, box-shadow 0.15s' };
 
 export default function Contact() {
   const [form, setForm] = useState({ name: '', email: '', phone: '', subject: '', message: '', priority: 'medium' });
@@ -58,21 +58,21 @@ export default function Contact() {
     <div style={{ minHeight: '100vh', background: '#f9fafb' }}>
 
       {/* Hero */}
-      <div style={{ background: '#111827', padding: '48px 0 40px' }}>
+      <div style={{ background: '#111827', padding: 'clamp(28px, 5vw, 48px) 0 clamp(24px, 4vw, 40px)' }}>
         <div className="wrap" style={{ textAlign: 'center' }}>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(249,115,22,0.12)', color: '#c9a96e', fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', padding: '5px 12px', borderRadius: 100, marginBottom: 16 }}>
-             Support
+            Support
           </div>
-          <h1 className="font-display" style={{ fontSize: 'clamp(28px, 5vw, 44px)', fontWeight: 900, color: '#fff', marginBottom: 12 }}>
+          <h1 className="font-display" style={{ fontSize: 'clamp(24px, 5vw, 44px)', fontWeight: 900, color: '#fff', marginBottom: 12 }}>
             How can we help you?
           </h1>
-          <p style={{ fontSize: 15, color: '#9ca3af', maxWidth: 480, margin: '0 auto' }}>
-            Our support team typically responds within 2448 hours. We're here to help!
+          <p style={{ fontSize: 'clamp(13px, 2vw, 15px)', color: '#9ca3af', maxWidth: 480, margin: '0 auto' }}>
+            Our support team typically responds within 24–48 hours. We're here to help!
           </p>
         </div>
       </div>
 
-      <div className="wrap" style={{ paddingTop: 40, paddingBottom: 64 }}>
+      <div className="wrap" style={{ paddingTop: 'clamp(24px, 4vw, 40px)', paddingBottom: 'clamp(40px, 6vw, 64px)' }}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 32 }} className="product-grid">
 
           {/*  Contact Form  */}

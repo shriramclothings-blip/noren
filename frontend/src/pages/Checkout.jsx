@@ -163,7 +163,7 @@ export default function Checkout() {
   const inp = { width: '100%', padding: '9px 12px', fontSize: 13, border: '1.5px solid #e5e7eb', borderRadius: 8, outline: 'none', fontFamily: 'inherit', color: '#111827', background: '#fff' };
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f9fafb', padding: '40px 0 60px' }}>
+    <div style={{ minHeight: '100vh', background: '#f9fafb', padding: 'clamp(20px, 4vw, 40px) 0 60px' }}>
       <div className="wrap">
         <div style={{ marginBottom: 28 }}>
           <h1 className="font-display" style={{ fontSize: 'clamp(22px, 4vw, 30px)', fontWeight: 900, color: '#111827' }}>Checkout</h1>

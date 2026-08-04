@@ -50,16 +50,16 @@ export default function Login() {
   const labelStyle = { display: 'block', fontSize: 10, fontWeight: 600, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#5a5750', marginBottom: 8 };
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f5f0e8', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '60px 16px' }}>
+    <div style={{ minHeight: '100vh', background: '#f5f0e8', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 'clamp(24px, 5vw, 60px) 16px' }}>
       <div style={{ width: '100%', maxWidth: 440 }}>
 
         {/* Wordmark */}
-        <div style={{ textAlign: 'center', marginBottom: 40 }}>
+        <div style={{ textAlign: 'center', marginBottom: 'clamp(24px, 4vw, 40px)' }}>
           <NorenWordmark />
           <div style={{ width: 32, height: 1, background: '#c9a96e', margin: '20px auto 0' }} />
         </div>
 
-        <div style={{ background: '#faf9f7', border: '1px solid #e6e0d8', padding: '40px 40px 36px' }}>
+        <div style={{ background: '#faf9f7', border: '1px solid #e6e0d8', padding: 'clamp(24px, 5vw, 40px)' }}>
           <h1 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 26, fontWeight: 600, color: '#1a1a18', marginBottom: 6, letterSpacing: '-0.01em' }}>Welcome Back</h1>
           <p style={{ fontSize: 13, color: '#9e9a94', marginBottom: 28, letterSpacing: '0.02em' }}>Sign in to your NOREN account</p>
 
@@ -78,7 +78,7 @@ export default function Login() {
               <input type="email" required value={form.email}
                 onChange={e => setForm(p => ({ ...p, email: e.target.value }))}
                 placeholder="your@email.com"
-                className="input" />
+                className="input" style={{ fontSize: 16 }} />
             </div>
 
             <div>
@@ -90,15 +90,15 @@ export default function Login() {
                 <input type={showPw ? 'text' : 'password'} required value={form.password}
                   onChange={e => setForm(p => ({ ...p, password: e.target.value }))}
                   placeholder=""
-                  className="input" style={{ paddingRight: 44 }} />
+                  className="input" style={{ paddingRight: 44, fontSize: 16 }} />
                 <button type="button" onClick={() => setShowPw(s => !s)}
-                  style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#9e9a94', display: 'flex', padding: 0 }}>
+                  style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#9e9a94', display: 'flex', padding: 8, minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }}>
                   {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
             </div>
 
-            <button type="submit" disabled={loading} className="btn-primary" style={{ width: '100%', padding: '14px', fontSize: 11, marginTop: 4 }}>
+            <button type="submit" disabled={loading} className="btn-primary" style={{ width: '100%', padding: '14px', fontSize: 11, marginTop: 4, minHeight: 48 }}>
               {loading ? 'Signing in...' : 'Sign In'}
             </button>
           </form>

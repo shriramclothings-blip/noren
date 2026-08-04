@@ -42,7 +42,7 @@ export default function Wishlist() {
   );
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f9fafb', paddingTop: 40, paddingBottom: 60 }}>
+    <div style={{ minHeight: '100vh', background: '#f9fafb', paddingTop: 'clamp(20px, 4vw, 40px)', paddingBottom: 60 }}>
       <div className="wrap">
 
         {/* Header */}

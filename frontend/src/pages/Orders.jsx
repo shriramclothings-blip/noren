@@ -29,7 +29,7 @@ export default function Orders() {
   );
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f9fafb', padding: '40px 0 60px' }}>
+    <div style={{ minHeight: '100vh', background: '#f9fafb', padding: 'clamp(20px, 4vw, 40px) 0 60px' }}>
       <div className="wrap" style={{ maxWidth: 720 }}>
         <div style={{ marginBottom: 28 }}>
           <h1 className="font-display" style={{ fontSize: 'clamp(22px, 4vw, 30px)', fontWeight: 900, color: '#111827' }}>My Orders</h1>
@@ -53,25 +53,25 @@ export default function Orders() {
               return (
                 <div key={order.id} style={{ background: '#fff', borderRadius: 16, border: '1px solid #f3f4f6', overflow: 'hidden' }}>
                   <button onClick={() => setExpanded(isOpen ? null : order.id)}
-                    style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', gap: 12 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                      <div style={{ width: 40, height: 40, background: '#f9fafb', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        <Package size={18} color="#9ca3af" />
+                    style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', gap: 10 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
+                      <div style={{ width: 38, height: 38, background: '#f9fafb', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <Package size={17} color="#9ca3af" />
                       </div>
-                      <div>
-                        <p style={{ fontWeight: 700, color: '#111827', fontSize: 13, fontFamily: 'monospace' }}>#{order.order_id}</p>
+                      <div style={{ minWidth: 0 }}>
+                        <p style={{ fontWeight: 700, color: '#111827', fontSize: 13, fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>#{order.order_id}</p>
                         <p style={{ fontSize: 11, color: '#9ca3af', marginTop: 2 }}>
                           {new Date(order.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                         </p>
                       </div>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 600, padding: '4px 10px', borderRadius: 100, background: s.bg, color: s.color, textTransform: 'capitalize' }}>
-                        <span style={{ width: 6, height: 6, borderRadius: '50%', background: s.dot, flexShrink: 0 }} />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 600, padding: '4px 8px', borderRadius: 100, background: s.bg, color: s.color, textTransform: 'capitalize', whiteSpace: 'nowrap' }}>
+                        <span style={{ width: 5, height: 5, borderRadius: '50%', background: s.dot, flexShrink: 0 }} />
                         {order.status}
                       </span>
-                      <span style={{ fontWeight: 700, color: '#111827', fontSize: 14 }}>{order.total}</span>
-                      {isOpen ? <ChevronUp size={15} color="#9ca3af" /> : <ChevronDown size={15} color="#9ca3af" />}
+                      <span style={{ fontWeight: 700, color: '#111827', fontSize: 13, whiteSpace: 'nowrap' }}>₹{order.total}</span>
+                      {isOpen ? <ChevronUp size={14} color="#9ca3af" /> : <ChevronDown size={14} color="#9ca3af" />}
                     </div>
                   </button>
 

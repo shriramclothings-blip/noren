@@ -12,49 +12,49 @@ function StaticHero({ settings }) {
       {/* Subtle background texture */}
       <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(ellipse 80% 80% at 70% 50%, rgba(201,169,110,0.06) 0%, transparent 70%)', pointerEvents: 'none' }} />
 
-      <div className="wrap" style={{ position: 'relative', zIndex: 2, width: '100%', padding: '120px 56px' }}>
+      <div className="wrap hero-static-wrap" style={{ position: 'relative', zIndex: 2, width: '100%', paddingTop: 'clamp(80px, 15vw, 140px)', paddingBottom: 'clamp(60px, 10vw, 100px)' }}>
         <div style={{ maxWidth: 680 }}>
           {/* Overline */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 36 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 'clamp(20px, 4vw, 36px)' }}>
             <div style={{ width: 32, height: 1, background: '#c9a96e' }} />
             <span style={{ fontSize: 10, fontWeight: 500, letterSpacing: '0.28em', textTransform: 'uppercase', color: '#c9a96e' }}>
-              New Collection  2024
+              New Collection — 2024
             </span>
           </div>
 
           {/* Headline */}
-          <h1 style={{ fontFamily: "'Cormorant Garamond', 'Cormorant Garamond', Georgia, serif", fontWeight: 600, fontSize: 'clamp(52px, 7vw, 96px)', color: '#faf9f7', lineHeight: 1.02, letterSpacing: '-0.01em', marginBottom: 28 }}>
+          <h1 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontWeight: 600, fontSize: 'clamp(40px, 8vw, 96px)', color: '#faf9f7', lineHeight: 1.02, letterSpacing: '-0.01em', marginBottom: 'clamp(16px, 3vw, 28px)', whiteSpace: 'pre-line' }}>
             {settings.hero_heading || 'Timeless\nBy Design.'}
           </h1>
 
           {/* Subheading */}
-          <p style={{ fontSize: 'clamp(14px, 1.8vw, 17px)', color: 'rgba(250,249,247,0.6)', lineHeight: 1.8, marginBottom: 16, maxWidth: 440, fontWeight: 300, letterSpacing: '0.03em' }}>
+          <p style={{ fontSize: 'clamp(13px, 2vw, 17px)', color: 'rgba(250,249,247,0.6)', lineHeight: 1.8, marginBottom: 12, maxWidth: 440, fontWeight: 300, letterSpacing: '0.03em' }}>
             {settings.hero_subheading || 'NOREN is more than clothing.'}
           </p>
-          <p style={{ fontSize: 'clamp(13px, 1.5vw, 15px)', color: 'rgba(250,249,247,0.45)', lineHeight: 1.8, marginBottom: 48, maxWidth: 420, fontWeight: 300 }}>
+          <p style={{ fontSize: 'clamp(12px, 1.6vw, 15px)', color: 'rgba(250,249,247,0.45)', lineHeight: 1.8, marginBottom: 'clamp(28px, 5vw, 48px)', maxWidth: 420, fontWeight: 300 }}>
             It's a statement of confidence, elegance, and individuality.
           </p>
 
           {/* CTAs */}
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16 }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
             <Link to={settings.hero_cta_link || '/shop'}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 10, padding: '16px 36px', background: '#faf9f7', color: '#1a1a18', fontSize: 11, fontWeight: 600, letterSpacing: '0.2em', textTransform: 'uppercase', textDecoration: 'none', border: '1px solid #faf9f7', transition: 'all 0.25s' }}
+              style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 10, padding: 'clamp(13px, 2vw, 16px) clamp(22px, 4vw, 36px)', background: '#faf9f7', color: '#1a1a18', fontSize: 11, fontWeight: 600, letterSpacing: '0.2em', textTransform: 'uppercase', textDecoration: 'none', border: '1px solid #faf9f7', transition: 'all 0.25s', minHeight: 44 }}
               onMouseEnter={e => { e.currentTarget.style.background = '#c9a96e'; e.currentTarget.style.borderColor = '#c9a96e'; e.currentTarget.style.color = '#1a1a18'; }}
               onMouseLeave={e => { e.currentTarget.style.background = '#faf9f7'; e.currentTarget.style.borderColor = '#faf9f7'; e.currentTarget.style.color = '#1a1a18'; }}>
               {settings.hero_cta_text || 'Shop Now'}
             </Link>
             <Link to="/shop?featured=true"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 10, padding: '16px 36px', background: 'transparent', color: 'rgba(250,249,247,0.75)', fontSize: 11, fontWeight: 500, letterSpacing: '0.2em', textTransform: 'uppercase', textDecoration: 'none', border: '1px solid rgba(250,249,247,0.2)', transition: 'all 0.25s' }}
+              style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 10, padding: 'clamp(13px, 2vw, 16px) clamp(22px, 4vw, 36px)', background: 'transparent', color: 'rgba(250,249,247,0.75)', fontSize: 11, fontWeight: 500, letterSpacing: '0.2em', textTransform: 'uppercase', textDecoration: 'none', border: '1px solid rgba(250,249,247,0.2)', transition: 'all 0.25s', minHeight: 44 }}
               onMouseEnter={e => { e.currentTarget.style.borderColor = '#c9a96e'; e.currentTarget.style.color = '#c9a96e'; }}
               onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(250,249,247,0.2)'; e.currentTarget.style.color = 'rgba(250,249,247,0.75)'; }}>
               Explore Collection
             </Link>
           </div>
 
-          {/* Scroll indicator */}
-          <div style={{ marginTop: 72, display: 'flex', alignItems: 'center', gap: 12 }}>
+          {/* Scroll indicator — hide on small phones to avoid clutter */}
+          <div style={{ marginTop: 'clamp(40px, 8vw, 72px)', display: 'flex', alignItems: 'center', gap: 12 }}>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-              <div style={{ width: 1, height: 48, background: 'linear-gradient(to bottom, rgba(201,169,110,0.6), transparent)', animation: 'fadeUp 2s ease infinite' }} />
+              <div style={{ width: 1, height: 40, background: 'linear-gradient(to bottom, rgba(201,169,110,0.6), transparent)', animation: 'fadeUp 2s ease infinite' }} />
             </div>
             <span style={{ fontSize: 9, letterSpacing: '0.24em', textTransform: 'uppercase', color: 'rgba(250,249,247,0.3)' }}>Scroll</span>
           </div>
@@ -67,6 +67,16 @@ function StaticHero({ settings }) {
 //  Hero Banner Slider (when banners are configured) 
 function HeroBanner({ banners, settings }) {
   const [current, setCurrent] = useState(0);
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== 'undefined' && window.innerWidth < 640
+  );
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 640);
+    window.addEventListener('resize', handleResize, { passive: true });
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   useEffect(() => {
     if (banners.length <= 1) return;
     const t = setInterval(() => setCurrent(c => (c + 1) % banners.length), 6000);
@@ -74,8 +84,6 @@ function HeroBanner({ banners, settings }) {
   }, [banners.length]);
 
   if (!banners.length) return <StaticHero settings={settings} />;
-
-  const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
 
   return (
     <section style={{ position: 'relative', overflow: 'hidden', background: '#1a1a18', minHeight: '100vh' }}>
@@ -90,21 +98,21 @@ function HeroBanner({ banners, settings }) {
                 <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center' }}>
                   <div className="wrap">
                     <div style={{ maxWidth: 580 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 28 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 'clamp(16px, 3vw, 28px)' }}>
                         <div style={{ width: 28, height: 1, background: '#c9a96e' }} />
                         <span style={{ fontSize: 10, fontWeight: 500, letterSpacing: '0.28em', textTransform: 'uppercase', color: '#c9a96e' }}>NOREN Collection</span>
                       </div>
                       {ban.heading && (
-                        <h2 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 'clamp(40px, 6vw, 80px)', fontWeight: 600, color: '#faf9f7', lineHeight: 1.05, marginBottom: 18, letterSpacing: '-0.01em' }}>
+                        <h2 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 'clamp(32px, 6vw, 80px)', fontWeight: 600, color: '#faf9f7', lineHeight: 1.05, marginBottom: 'clamp(10px, 2vw, 18px)', letterSpacing: '-0.01em' }}>
                           {ban.heading}
                         </h2>
                       )}
                       {ban.subheading && (
-                        <p style={{ fontSize: 'clamp(13px, 1.5vw, 16px)', color: 'rgba(250,249,247,0.65)', marginBottom: 36, lineHeight: 1.7, fontWeight: 300 }}>{ban.subheading}</p>
+                        <p style={{ fontSize: 'clamp(12px, 1.5vw, 16px)', color: 'rgba(250,249,247,0.65)', marginBottom: 'clamp(20px, 4vw, 36px)', lineHeight: 1.7, fontWeight: 300 }}>{ban.subheading}</p>
                       )}
                       {ban.cta_text && (
                         <Link to={ban.cta_link || '/shop'}
-                          style={{ display: 'inline-flex', alignItems: 'center', gap: 10, padding: '15px 32px', background: '#faf9f7', color: '#1a1a18', fontSize: 11, fontWeight: 600, letterSpacing: '0.2em', textTransform: 'uppercase', textDecoration: 'none', transition: 'all 0.25s' }}
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: 10, padding: 'clamp(12px, 2vw, 15px) clamp(20px, 4vw, 32px)', background: '#faf9f7', color: '#1a1a18', fontSize: 11, fontWeight: 600, letterSpacing: '0.2em', textTransform: 'uppercase', textDecoration: 'none', transition: 'all 0.25s', minHeight: 44 }}
                           onMouseEnter={e => e.currentTarget.style.background = '#c9a96e'}
                           onMouseLeave={e => e.currentTarget.style.background = '#faf9f7'}>
                           {ban.cta_text} <ArrowRight size={14} />
@@ -148,22 +156,23 @@ function HeroBanner({ banners, settings }) {
 //  Brand Promise Strip 
 function BrandPromise() {
   const pillars = [
-    { icon: '', label: 'Premium Quality', sub: 'Finest Fabrics' },
-    { icon: '', label: 'Timeless Design', sub: 'Made to Last' },
-    { icon: '', label: 'Easy Returns', sub: 'Hassle Free' },
-    { icon: '', label: 'Secure Payments', sub: '100% Protected' },
-    { icon: '', label: 'Worldwide Shipping', sub: 'Swift Delivery' },
+    { icon: '✦', label: 'Premium Quality', sub: 'Finest Fabrics' },
+    { icon: '◇', label: 'Timeless Design', sub: 'Made to Last' },
+    { icon: '↩', label: 'Easy Returns', sub: 'Hassle Free' },
+    { icon: '⊕', label: 'Secure Payments', sub: '100% Protected' },
+    { icon: '→', label: 'Worldwide Shipping', sub: 'Swift Delivery' },
   ];
   return (
-    <section style={{ background: '#f5f0e8', borderBottom: '1px solid #e8ddd0', padding: '28px 0' }}>
+    <section style={{ background: '#f5f0e8', borderBottom: '1px solid #e8ddd0', padding: '20px 0' }}>
       <div className="wrap">
-        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '0', borderLeft: '1px solid #e8ddd0' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 0 }}
+          className="brand-promise-strip">
           {pillars.map((p, i) => (
-            <div key={i} style={{ flex: '1 1 140px', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '16px 20px', borderRight: '1px solid #e8ddd0', gap: 8 }}>
+            <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '14px 12px', border: '1px solid #e8ddd0', gap: 6 }}>
               <span style={{ fontSize: 16, color: '#c9a96e', lineHeight: 1 }}>{p.icon}</span>
               <div style={{ textAlign: 'center' }}>
-                <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#1a1a18', marginBottom: 2 }}>{p.label}</p>
-                <p style={{ fontSize: 10, color: '#9e9a94', letterSpacing: '0.06em' }}>{p.sub}</p>
+                <p style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#1a1a18', marginBottom: 2 }}>{p.label}</p>
+                <p style={{ fontSize: 10, color: '#9e9a94', letterSpacing: '0.04em' }}>{p.sub}</p>
               </div>
             </div>
           ))}
@@ -215,7 +224,7 @@ function CategoriesSection({ section }) {
   const displayCats = cats.slice(0, 10);
 
   return (
-    <section style={{ background: '#faf9f7', padding: '96px 0' }}>
+    <section style={{ background: '#faf9f7', padding: 'clamp(48px, 8vw, 96px) 0' }}>
       <div className="wrap">
         {/* Header with gender tabs */}
         <div style={{ textAlign: 'center', marginBottom: 40 }}>
@@ -335,17 +344,17 @@ function ProductSection({ section }) {
   const isAlternate = section.type === 'trending_products' || section.type === 'best_sellers';
 
   return (
-    <section style={{ background: isAlternate ? '#f5f0e8' : '#faf9f7', padding: '96px 0' }}>
+    <section style={{ background: isAlternate ? '#f5f0e8' : '#faf9f7', padding: 'clamp(48px, 8vw, 96px) 0' }}>
       <div className="wrap">
-        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 48 }}>
+        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 'clamp(24px, 4vw, 48px)', flexWrap: 'wrap', gap: 12 }}>
           <div>
             <p className="section-label" style={{ marginBottom: 12 }}>{tag}</p>
-            <h2 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 'clamp(28px, 3.5vw, 48px)', fontWeight: 600, color: '#1a1a18', letterSpacing: '-0.01em' }}>
+            <h2 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 'clamp(26px, 4vw, 48px)', fontWeight: 600, color: '#1a1a18', letterSpacing: '-0.01em' }}>
               {section.title || title}
             </h2>
             {section.subtitle && <p style={{ fontSize: 13, color: '#9e9a94', marginTop: 6, letterSpacing: '0.02em' }}>{section.subtitle}</p>}
           </div>
-          <Link to="/shop" style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, fontWeight: 500, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#1a1a18', textDecoration: 'none', borderBottom: '1px solid #1a1a18', paddingBottom: 2, transition: 'all 0.2s', whiteSpace: 'nowrap' }}
+          <Link to="/shop" style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, fontWeight: 500, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#1a1a18', textDecoration: 'none', borderBottom: '1px solid #1a1a18', paddingBottom: 2, transition: 'all 0.2s', whiteSpace: 'nowrap', flexShrink: 0 }}
             onMouseEnter={e => { e.currentTarget.style.color = '#c9a96e'; e.currentTarget.style.borderBottomColor = '#c9a96e'; }}
             onMouseLeave={e => { e.currentTarget.style.color = '#1a1a18'; e.currentTarget.style.borderBottomColor = '#1a1a18'; }}>
             View All <ArrowRight size={12} />
@@ -474,20 +483,20 @@ function WomenProductSection({ section }) {
   const isAlternate = section.type === 'women_trending' || section.type === 'women_best_sellers';
 
   return (
-    <section style={{ background: isAlternate ? '#fdf2f8' : '#faf9f7', padding: '96px 0' }}>
+    <section style={{ background: isAlternate ? '#fdf2f8' : '#faf9f7', padding: 'clamp(48px, 8vw, 96px) 0' }}>
       <div className="wrap">
-        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 48 }}>
+        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 'clamp(24px, 4vw, 48px)', flexWrap: 'wrap', gap: 12 }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
               <div style={{ width: 24, height: 1, background: '#c9a96e' }} />
               <p style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.22em', textTransform: 'uppercase', color: '#c9a96e' }}>{tag}</p>
             </div>
-            <h2 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 'clamp(28px, 3.5vw, 48px)', fontWeight: 600, color: '#1a1a18', letterSpacing: '-0.01em' }}>
+            <h2 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 'clamp(26px, 4vw, 48px)', fontWeight: 600, color: '#1a1a18', letterSpacing: '-0.01em' }}>
               {section.title || title}
             </h2>
             {section.subtitle && <p style={{ fontSize: 13, color: '#9e9a94', marginTop: 6, letterSpacing: '0.02em' }}>{section.subtitle}</p>}
           </div>
-          <Link to={link} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, fontWeight: 500, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#1a1a18', textDecoration: 'none', borderBottom: '1px solid #1a1a18', paddingBottom: 2, transition: 'all 0.2s', whiteSpace: 'nowrap' }}
+          <Link to={link} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, fontWeight: 500, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#1a1a18', textDecoration: 'none', borderBottom: '1px solid #1a1a18', paddingBottom: 2, transition: 'all 0.2s', whiteSpace: 'nowrap', flexShrink: 0 }}
             onMouseEnter={e => { e.currentTarget.style.color = '#c9a96e'; e.currentTarget.style.borderBottomColor = '#c9a96e'; }}
             onMouseLeave={e => { e.currentTarget.style.color = '#1a1a18'; e.currentTarget.style.borderBottomColor = '#1a1a18'; }}>
             View All <ArrowRight size={12} />
@@ -511,19 +520,19 @@ function WomenProductSection({ section }) {
 //  Women's Collection Banner 
 function WomensCollectionBanner() {
   return (
-    <section style={{ background: '#1a1a18', padding: '80px 0', position: 'relative', overflow: 'hidden' }}>
+    <section style={{ background: '#1a1a18', padding: 'clamp(48px, 8vw, 80px) 0', position: 'relative', overflow: 'hidden' }}>
       {/* Subtle pink-gold gradient accent */}
       <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(ellipse 60% 60% at 30% 50%, rgba(201,169,110,0.08) 0%, transparent 70%)', pointerEvents: 'none' }} />
       <div className="wrap" style={{ position: 'relative' }}>
-        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 40 }}>
-          <div style={{ maxWidth: 520 }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 'clamp(28px, 5vw, 40px)' }}>
+          <div style={{ maxWidth: 520, flex: '1 1 280px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
               <div style={{ width: 32, height: 1, background: '#c9a96e' }} />
               <span style={{ fontSize: 10, fontWeight: 500, letterSpacing: '0.28em', textTransform: 'uppercase', color: '#c9a96e' }}>
                 New Arrivals — Women's Fashion
               </span>
             </div>
-            <h2 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 'clamp(32px, 4vw, 56px)', fontWeight: 600, color: '#faf9f7', lineHeight: 1.1, marginBottom: 18, letterSpacing: '-0.01em' }}>
+            <h2 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 'clamp(28px, 5vw, 56px)', fontWeight: 600, color: '#faf9f7', lineHeight: 1.1, marginBottom: 18, letterSpacing: '-0.01em' }}>
               Elegance,<br />Redefined for Her.
             </h2>
             <p style={{ fontSize: 'clamp(13px, 1.5vw, 15px)', color: 'rgba(250,249,247,0.6)', lineHeight: 1.8, marginBottom: 36, fontWeight: 300 }}>
@@ -531,13 +540,13 @@ function WomensCollectionBanner() {
             </p>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
               <Link to="/shop?gender=women"
-                style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '14px 32px', background: '#faf9f7', color: '#1a1a18', fontSize: 11, fontWeight: 600, letterSpacing: '0.18em', textTransform: 'uppercase', textDecoration: 'none', transition: 'all 0.25s' }}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: 'clamp(11px, 2vw, 14px) clamp(20px, 3vw, 32px)', background: '#faf9f7', color: '#1a1a18', fontSize: 11, fontWeight: 600, letterSpacing: '0.18em', textTransform: 'uppercase', textDecoration: 'none', transition: 'all 0.25s', minHeight: 44 }}
                 onMouseEnter={e => { e.currentTarget.style.background = '#c9a96e'; }}
                 onMouseLeave={e => { e.currentTarget.style.background = '#faf9f7'; }}>
                 Shop Women's <ArrowRight size={13} />
               </Link>
               <Link to="/shop?gender=women&category=kurtis"
-                style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '14px 32px', background: 'transparent', color: 'rgba(250,249,247,0.75)', fontSize: 11, fontWeight: 500, letterSpacing: '0.18em', textTransform: 'uppercase', textDecoration: 'none', border: '1px solid rgba(250,249,247,0.2)', transition: 'all 0.25s' }}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: 'clamp(11px, 2vw, 14px) clamp(20px, 3vw, 32px)', background: 'transparent', color: 'rgba(250,249,247,0.75)', fontSize: 11, fontWeight: 500, letterSpacing: '0.18em', textTransform: 'uppercase', textDecoration: 'none', border: '1px solid rgba(250,249,247,0.2)', transition: 'all 0.25s', minHeight: 44 }}
                 onMouseEnter={e => { e.currentTarget.style.borderColor = '#c9a96e'; e.currentTarget.style.color = '#c9a96e'; }}
                 onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(250,249,247,0.2)'; e.currentTarget.style.color = 'rgba(250,249,247,0.75)'; }}>
                 Ethnic Wear
@@ -545,7 +554,7 @@ function WomensCollectionBanner() {
             </div>
           </div>
           {/* Category quick links */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, flex: '0 1 auto', width: '100%', maxWidth: 320 }}>
             {[
               { label: 'Kurtis & Kurtas', link: '/shop?gender=women&category=kurtis' },
               { label: 'Co-Ord Sets',     link: '/shop?gender=women&category=co-ord-sets' },
@@ -555,7 +564,7 @@ function WomensCollectionBanner() {
               { label: 'Accessories',     link: '/shop?gender=women&category=dupattas' },
             ].map(item => (
               <Link key={item.label} to={item.link}
-                style={{ padding: '10px 16px', background: 'rgba(250,249,247,0.05)', border: '1px solid rgba(250,249,247,0.1)', color: 'rgba(250,249,247,0.75)', fontSize: 12, fontWeight: 500, letterSpacing: '0.08em', textDecoration: 'none', transition: 'all 0.2s', whiteSpace: 'nowrap' }}
+                style={{ padding: '10px 14px', background: 'rgba(250,249,247,0.05)', border: '1px solid rgba(250,249,247,0.1)', color: 'rgba(250,249,247,0.75)', fontSize: 12, fontWeight: 500, letterSpacing: '0.06em', textDecoration: 'none', transition: 'all 0.2s', minHeight: 44, display: 'flex', alignItems: 'center' }}
                 onMouseEnter={e => { e.currentTarget.style.background = 'rgba(201,169,110,0.12)'; e.currentTarget.style.borderColor = 'rgba(201,169,110,0.4)'; e.currentTarget.style.color = '#c9a96e'; }}
                 onMouseLeave={e => { e.currentTarget.style.background = 'rgba(250,249,247,0.05)'; e.currentTarget.style.borderColor = 'rgba(250,249,247,0.1)'; e.currentTarget.style.color = 'rgba(250,249,247,0.75)'; }}>
                 {item.label}
