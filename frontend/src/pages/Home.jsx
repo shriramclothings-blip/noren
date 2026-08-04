@@ -8,56 +8,42 @@ import { useSiteSettings } from '../context/SiteSettingsContext';
 //  NOREN Static Hero (no banners) 
 function StaticHero({ settings }) {
   return (
-    <section style={{ position: 'relative', minHeight: '100vh', background: '#1a1a18', display: 'flex', alignItems: 'center', overflow: 'hidden' }}>
-      {/* Subtle background texture */}
+    <section style={{ position: 'relative', minHeight: 'calc(100dvh - 84px)', minHeight: 'calc(100vh - 84px)', background: '#1a1a18', display: 'flex', alignItems: 'center', overflow: 'hidden' }}>
       <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(ellipse 80% 80% at 70% 50%, rgba(201,169,110,0.06) 0%, transparent 70%)', pointerEvents: 'none' }} />
 
-      <div className="wrap hero-static-wrap" style={{ position: 'relative', zIndex: 2, width: '100%', paddingTop: 'clamp(80px, 15vw, 140px)', paddingBottom: 'clamp(60px, 10vw, 100px)' }}>
-        <div style={{ maxWidth: 680 }}>
-          {/* Overline */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 'clamp(20px, 4vw, 36px)' }}>
-            <div style={{ width: 32, height: 1, background: '#c9a96e' }} />
-            <span style={{ fontSize: 10, fontWeight: 500, letterSpacing: '0.28em', textTransform: 'uppercase', color: '#c9a96e' }}>
+      <div className="wrap" style={{ position: 'relative', zIndex: 2, width: '100%', paddingTop: 'clamp(40px, 8vw, 100px)', paddingBottom: 'clamp(40px, 8vw, 80px)' }}>
+        <div style={{ maxWidth: 640 }}>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 'clamp(16px, 3vw, 28px)' }}>
+            <div style={{ width: 24, height: 1, background: '#c9a96e' }} />
+            <span style={{ fontSize: 10, fontWeight: 500, letterSpacing: '0.22em', textTransform: 'uppercase', color: '#c9a96e' }}>
               New Collection — 2024
             </span>
           </div>
 
-          {/* Headline */}
-          <h1 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontWeight: 600, fontSize: 'clamp(40px, 8vw, 96px)', color: '#faf9f7', lineHeight: 1.02, letterSpacing: '-0.01em', marginBottom: 'clamp(16px, 3vw, 28px)', whiteSpace: 'pre-line' }}>
+          <h1 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontWeight: 600, fontSize: 'clamp(36px, 9vw, 88px)', color: '#faf9f7', lineHeight: 1.05, letterSpacing: '-0.01em', marginBottom: 'clamp(14px, 3vw, 24px)' }}>
             {settings.hero_heading || 'Timeless\nBy Design.'}
           </h1>
 
-          {/* Subheading */}
-          <p style={{ fontSize: 'clamp(13px, 2vw, 17px)', color: 'rgba(250,249,247,0.6)', lineHeight: 1.8, marginBottom: 12, maxWidth: 440, fontWeight: 300, letterSpacing: '0.03em' }}>
-            {settings.hero_subheading || 'NOREN is more than clothing.'}
-          </p>
-          <p style={{ fontSize: 'clamp(12px, 1.6vw, 15px)', color: 'rgba(250,249,247,0.45)', lineHeight: 1.8, marginBottom: 'clamp(28px, 5vw, 48px)', maxWidth: 420, fontWeight: 300 }}>
-            It's a statement of confidence, elegance, and individuality.
+          <p style={{ fontSize: 'clamp(13px, 1.8vw, 16px)', color: 'rgba(250,249,247,0.6)', lineHeight: 1.8, marginBottom: 'clamp(24px, 4vw, 44px)', maxWidth: 420, fontWeight: 300 }}>
+            {settings.hero_subheading || 'NOREN is more than clothing. It\'s a statement of confidence, elegance, and individuality.'}
           </p>
 
-          {/* CTAs */}
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
             <Link to={settings.hero_cta_link || '/shop'}
-              style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 10, padding: 'clamp(13px, 2vw, 16px) clamp(22px, 4vw, 36px)', background: '#faf9f7', color: '#1a1a18', fontSize: 11, fontWeight: 600, letterSpacing: '0.2em', textTransform: 'uppercase', textDecoration: 'none', border: '1px solid #faf9f7', transition: 'all 0.25s', minHeight: 44 }}
-              onMouseEnter={e => { e.currentTarget.style.background = '#c9a96e'; e.currentTarget.style.borderColor = '#c9a96e'; e.currentTarget.style.color = '#1a1a18'; }}
-              onMouseLeave={e => { e.currentTarget.style.background = '#faf9f7'; e.currentTarget.style.borderColor = '#faf9f7'; e.currentTarget.style.color = '#1a1a18'; }}>
+              style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: 'clamp(12px, 2vw, 15px) clamp(20px, 4vw, 32px)', background: '#faf9f7', color: '#1a1a18', fontSize: 11, fontWeight: 600, letterSpacing: '0.18em', textTransform: 'uppercase', textDecoration: 'none', border: '1px solid #faf9f7', transition: 'all 0.25s', minHeight: 44 }}
+              onMouseEnter={e => { e.currentTarget.style.background = '#c9a96e'; e.currentTarget.style.borderColor = '#c9a96e'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = '#faf9f7'; e.currentTarget.style.borderColor = '#faf9f7'; }}>
               {settings.hero_cta_text || 'Shop Now'}
             </Link>
             <Link to="/shop?featured=true"
-              style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 10, padding: 'clamp(13px, 2vw, 16px) clamp(22px, 4vw, 36px)', background: 'transparent', color: 'rgba(250,249,247,0.75)', fontSize: 11, fontWeight: 500, letterSpacing: '0.2em', textTransform: 'uppercase', textDecoration: 'none', border: '1px solid rgba(250,249,247,0.2)', transition: 'all 0.25s', minHeight: 44 }}
+              style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: 'clamp(12px, 2vw, 15px) clamp(20px, 4vw, 32px)', background: 'transparent', color: 'rgba(250,249,247,0.8)', fontSize: 11, fontWeight: 500, letterSpacing: '0.18em', textTransform: 'uppercase', textDecoration: 'none', border: '1px solid rgba(250,249,247,0.25)', transition: 'all 0.25s', minHeight: 44 }}
               onMouseEnter={e => { e.currentTarget.style.borderColor = '#c9a96e'; e.currentTarget.style.color = '#c9a96e'; }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(250,249,247,0.2)'; e.currentTarget.style.color = 'rgba(250,249,247,0.75)'; }}>
-              Explore Collection
+              onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(250,249,247,0.25)'; e.currentTarget.style.color = 'rgba(250,249,247,0.8)'; }}>
+              New Arrivals
             </Link>
           </div>
 
-          {/* Scroll indicator — hide on small phones to avoid clutter */}
-          <div style={{ marginTop: 'clamp(40px, 8vw, 72px)', display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-              <div style={{ width: 1, height: 40, background: 'linear-gradient(to bottom, rgba(201,169,110,0.6), transparent)', animation: 'fadeUp 2s ease infinite' }} />
-            </div>
-            <span style={{ fontSize: 9, letterSpacing: '0.24em', textTransform: 'uppercase', color: 'rgba(250,249,247,0.3)' }}>Scroll</span>
-          </div>
         </div>
       </div>
     </section>
@@ -86,8 +72,8 @@ function HeroBanner({ banners, settings }) {
   if (!banners.length) return <StaticHero settings={settings} />;
 
   return (
-    <section style={{ position: 'relative', overflow: 'hidden', background: '#1a1a18', minHeight: '100vh' }}>
-      <div style={{ position: 'relative', minHeight: 'clamp(500px, 100vh, 900px)' }}>
+    <section style={{ position: 'relative', overflow: 'hidden', background: '#1a1a18' }}>
+      <div style={{ position: 'relative', minHeight: 'clamp(480px, calc(100dvh - 84px), 860px)' }}>
         {banners.map((ban, i) => {
           const bgImg = (isMobile && ban.mobile_image) ? ban.mobile_image : ban.desktop_image;
           return (
