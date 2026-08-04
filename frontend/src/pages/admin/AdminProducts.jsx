@@ -1,5 +1,5 @@
 ﻿import { useState, useEffect, useCallback } from 'react';
-import { Search, Trash2, Plus, X, Upload, Pencil, GripVertical, Star as StarIcon } from 'lucide-react';
+import { Search, Trash2, Plus, X, Upload, Pencil, Star as StarIcon, CheckSquare, Square, Zap, Filter, TrendingUp, Award, Eye, EyeOff } from 'lucide-react';
 import api from '../../utils/api';
 import toast from 'react-hot-toast';
 
@@ -27,26 +27,73 @@ export default function AdminProducts() {
   const [categories, setCategories] = useState([]);
   const [saving, setSaving] = useState(false);
   const [dragOver, setDragOver] = useState(false);
+  const [selected, setSelected] = useState(new Set()); // selected product IDs for bulk actions
+  const [statusFilter, setStatusFilter] = useState('');
+  const [flagFilter, setFlagFilter] = useState(''); // 'featured' | 'trending' | ''
+  const [bulkLoading, setBulkLoading] = useState(false);
   const LIMIT = 15;
 
   const fetchProducts = useCallback(async () => {
     setLoading(true);
+    setSelected(new Set());
     try {
-      // Fetch ALL products (no status filter) so admin sees pending too
       const p = new URLSearchParams({ page, limit: LIMIT });
-      if (search) p.set('search', search);
+      if (search)       p.set('search', search);
       if (genderFilter) p.set('gender', genderFilter);
+      if (statusFilter) p.set('status', statusFilter);
+      if (flagFilter === 'featured') p.set('featured', 'true');
+      if (flagFilter === 'trending') p.set('trending', 'true');
       const res = await api.get(`/admin/products?${p}`);
       setProducts(res.data.products || []);
       setTotal(res.data.total || 0);
     } catch { toast.error('Failed to load products'); }
     finally { setLoading(false); }
-  }, [page, search, genderFilter]);
+  }, [page, search, genderFilter, statusFilter, flagFilter]);
 
   useEffect(() => { fetchProducts(); }, [fetchProducts]);
-  useEffect(() => { setPage(1); }, [search, genderFilter]);
+  useEffect(() => { setPage(1); }, [search, genderFilter, statusFilter, flagFilter]);
   useEffect(() => { api.get('/products/categories').then(r => setCategories(r.data)).catch(() => {}); }, []);
 
+  const toggleSelect = (id) => {
+    setSelected(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selected.size === products.length) {
+      setSelected(new Set());
+    } else {
+      setSelected(new Set(products.map(p => p.id)));
+    }
+  };
+
+  // Bulk action: apply a field value to all selected products
+  const bulkAction = async (field, value, label) => {
+    if (!selected.size) return toast.error('Select at least one product');
+    if (!confirm(`Apply "${label}" to ${selected.size} selected product(s)?`)) return;
+    setBulkLoading(true);
+    try {
+      await Promise.all([...selected].map(id => api.put(`/admin/products/${id}`, { [field]: value })));
+      toast.success(`${label} applied to ${selected.size} product(s)`);
+      fetchProducts();
+    } catch { toast.error('Bulk action failed'); }
+    finally { setBulkLoading(false); }
+  };
+
+  const bulkDelete = async () => {
+    if (!selected.size) return toast.error('Select at least one product');
+    if (!confirm(`Permanently delete ${selected.size} selected product(s)? This cannot be undone.`)) return;
+    setBulkLoading(true);
+    try {
+      await Promise.all([...selected].map(id => api.delete(`/admin/products/${id}`)));
+      toast.success(`${selected.size} product(s) deleted`);
+      fetchProducts();
+    } catch { toast.error('Bulk delete failed'); }
+    finally { setBulkLoading(false); }
+  };
   const openAdd = () => {
     setEditProduct(null); setForm(blank);
     setImages([]); setPreviews([]); setExistingImages([]); setPrimaryIdx(0);
@@ -179,24 +226,71 @@ export default function AdminProducts() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-      {/* Toolbar */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-          <div style={{ position: 'relative' }}>
-            <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#9ca3af', pointerEvents: 'none' }} />
-            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search products..." style={{ ...inp, paddingLeft: 32, width: 220 }} />
+      {/* ── Toolbar ── */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+
+        {/* Row 1: search + filters + add button */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <div style={{ position: 'relative' }}>
+              <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#9ca3af', pointerEvents: 'none' }} />
+              <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search products..."
+                style={{ ...inp, paddingLeft: 32, width: 200 }} />
+            </div>
+            <select value={genderFilter} onChange={e => setGenderFilter(e.target.value)} style={{ ...inp, width: 120 }}>
+              <option value="">All Genders</option>
+              <option value="men">Men</option>
+              <option value="women">Women</option>
+              <option value="unisex">Unisex</option>
+            </select>
+            <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} style={{ ...inp, width: 130 }}>
+              <option value="">All Status</option>
+              <option value="approved">✓ Live</option>
+              <option value="pending">⏳ Pending</option>
+              <option value="rejected">✗ Rejected</option>
+            </select>
+            <select value={flagFilter} onChange={e => setFlagFilter(e.target.value)} style={{ ...inp, width: 140 }}>
+              <option value="">All Products</option>
+              <option value="featured">⭐ Featured Only</option>
+              <option value="trending">🔥 Trending Only</option>
+            </select>
           </div>
-          <select value={genderFilter} onChange={e => setGenderFilter(e.target.value)}
-            style={{ ...inp, width: 130, padding: '9px 12px' }}>
-            <option value="">All Genders</option>
-            <option value="men">Men</option>
-            <option value="women">Women</option>
-            <option value="unisex">Unisex</option>
-          </select>
+          <button onClick={openAdd} className="btn-orange" style={{ padding: '9px 16px', borderRadius: 10, fontSize: 13, display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+            <Plus size={14} /> Add Product
+          </button>
         </div>
-        <button onClick={openAdd} className="btn-orange" style={{ padding: '9px 18px', borderRadius: 10, fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
-          <Plus size={15} /> Add Product
-        </button>
+
+        {/* Row 2: bulk action bar — shown when products are selected */}
+        {selected.size > 0 && (
+          <div style={{ background: '#1a1a18', borderRadius: 10, padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: '#c9a96e', flexShrink: 0 }}>
+              {selected.size} selected
+            </span>
+            <div style={{ width: 1, height: 20, background: 'rgba(255,255,255,0.15)' }} />
+            <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', flexShrink: 0 }}>Bulk Actions:</span>
+            {[
+              { label: '⭐ Mark Featured',    field: 'is_featured', value: true  },
+              { label: '✕ Remove Featured',   field: 'is_featured', value: false },
+              { label: '🔥 Mark Trending',    field: 'is_trending', value: true  },
+              { label: '✕ Remove Trending',   field: 'is_trending', value: false },
+              { label: '✓ Approve All',       field: 'status',      value: 'approved' },
+            ].map(a => (
+              <button key={a.label} onClick={() => bulkAction(a.field, a.value, a.label)} disabled={bulkLoading}
+                style={{ padding: '5px 12px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.2)', background: 'transparent', color: '#faf9f7', fontSize: 12, fontWeight: 600, cursor: bulkLoading ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap', opacity: bulkLoading ? 0.5 : 1 }}>
+                {a.label}
+              </button>
+            ))}
+            <div style={{ flex: 1 }} />
+            <button onClick={bulkDelete} disabled={bulkLoading}
+              style={{ padding: '5px 12px', borderRadius: 8, border: '1px solid rgba(239,68,68,0.5)', background: 'transparent', color: '#f87171', fontSize: 12, fontWeight: 600, cursor: bulkLoading ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap' }}>
+              🗑 Delete Selected
+            </button>
+            <button onClick={() => setSelected(new Set())}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.5)', display: 'flex', padding: 4 }}>
+              <X size={14} />
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Form */}
@@ -350,6 +444,12 @@ export default function AdminProducts() {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
             <thead>
               <tr style={{ background: '#f9fafb' }}>
+                <th style={{ padding: '10px 14px', width: 36 }}>
+                  <input type="checkbox"
+                    checked={products.length > 0 && selected.size === products.length}
+                    onChange={toggleSelectAll}
+                    style={{ accentColor: '#c9a96e', width: 15, height: 15, cursor: 'pointer' }} />
+                </th>
                 {['Product', 'Category', 'Gender', 'Price', 'Status', 'Featured', 'Trending', 'Actions'].map(h => (
                   <th key={h} style={{ textAlign: 'left', padding: '10px 14px', fontSize: 11, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>{h}</th>
                 ))}
@@ -358,72 +458,84 @@ export default function AdminProducts() {
             <tbody>
               {loading ? (
                 Array.from({ length: 5 }).map((_, i) => (
-                  <tr key={i}><td colSpan={8} style={{ padding: '10px 14px' }}><div className="skeleton" style={{ height: 32, borderRadius: 8 }} /></td></tr>
+                  <tr key={i}><td colSpan={9} style={{ padding: '10px 14px' }}><div className="skeleton" style={{ height: 32, borderRadius: 8 }} /></td></tr>
                 ))
               ) : products.map(p => (
-                <tr key={p.id} style={{ borderTop: '1px solid #f9fafb' }}
-                  onMouseEnter={e => e.currentTarget.style.background = '#fafafa'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                <tr key={p.id} style={{ borderTop: '1px solid #f9fafb', background: selected.has(p.id) ? '#fffbeb' : 'transparent' }}
+                  onMouseEnter={e => { if (!selected.has(p.id)) e.currentTarget.style.background = '#fafafa'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = selected.has(p.id) ? '#fffbeb' : 'transparent'; }}>
+                  {/* Checkbox */}
+                  <td style={{ padding: '10px 14px' }}>
+                    <input type="checkbox" checked={selected.has(p.id)} onChange={() => toggleSelect(p.id)}
+                      style={{ accentColor: '#c9a96e', width: 15, height: 15, cursor: 'pointer' }} />
+                  </td>
+                  {/* Product */}
                   <td style={{ padding: '10px 14px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <img src={p.primary_image || 'https://placehold.co/40x48/f9fafb/9ca3af?text=IMG'} alt="" style={{ width: 38, height: 46, objectFit: 'cover', borderRadius: 8, flexShrink: 0 }} />
-                      <span style={{ fontWeight: 600, color: '#111827', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.title}</span>
+                      <img src={p.primary_image || 'https://placehold.co/40x48/f9fafb/9ca3af?text=IMG'} alt=""
+                        style={{ width: 38, height: 46, objectFit: 'cover', borderRadius: 8, flexShrink: 0 }} />
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontWeight: 600, color: '#111827', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.title}</div>
+                        <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 1 }}>ID #{p.id}</div>
+                      </div>
                     </div>
                   </td>
-                  <td style={{ padding: '10px 14px', color: '#6b7280', whiteSpace: 'nowrap' }}>{p.category_name || ''}</td>
+                  {/* Category */}
+                  <td style={{ padding: '10px 14px', color: '#6b7280', whiteSpace: 'nowrap', fontSize: 12 }}>{p.category_name || '—'}</td>
+                  {/* Gender */}
                   <td style={{ padding: '10px 14px', whiteSpace: 'nowrap' }}>
-                    <span style={{
-                      padding: '3px 8px', borderRadius: 100, fontSize: 10, fontWeight: 600,
-                      background: p.gender === 'women' ? '#fce7f3' : p.gender === 'unisex' ? '#e0f2fe' : '#f0fdf4',
-                      color: p.gender === 'women' ? '#be185d' : p.gender === 'unisex' ? '#0369a1' : '#15803d',
-                    }}>
+                    <span style={{ padding: '3px 8px', borderRadius: 100, fontSize: 10, fontWeight: 600, background: p.gender === 'women' ? '#fce7f3' : p.gender === 'unisex' ? '#e0f2fe' : '#f0fdf4', color: p.gender === 'women' ? '#be185d' : p.gender === 'unisex' ? '#0369a1' : '#15803d' }}>
                       {p.gender === 'women' ? 'Women' : p.gender === 'unisex' ? 'Unisex' : 'Men'}
                     </span>
                   </td>
+                  {/* Price */}
                   <td style={{ padding: '10px 14px', whiteSpace: 'nowrap' }}>
-                    <span style={{ fontWeight: 700, color: '#111827' }}>{p.discount_percent > 0 ? Math.round(p.price * (1 - p.discount_percent / 100)) : p.price}</span>
-                    {p.discount_percent > 0 && <span style={{ fontSize: 11, color: '#9ca3af', textDecoration: 'line-through', marginLeft: 4 }}>{p.price}</span>}
+                    <span style={{ fontWeight: 700, color: '#111827' }}>₹{p.discount_percent > 0 ? Math.round(p.price * (1 - p.discount_percent / 100)) : p.price}</span>
+                    {p.discount_percent > 0 && <span style={{ fontSize: 11, color: '#9ca3af', textDecoration: 'line-through', marginLeft: 4 }}>₹{p.price}</span>}
                   </td>
+                  {/* Status */}
                   <td style={{ padding: '10px 14px', whiteSpace: 'nowrap' }}>
-                    <span style={{
-                      padding: '3px 8px', borderRadius: 100, fontSize: 10, fontWeight: 600,
-                      background: p.status === 'approved' ? '#f0fdf4' : p.status === 'rejected' ? '#fef2f2' : '#fefce8',
-                      color: p.status === 'approved' ? '#15803d' : p.status === 'rejected' ? '#dc2626' : '#a16207',
-                    }}>
+                    <span style={{ padding: '3px 8px', borderRadius: 100, fontSize: 10, fontWeight: 600, background: p.status === 'approved' ? '#f0fdf4' : p.status === 'rejected' ? '#fef2f2' : '#fefce8', color: p.status === 'approved' ? '#15803d' : p.status === 'rejected' ? '#dc2626' : '#a16207' }}>
                       {p.status === 'approved' ? '✓ Live' : p.status === 'rejected' ? '✗ Rejected' : '⏳ Pending'}
                     </span>
                     {p.status === 'pending' && (
-                      <button onClick={async () => {
-                        try {
-                          await api.put(`/admin/products/${p.id}`, { status: 'approved' });
-                          fetchProducts();
-                          toast.success('Product approved!');
-                        } catch { toast.error('Failed to approve'); }
-                      }} style={{ marginLeft: 6, fontSize: 10, fontWeight: 600, color: '#15803d', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>
+                      <button onClick={async () => { try { await api.put(`/admin/products/${p.id}`, { status: 'approved' }); fetchProducts(); toast.success('Approved!'); } catch { toast.error('Failed'); } }}
+                        style={{ marginLeft: 6, fontSize: 10, fontWeight: 600, color: '#15803d', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>
                         Approve
                       </button>
                     )}
                   </td>
+                  {/* Featured toggle */}
                   <td style={{ padding: '10px 14px' }}>
-                    <button onClick={() => toggle(p.id, 'is_featured', p.is_featured)} style={{ padding: '4px 10px', borderRadius: 100, fontSize: 11, fontWeight: 600, border: 'none', cursor: 'pointer', background: p.is_featured ? '#fef9c3' : '#f3f4f6', color: p.is_featured ? '#854d0e' : '#9ca3af' }}>
+                    <button onClick={() => toggle(p.id, 'is_featured', p.is_featured)}
+                      style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 8, fontSize: 11, fontWeight: 700, border: 'none', cursor: 'pointer', transition: 'all 0.15s', background: p.is_featured ? '#fef9c3' : '#f3f4f6', color: p.is_featured ? '#854d0e' : '#9ca3af', whiteSpace: 'nowrap' }}>
                       {p.is_featured ? '⭐ Featured' : '+ Feature'}
                     </button>
                   </td>
+                  {/* Trending toggle */}
                   <td style={{ padding: '10px 14px' }}>
-                    <button onClick={() => toggle(p.id, 'is_trending', p.is_trending)} style={{ padding: '4px 10px', borderRadius: 100, fontSize: 11, fontWeight: 600, border: 'none', cursor: 'pointer', background: p.is_trending ? '#fee2e2' : '#f3f4f6', color: p.is_trending ? '#991b1b' : '#9ca3af' }}>
-                      {p.is_trending ? ' Trending' : '+ Trending'}
+                    <button onClick={() => toggle(p.id, 'is_trending', p.is_trending)}
+                      style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 8, fontSize: 11, fontWeight: 700, border: 'none', cursor: 'pointer', transition: 'all 0.15s', background: p.is_trending ? '#fee2e2' : '#f3f4f6', color: p.is_trending ? '#991b1b' : '#9ca3af', whiteSpace: 'nowrap' }}>
+                      {p.is_trending ? '🔥 Trending' : '+ Trending'}
                     </button>
                   </td>
+                  {/* Actions */}
                   <td style={{ padding: '10px 14px' }}>
                     <div style={{ display: 'flex', gap: 6 }}>
-                      <button onClick={() => openEdit(p)} title="Edit" style={{ width: 30, height: 30, borderRadius: 8, border: 'none', cursor: 'pointer', background: '#fff7ed', color: '#c9a96e', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Pencil size={13} /></button>
-                      <button onClick={() => handleDelete(p.id)} title="Delete" style={{ width: 30, height: 30, borderRadius: 8, border: 'none', cursor: 'pointer', background: '#fef2f2', color: '#f87171', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Trash2 size={13} /></button>
+                      <button onClick={() => openEdit(p)} title="Edit product"
+                        style={{ width: 30, height: 30, borderRadius: 8, border: 'none', cursor: 'pointer', background: '#fff7ed', color: '#c9a96e', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Pencil size={13} />
+                      </button>
+                      <button onClick={() => handleDelete(p.id)} title="Delete product"
+                        style={{ width: 30, height: 30, borderRadius: 8, border: 'none', cursor: 'pointer', background: '#fef2f2', color: '#f87171', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Trash2 size={13} />
+                      </button>
                     </div>
                   </td>
                 </tr>
               ))}
               {!loading && !products.length && (
-                <tr><td colSpan={8} style={{ padding: '48px', textAlign: 'center', color: '#9ca3af', fontSize: 13 }}>No products yet. Click "Add Product" to get started.</td></tr>
+                <tr><td colSpan={9} style={{ padding: '48px', textAlign: 'center', color: '#9ca3af', fontSize: 13 }}>No products found. Try adjusting your filters.</td></tr>
               )}
             </tbody>
           </table>
