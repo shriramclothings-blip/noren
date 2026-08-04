@@ -1,46 +1,59 @@
 ﻿import { useState, useEffect } from 'react';
-import { Plus, Pencil, Trash2, X, ToggleLeft, ToggleRight } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, Zap, GripVertical, Eye, EyeOff } from 'lucide-react';
 import api from '../../utils/api';
 import toast from 'react-hot-toast';
 
 const SECTION_TYPES = [
-  { value: 'featured_products',  label: '⭐ Featured Products' },
-  { value: 'trending_products',  label: '🔥 Trending Products' },
-  { value: 'new_arrivals',       label: '🆕 New Arrivals' },
-  { value: 'best_sellers',       label: '🏆 Best Sellers' },
-  { value: 'categories',         label: '📂 Categories' },
-  { value: 'offer_banner',       label: '📣 Offer Banner' },
-  { value: 'reels',              label: '🎬 Reels / Videos' },
-  // Women's sections
-  { value: 'women_new_arrivals', label: '👗 Women — New Arrivals' },
-  { value: 'women_best_sellers', label: '👗 Women — Best Sellers' },
-  { value: 'women_trending',     label: '👗 Women — Trending' },
-  { value: 'women_ethnic',       label: '👗 Women — Ethnic Collection' },
-  { value: 'women_western',      label: '👗 Women — Western Collection' },
+  { value: 'new_arrivals',           label: '🆕 New Arrivals',                desc: 'Latest products sorted by date' },
+  { value: 'featured_products',      label: '⭐ Featured / Signature',        desc: 'Products marked as featured' },
+  { value: 'trending_products',      label: '🔥 Trending Now',                desc: 'Products marked as trending (Men)' },
+  { value: 'best_sellers',           label: '🏆 Best Sellers',                desc: 'Most popular products (Men)' },
+  { value: 'categories',             label: '📂 Shop by Category',            desc: 'Gender-tabbed category grid' },
+  { value: 'offer_banner',           label: '📣 Editorial / Offer Banner',    desc: 'Full-width dark quote banner' },
+  { value: 'women_collection_banner',label: '👗 Women\'s Collection Banner',  desc: 'Dark promo banner for Women\'s section' },
+  { value: 'women_new_arrivals',     label: '👗 Women — New Arrivals',        desc: 'Latest products for women' },
+  { value: 'women_best_sellers',     label: '👗 Women — Best Sellers',        desc: 'Most popular products for women' },
+  { value: 'women_trending',         label: '👗 Women — Trending',            desc: 'Trending products for women' },
+  { value: 'women_ethnic',           label: '👗 Women — Ethnic Collection',   desc: 'Kurtis, suits, ethnic wear' },
+  { value: 'women_western',          label: '👗 Women — Western Collection',  desc: 'Dresses, tops, western wear' },
+  { value: 'reels',                  label: '🎬 Reels / Videos',              desc: 'Short video shop-the-look section' },
+];
+
+const DEFAULT_SECTIONS = [
+  { type: 'categories',             title: 'The Collections',        subtitle: '',                               sort_order: 1 },
+  { type: 'new_arrivals',           title: 'New Arrivals',           subtitle: 'Just dropped for you',           sort_order: 2 },
+  { type: 'offer_banner',           title: 'Crafted Beyond Trends.', subtitle: 'Wear confidence. Designed to endure. Modern heritage for every journey.', sort_order: 3 },
+  { type: 'featured_products',      title: 'Signature Collection',   subtitle: 'Handpicked by our team',         sort_order: 4 },
+  { type: 'women_collection_banner',title: '',                       subtitle: '',                               sort_order: 5 },
+  { type: 'women_new_arrivals',     title: "Women's New Arrivals",   subtitle: '',                               sort_order: 6 },
+  { type: 'trending_products',      title: 'Trending Now',           subtitle: '',                               sort_order: 7 },
+  { type: 'women_trending',         title: 'Trending in Women',      subtitle: '',                               sort_order: 8 },
+  { type: 'women_ethnic',           title: 'Ethnic Wear for Women',  subtitle: '',                               sort_order: 9 },
+  { type: 'best_sellers',           title: 'Best Sellers',           subtitle: '',                               sort_order: 10 },
+  { type: 'women_western',          title: "Women's Western Collection", subtitle: '',                           sort_order: 11 },
+  { type: 'reels',                  title: 'Shop the Look',          subtitle: '',                               sort_order: 12 },
 ];
 
 const inp = { width: '100%', padding: '9px 12px', fontSize: 13, border: '1.5px solid #e5e7eb', borderRadius: 8, outline: 'none', fontFamily: 'inherit', color: '#111827', background: '#fff' };
-const blank = { type: 'featured_products', title: '', subtitle: '', sort_order: 0, is_active: true };
+const blank = { type: 'new_arrivals', title: '', subtitle: '', sort_order: 0, is_active: true };
 
 export default function AdminSections() {
   const [sections, setSections] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading,  setLoading]  = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [editing, setEditing] = useState(null);
-  const [form, setForm] = useState(blank);
-  const [saving, setSaving] = useState(false);
+  const [editing,  setEditing]  = useState(null);
+  const [form,     setForm]     = useState(blank);
+  const [saving,   setSaving]   = useState(false);
+  const [seeding,  setSeeding]  = useState(false);
 
   const load = async () => {
-    try {
-      const res = await api.get('/homepage/admin/sections');
-      setSections(res.data);
-    } catch { toast.error('Failed to load sections'); }
+    try { const r = await api.get('/homepage/admin/sections'); setSections(r.data); }
+    catch { toast.error('Failed to load sections'); }
     finally { setLoading(false); }
   };
-
   useEffect(() => { load(); }, []);
 
-  const openAdd = () => { setEditing(null); setForm(blank); setShowForm(true); };
+  const openAdd  = () => { setEditing(null); setForm(blank); setShowForm(true); };
   const openEdit = (s) => {
     setEditing(s);
     setForm({ type: s.type, title: s.title || '', subtitle: s.subtitle || '', sort_order: s.sort_order, is_active: s.is_active });
@@ -48,16 +61,10 @@ export default function AdminSections() {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setSaving(true);
+    e.preventDefault(); setSaving(true);
     try {
-      if (editing) {
-        await api.put(`/homepage/admin/sections/${editing.id}`, form);
-        toast.success('Section updated!');
-      } else {
-        await api.post('/homepage/admin/sections', form);
-        toast.success('Section added!');
-      }
+      if (editing) { await api.put(`/homepage/admin/sections/${editing.id}`, form); toast.success('Section updated!'); }
+      else         { await api.post('/homepage/admin/sections', form);              toast.success('Section added!');   }
       setShowForm(false); load();
     } catch (err) { toast.error(err.response?.data?.message || 'Failed'); }
     finally { setSaving(false); }
@@ -69,68 +76,116 @@ export default function AdminSections() {
   };
 
   const deleteSection = async (id) => {
-    if (!confirm('Delete this section?')) return;
+    if (!confirm('Delete this section? It will no longer appear on the homepage.')) return;
     try { await api.delete(`/homepage/admin/sections/${id}`); toast.success('Deleted'); load(); }
-    catch { toast.error('Failed'); }
+    catch { toast.error('Failed to delete'); }
   };
 
-  const moveOrder = async (id, direction, currentOrder) => {
-    try { await api.put(`/homepage/admin/sections/${id}`, { sort_order: currentOrder + direction }); load(); }
-    catch { toast.error('Failed'); }
+  const moveSection = async (idx, dir) => {
+    const next = idx + dir;
+    if (next < 0 || next >= sections.length) return;
+    const a = sections[idx], b = sections[next];
+    try {
+      await Promise.all([
+        api.put(`/homepage/admin/sections/${a.id}`, { sort_order: b.sort_order }),
+        api.put(`/homepage/admin/sections/${b.id}`, { sort_order: a.sort_order }),
+      ]);
+      load();
+    } catch { toast.error('Failed to reorder'); }
   };
 
-  const typeLabel = (type) => SECTION_TYPES.find(t => t.value === type)?.label || type;
+  const seedDefaults = async () => {
+    if (!confirm('This will add all default homepage sections. Existing sections will NOT be removed. Continue?')) return;
+    setSeeding(true);
+    try {
+      const existing  = sections.map(s => s.type);
+      const toCreate  = DEFAULT_SECTIONS.filter(d => !existing.includes(d.type));
+      if (!toCreate.length) { toast('All default sections already exist!', { icon: 'ℹ️' }); setSeeding(false); return; }
+      for (const s of toCreate) await api.post('/homepage/admin/sections', { ...s, is_active: true });
+      toast.success(`Added ${toCreate.length} sections! Toggle, reorder, and rename them below.`);
+      load();
+    } catch { toast.error('Failed to seed sections'); }
+    finally { setSeeding(false); }
+  };
+
+  const typeInfo  = (type) => SECTION_TYPES.find(t => t.value === type);
+  const typeLabel = (type) => typeInfo(type)?.label || type;
+  const typeDesc  = (type) => typeInfo(type)?.desc  || '';
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      {/* ── Header ── */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
         <div>
           <div style={{ fontSize: 15, fontWeight: 700, color: '#111827' }}>Homepage Sections</div>
-          <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 2 }}>Control which sections appear on the homepage and in what order</div>
+          <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 2 }}>
+            Control which sections appear on the homepage and in what order.
+            Toggle the eye icon to show/hide without deleting.
+          </div>
         </div>
-        <button onClick={openAdd} className="btn-orange" style={{ padding: '9px 18px', borderRadius: 10, fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
-          <Plus size={15} /> Add Section
-        </button>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <button onClick={seedDefaults} disabled={seeding}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 14px', borderRadius: 10, border: '1.5px solid #e5e7eb', cursor: seeding ? 'not-allowed' : 'pointer', background: '#fff', color: '#374151', fontSize: 13, fontWeight: 600, opacity: seeding ? 0.6 : 1 }}>
+            <Zap size={14} color="#c9a96e" />
+            {seeding ? 'Adding...' : sections.length === 0 ? 'Setup Default Sections' : 'Add Missing Defaults'}
+          </button>
+          <button onClick={openAdd} className="btn-orange"
+            style={{ padding: '9px 14px', borderRadius: 10, fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Plus size={14} /> Add Section
+          </button>
+        </div>
       </div>
 
-      {/* Form */}
+      {/* ── Empty state info ── */}
+      {!loading && sections.length === 0 && (
+        <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 12, padding: '16px 20px', display: 'flex', gap: 12 }}>
+          <Zap size={18} color="#c9a96e" style={{ flexShrink: 0, marginTop: 1 }} />
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: '#92400e', marginBottom: 4 }}>No sections configured yet</div>
+            <div style={{ fontSize: 12, color: '#92400e', lineHeight: 1.6 }}>
+              The homepage is showing built-in default sections that can't be controlled here.
+              Click <strong>"Setup Default Sections"</strong> to import them, then enable/disable/reorder/rename each one.
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Add / Edit form ── */}
       {showForm && (
         <form onSubmit={handleSubmit} style={{ background: '#fff', borderRadius: 14, border: '1.5px solid #fed7aa', padding: 20, display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: 14, fontWeight: 700, color: '#111827' }}>{editing ? 'Edit Section' : 'Add Section'}</span>
-            <button type="button" onClick={() => setShowForm(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', display: 'flex' }}><X size={18} /></button>
+            <span style={{ fontSize: 14, fontWeight: 700, color: '#111827' }}>{editing ? 'Edit Section' : 'Add New Section'}</span>
+            <button type="button" onClick={() => setShowForm(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af' }}><X size={18} /></button>
           </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div style={{ gridColumn: '1 / -1' }}>
               <label style={{ fontSize: 12, fontWeight: 600, color: '#6b7280', display: 'block', marginBottom: 5 }}>Section Type *</label>
               <select value={form.type} onChange={e => setForm(p => ({ ...p, type: e.target.value }))} style={inp} disabled={!!editing}>
                 {SECTION_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
               </select>
+              {form.type && <p style={{ fontSize: 11, color: '#9ca3af', marginTop: 4 }}>{typeDesc(form.type)}</p>}
             </div>
             <div>
-              <label style={{ fontSize: 12, fontWeight: 600, color: '#6b7280', display: 'block', marginBottom: 5 }}>Title</label>
-              <input value={form.title} onChange={e => setForm(p => ({ ...p, title: e.target.value }))} placeholder="e.g. Featured Collection" style={inp} />
+              <label style={{ fontSize: 12, fontWeight: 600, color: '#6b7280', display: 'block', marginBottom: 5 }}>Title <span style={{ fontWeight: 400 }}>(shown as section heading)</span></label>
+              <input value={form.title} onChange={e => setForm(p => ({ ...p, title: e.target.value }))} placeholder="e.g. New Arrivals" style={inp} />
             </div>
             <div>
-              <label style={{ fontSize: 12, fontWeight: 600, color: '#6b7280', display: 'block', marginBottom: 5 }}>Subtitle</label>
+              <label style={{ fontSize: 12, fontWeight: 600, color: '#6b7280', display: 'block', marginBottom: 5 }}>Subtitle <span style={{ fontWeight: 400 }}>(optional)</span></label>
               <input value={form.subtitle} onChange={e => setForm(p => ({ ...p, subtitle: e.target.value }))} placeholder="e.g. Handpicked for you" style={inp} />
             </div>
             <div>
               <label style={{ fontSize: 12, fontWeight: 600, color: '#6b7280', display: 'block', marginBottom: 5 }}>Sort Order</label>
-              <input type="number" value={form.sort_order} onChange={e => setForm(p => ({ ...p, sort_order: e.target.value }))} style={inp} />
+              <input type="number" value={form.sort_order} onChange={e => setForm(p => ({ ...p, sort_order: Number(e.target.value) }))} style={inp} />
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingTop: 20 }}>
-              <input type="checkbox" id="sec_active" checked={form.is_active} onChange={e => setForm(p => ({ ...p, is_active: e.target.checked }))} style={{ accentColor: '#c9a96e', width: 16, height: 16 }} />
-              <label htmlFor="sec_active" style={{ fontSize: 13, fontWeight: 600, color: '#374151', cursor: 'pointer' }}>Active</label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingTop: 22 }}>
+              <input type="checkbox" id="sec_active" checked={form.is_active} onChange={e => setForm(p => ({ ...p, is_active: e.target.checked }))} style={{ accentColor: '#c9a96e', width: 16, height: 16, cursor: 'pointer' }} />
+              <label htmlFor="sec_active" style={{ fontSize: 13, fontWeight: 600, color: '#374151', cursor: 'pointer' }}>Visible on homepage</label>
             </div>
           </div>
-
           <div style={{ display: 'flex', gap: 10 }}>
             <button type="submit" disabled={saving} className="btn-orange" style={{ padding: '9px 20px', borderRadius: 10, fontSize: 13 }}>
-              {saving ? 'Saving...' : editing ? 'Update' : 'Add Section'}
+              {saving ? 'Saving...' : editing ? 'Update Section' : 'Add Section'}
             </button>
             <button type="button" onClick={() => setShowForm(false)} style={{ padding: '9px 20px', borderRadius: 10, fontSize: 13, border: '1.5px solid #e5e7eb', background: '#fff', cursor: 'pointer', color: '#374151' }}>
               Cancel
@@ -139,59 +194,72 @@ export default function AdminSections() {
         </form>
       )}
 
-      {/* Sections list */}
+      {/* ── Sections list ── */}
       {loading ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {[1,2,3].map(i => <div key={i} className="skeleton" style={{ height: 64, borderRadius: 12 }} />)}
+          {[1,2,3,4,5].map(i => <div key={i} className="skeleton" style={{ height: 68, borderRadius: 12 }} />)}
         </div>
-      ) : sections.length === 0 ? (
-        <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #f3f4f6', padding: '48px', textAlign: 'center', color: '#9ca3af', fontSize: 13 }}>
-          No sections yet. Add sections to build your homepage layout.
-        </div>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {sections.map((s, idx) => (
-            <div key={s.id} style={{ background: '#fff', borderRadius: 12, border: '1px solid #f3f4f6', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+      ) : sections.length > 0 && (
+        <>
+          <div style={{ fontSize: 12, color: '#9ca3af', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <GripVertical size={14} /> Use ▲▼ to reorder. Eye icon shows/hides. Pencil to rename. Trash to delete.
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {sections.map((s, idx) => (
+              <div key={s.id} style={{ background: '#fff', borderRadius: 12, border: `1.5px solid ${s.is_active ? '#f3f4f6' : '#fef3c7'}`, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 10, opacity: s.is_active ? 1 : 0.6, transition: 'opacity 0.2s' }}>
 
-              {/* Order controls */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                <button onClick={() => moveOrder(s.id, -1, s.sort_order)} disabled={idx === 0}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', padding: 1, opacity: idx === 0 ? 0.3 : 1, fontSize: 10 }}></button>
-                <button onClick={() => moveOrder(s.id, 1, s.sort_order)} disabled={idx === sections.length - 1}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', padding: 1, opacity: idx === sections.length - 1 ? 0.3 : 1, fontSize: 10 }}></button>
-              </div>
+                {/* Up / Down */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 2, flexShrink: 0 }}>
+                  <button onClick={() => moveSection(idx, -1)} disabled={idx === 0}
+                    style={{ background: 'none', border: 'none', cursor: idx === 0 ? 'default' : 'pointer', color: '#9ca3af', padding: '1px 4px', opacity: idx === 0 ? 0.2 : 1, fontSize: 11, lineHeight: 1 }}>▲</button>
+                  <button onClick={() => moveSection(idx, 1)} disabled={idx === sections.length - 1}
+                    style={{ background: 'none', border: 'none', cursor: idx === sections.length - 1 ? 'default' : 'pointer', color: '#9ca3af', padding: '1px 4px', opacity: idx === sections.length - 1 ? 0.2 : 1, fontSize: 11, lineHeight: 1 }}>▼</button>
+                </div>
 
-              {/* Type badge */}
-              <div style={{ fontSize: 11, background: '#f3f4f6', color: '#374151', padding: '3px 8px', borderRadius: 6, fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0 }}>
-                {typeLabel(s.type)}
-              </div>
+                {/* Position number */}
+                <div style={{ width: 24, height: 24, borderRadius: '50%', background: '#f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: '#6b7280', flexShrink: 0 }}>
+                  {idx + 1}
+                </div>
 
-              {/* Info */}
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: '#111827' }}>{s.title || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>No title</span>}</div>
-                {s.subtitle && <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 1 }}>{s.subtitle}</div>}
-              </div>
+                {/* Type badge */}
+                <div style={{ fontSize: 11, background: s.is_active ? '#f0fdf4' : '#fef9c3', color: s.is_active ? '#166534' : '#854d0e', padding: '3px 8px', borderRadius: 6, fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0, maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {typeLabel(s.type)}
+                </div>
 
-              {/* Order number */}
-              <div style={{ fontSize: 11, color: '#9ca3af', flexShrink: 0 }}>#{s.sort_order}</div>
+                {/* Title + description */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: '#111827', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {s.title || <span style={{ color: '#9ca3af', fontStyle: 'italic', fontWeight: 400 }}>No title</span>}
+                  </div>
+                  <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 1 }}>{typeDesc(s.type)}</div>
+                </div>
 
-              {/* Toggle */}
-              <button onClick={() => toggleActive(s)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: s.is_active ? '#22c55e' : '#d1d5db', flexShrink: 0 }}>
-                {s.is_active ? <ToggleRight size={24} /> : <ToggleLeft size={24} />}
-              </button>
-
-              {/* Actions */}
-              <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-                <button onClick={() => openEdit(s)} style={{ width: 28, height: 28, borderRadius: 8, border: 'none', cursor: 'pointer', background: '#fff7ed', color: '#c9a96e', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Pencil size={12} />
+                {/* Eye toggle */}
+                <button onClick={() => toggleActive(s)} title={s.is_active ? 'Hide from homepage' : 'Show on homepage'}
+                  style={{ background: s.is_active ? '#f0fdf4' : '#fef3c7', border: 'none', cursor: 'pointer', borderRadius: 8, width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  {s.is_active ? <Eye size={14} color="#16a34a" /> : <EyeOff size={14} color="#d97706" />}
                 </button>
-                <button onClick={() => deleteSection(s.id)} style={{ width: 28, height: 28, borderRadius: 8, border: 'none', cursor: 'pointer', background: '#fef2f2', color: '#f87171', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Trash2 size={12} />
-                </button>
+
+                {/* Edit + Delete */}
+                <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                  <button onClick={() => openEdit(s)} title="Edit"
+                    style={{ width: 32, height: 32, borderRadius: 8, border: 'none', cursor: 'pointer', background: '#fff7ed', color: '#c9a96e', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Pencil size={13} />
+                  </button>
+                  <button onClick={() => deleteSection(s.id)} title="Delete"
+                    style={{ width: 32, height: 32, borderRadius: 8, border: 'none', cursor: 'pointer', background: '#fef2f2', color: '#f87171', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Trash2 size={13} />
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+
+          {/* Live info */}
+          <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, padding: '10px 14px', fontSize: 12, color: '#166534' }}>
+            ✓ Changes are <strong>live immediately</strong> — the homepage reads these sections in real time. No redeploy needed.
+          </div>
+        </>
       )}
     </div>
   );

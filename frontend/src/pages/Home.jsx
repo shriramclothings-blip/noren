@@ -684,6 +684,8 @@ export default function Home() {
         return <CategoriesSection key={section.id} section={section} />;
       case 'offer_banner':
         return <EditorialBanner key={section.id} section={section} />;
+      case 'women_collection_banner':
+        return <WomensCollectionBanner key={section.id} />;
       case 'reels':
         return reels.length > 0 ? <ReelsSection key={section.id} reels={reels} /> : null;
       default:
