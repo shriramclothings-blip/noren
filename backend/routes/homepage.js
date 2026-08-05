@@ -31,8 +31,8 @@ const reelStorage = new CloudinaryStorage({
   }),
 });
 
-const uploadBanner = multer({ storage: bannerStorage, limits: { fileSize: 10 * 1024 * 1024 } })
-  .fields([{ name: 'desktop', maxCount: 1 }, { name: 'mobile', maxCount: 1 }]);
+const uploadBanner = multer({ storage: bannerStorage, limits: { fileSize: 200 * 1024 * 1024 } })
+  .fields([{ name: 'desktop', maxCount: 1 }, { name: 'mobile', maxCount: 1 }, { name: 'video', maxCount: 1 }]);
 
 const uploadReel = multer({ storage: reelStorage, limits: { fileSize: 100 * 1024 * 1024 } })
   .fields([{ name: 'video', maxCount: 1 }, { name: 'thumbnail', maxCount: 1 }]);
