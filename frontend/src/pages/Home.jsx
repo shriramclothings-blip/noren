@@ -678,12 +678,14 @@ function MidBanner({ banners }) {
   }, []);
 
   useEffect(() => {
-    if (banners.length <= 1) return;
-    const t = setInterval(() => setCurrent(c => (c + 1) % banners.length), 5000);
+    if (validBanners.length <= 1) return;
+    const t = setInterval(() => setCurrent(c => (c + 1) % validBanners.length), 5000);
     return () => clearInterval(t);
-  }, [banners.length]);
+  }, [validBanners.length]);
 
-  if (!banners.length) return null;
+  // Only show banners that actually have something to display
+  const validBanners = banners.filter(b => b.desktop_image || b.mobile_image || b.video_url);
+  if (!validBanners.length) return null;
 
   return (
     <section style={{ position: 'relative', background: '#0f0f0d', overflow: 'hidden' }}>
@@ -698,7 +700,7 @@ function MidBanner({ banners }) {
         overflow: 'hidden',
       }}>
 
-        {banners.map((ban, i) => {
+        {validBanners.map((ban, i) => {
           const bgImg = (isMobile && ban.mobile_image) ? ban.mobile_image : ban.desktop_image;
           const isActive = i === current;
 
@@ -798,13 +800,13 @@ function MidBanner({ banners }) {
         })}
 
         {/* Arrows — both devices (smaller on mobile) */}
-        {banners.length > 1 && (
+        {validBanners.length > 1 && (
           <>
-            <button onClick={() => setCurrent(c => (c - 1 + banners.length) % banners.length)}
+            <button onClick={() => setCurrent(c => (c - 1 + validBanners.length) % validBanners.length)}
               style={{ position: 'absolute', left: isMobile ? 8 : 16, top: '50%', transform: 'translateY(-50%)', width: isMobile ? 32 : 40, height: isMobile ? 32 : 40, background: 'rgba(250,249,247,0.12)', border: '1px solid rgba(250,249,247,0.2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#faf9f7', zIndex: 10, borderRadius: 4 }}>
               <ChevronLeft size={isMobile ? 14 : 16} />
             </button>
-            <button onClick={() => setCurrent(c => (c + 1) % banners.length)}
+            <button onClick={() => setCurrent(c => (c + 1) % validBanners.length)}
               style={{ position: 'absolute', right: isMobile ? 8 : 16, top: '50%', transform: 'translateY(-50%)', width: isMobile ? 32 : 40, height: isMobile ? 32 : 40, background: 'rgba(250,249,247,0.12)', border: '1px solid rgba(250,249,247,0.2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#faf9f7', zIndex: 10, borderRadius: 4 }}>
               <ChevronRight size={isMobile ? 14 : 16} />
             </button>
@@ -812,9 +814,9 @@ function MidBanner({ banners }) {
         )}
 
         {/* Dots — both devices */}
-        {banners.length > 1 && (
+        {validBanners.length > 1 && (
           <div style={{ position: 'absolute', bottom: isMobile ? 10 : 14, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 5, zIndex: 10 }}>
-            {banners.map((_, i) => (
+            {validBanners.map((_, i) => (
               <button key={i} onClick={() => setCurrent(i)} style={{ width: i === current ? 18 : 6, height: 5, borderRadius: 3, background: i === current ? '#c9a96e' : 'rgba(250,249,247,0.4)', border: 'none', cursor: 'pointer', transition: 'all 0.3s', padding: 0 }} />
             ))}
           </div>
