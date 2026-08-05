@@ -261,6 +261,7 @@ export default function AdminLoginSessions() {
   const [search, setSearch]     = useState('');
   const [filterDevice, setFilterDevice] = useState('');
   const [filterAuth, setFilterAuth]     = useState('');
+  const [backfilling, setBackfilling]   = useState(false);
   const LIMIT = 20;
 
   const fetchSessions = useCallback(async () => {
@@ -295,6 +296,20 @@ export default function AdminLoginSessions() {
     }
   };
 
+  const backfillGeo = async () => {
+    if (!confirm('This will fetch location data for all sessions that are missing it. Continue?')) return;
+    setBackfilling(true);
+    try {
+      const res = await api.post('/erp/sessions/backfill-geo');
+      toast.success(res.data.message || 'Location data updated');
+      fetchSessions();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Backfill failed');
+    } finally {
+      setBackfilling(false);
+    }
+  };
+
   // Client-side filter by device / auth after fetch
   const filtered = sessions.filter(s => {
     if (filterDevice && s.device_type !== filterDevice) return false;
@@ -314,9 +329,20 @@ export default function AdminLoginSessions() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
       {/* ── Header ── */}
-      <div>
-        <h2 style={{ fontSize: 18, fontWeight: 800, color: '#111827', marginBottom: 4 }}>Login Sessions</h2>
-        <p style={{ fontSize: 13, color: '#9ca3af' }}>Every login captured — IP address, browser, device, location, and session status</p>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+        <div>
+          <h2 style={{ fontSize: 18, fontWeight: 800, color: '#111827', marginBottom: 4 }}>Login Sessions</h2>
+          <p style={{ fontSize: 13, color: '#9ca3af' }}>Every login captured — IP address, browser, device, location, and session status</p>
+        </div>
+        <button
+          onClick={backfillGeo}
+          disabled={backfilling}
+          title="Fetch missing location/map data for all sessions"
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 9, border: '1.5px solid #c9a96e', background: backfilling ? '#fef3c7' : '#fff7ed', color: '#92400e', fontSize: 12, fontWeight: 600, cursor: backfilling ? 'default' : 'pointer', whiteSpace: 'nowrap', opacity: backfilling ? 0.7 : 1 }}
+        >
+          <MapPin size={13} />
+          {backfilling ? 'Fetching locations…' : 'Fix Location Data'}
+        </button>
       </div>
 
       {/* ── Stats row ── */}

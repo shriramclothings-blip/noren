@@ -458,6 +458,62 @@ const getRoleDashboard = async (req, res) => {
   }
 };
 
+// POST /api/erp/sessions/backfill-geo  (super_admin only)
+// Backfills latitude/longitude/city/region/country for sessions that have
+// an IP but no geo data yet. Runs in batches of 40 to stay within ip-api.com
+// rate limits. Safe to call multiple times — skips already-resolved rows.
+const backfillSessionGeo = async (req, res) => {
+  try {
+    const { fetchGeoLocation } = require('../services/sessionService');
+
+    // Find sessions with IP but missing geo, up to 200 at a time
+    const { rows } = await pool.query(
+      `SELECT id, ip_address FROM src_login_sessions
+       WHERE ip_address IS NOT NULL
+         AND ip_address NOT IN ('127.0.0.1', '::1', 'Localhost')
+         AND (latitude IS NULL OR longitude IS NULL)
+       ORDER BY logged_in_at DESC
+       LIMIT 200`
+    );
+
+    if (!rows.length) {
+      return res.json({ message: 'No sessions need backfilling', updated: 0 });
+    }
+
+    let updated = 0;
+    // Process in batches of 5 concurrently to avoid hammering the geo API
+    const BATCH = 5;
+    for (let i = 0; i < rows.length; i += BATCH) {
+      const batch = rows.slice(i, i + BATCH);
+      await Promise.all(batch.map(async (row) => {
+        const geo = await fetchGeoLocation(row.ip_address);
+        if (!geo.lat && !geo.lon && !geo.city) return; // no data returned
+        await pool.query(
+          `UPDATE src_login_sessions
+           SET city=$1, region=$2, country=$3, country_code=$4,
+               timezone=$5, isp=$6, latitude=$7, longitude=$8,
+               location=$9
+           WHERE id=$10`,
+          [
+            geo.city, geo.region, geo.country, geo.country_code,
+            geo.timezone, geo.isp, geo.lat, geo.lon,
+            [geo.city, geo.region, geo.country].filter(Boolean).join(', ') || null,
+            row.id,
+          ]
+        );
+        updated++;
+      }));
+      // Small delay between batches to respect rate limits
+      if (i + BATCH < rows.length) await new Promise(r => setTimeout(r, 300));
+    }
+
+    res.json({ message: `Backfilled geo for ${updated} of ${rows.length} sessions`, updated, total: rows.length });
+  } catch (err) {
+    console.error('backfillSessionGeo error:', err.message);
+    res.status(500).json({ message: err.message });
+  }
+};
+
 module.exports = {
   getSystemHealth,
   getGlobalRevenue,
@@ -468,4 +524,5 @@ module.exports = {
   getCallLogs,
   getAllCallLogs,
   getRoleDashboard,
+  backfillSessionGeo,
 };

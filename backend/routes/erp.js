@@ -75,9 +75,10 @@ router.post('/warehouse/transfer-requests/:id/approve', ...approveGuard, whCtrl.
 router.post('/warehouse/transfer-requests/:id/reject',  ...approveGuard, whCtrl.rejectTransfer);
 
 // ── Phase 2: Session management ───────────────────────────────────────────────
-router.get('/sessions/live',         ...adminGuard, sysCtrl.getLiveSessions);
-router.delete('/sessions/:sessionId', ...superAdminGuard, sysCtrl.terminateSession);
-router.get('/sessions/history',      ...adminGuard, sysCtrl.getLoginHistory);
+router.get('/sessions/live',              ...adminGuard,      sysCtrl.getLiveSessions);
+router.delete('/sessions/:sessionId',     ...superAdminGuard, sysCtrl.terminateSession);
+router.get('/sessions/history',           ...adminGuard,      sysCtrl.getLoginHistory);
+router.post('/sessions/backfill-geo',     ...superAdminGuard, sysCtrl.backfillSessionGeo);
 
 // ── Phase 2: System health + global analytics (super_admin) ───────────────────
 router.get('/system/health',          ...superAdminGuard, sysCtrl.getSystemHealth);

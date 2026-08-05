@@ -73,42 +73,70 @@ function getClientIP(req) {
 }
 
 /**
- * Fetch geolocation for an IP using ip-api.com (free, no key needed, 45 req/min).
- * Falls back gracefully on failure.
+ * Fetch geolocation for an IP.
+ * Primary:  ipwho.is  (HTTPS, free, no key needed)
+ * Fallback: ip-api.com via HTTP (free, 45 req/min limit)
  */
 async function fetchGeoLocation(ip) {
+  const EMPTY = { city: null, region: null, country: null, country_code: null, timezone: null, isp: null, lat: null, lon: null };
+
   // Skip for localhost / private ranges
   if (!ip || ip === '127.0.0.1' || ip === '::1' || ip.startsWith('192.168.') || ip.startsWith('10.') || ip.startsWith('172.')) {
     return { city: 'Localhost', region: null, country: 'Local', country_code: 'LO', timezone: null, isp: null, lat: null, lon: null };
   }
-  try {
-    const https = require('https');
-    const data = await new Promise((resolve, reject) => {
-      const req = https.get(`https://ip-api.com/json/${ip}?fields=status,city,regionName,country,countryCode,timezone,isp,lat,lon`, res => {
+
+  // Helper: perform a GET request and return parsed JSON
+  function fetchJson(url) {
+    const mod = url.startsWith('https') ? require('https') : require('http');
+    return new Promise((resolve) => {
+      const req = mod.get(url, (res) => {
         let body = '';
-        res.on('data', chunk => { body += chunk; });
+        res.on('data', (chunk) => { body += chunk; });
         res.on('end', () => {
           try { resolve(JSON.parse(body)); }
-          catch { resolve({}); }
+          catch { resolve(null); }
         });
       });
-      req.setTimeout(4000, () => { req.destroy(); resolve({}); });
-      req.on('error', () => resolve({}));
+      req.setTimeout(5000, () => { req.destroy(); resolve(null); });
+      req.on('error', () => resolve(null));
     });
-    if (data.status === 'success') {
+  }
+
+  // ── Primary: ipwho.is (HTTPS, free) ─────────────────────────────────────────
+  try {
+    const d = await fetchJson(`https://ipwho.is/${ip}`);
+    if (d && d.success) {
       return {
-        city: data.city || null,
-        region: data.regionName || null,
-        country: data.country || null,
-        country_code: data.countryCode || null,
-        timezone: data.timezone || null,
-        isp: data.isp || null,
-        lat: data.lat || null,
-        lon: data.lon || null,
+        city:         d.city         || null,
+        region:       d.region       || null,
+        country:      d.country      || null,
+        country_code: d.country_code || null,
+        timezone:     d.timezone?.id || null,
+        isp:          d.connection?.isp || d.org || null,
+        lat:          d.latitude     || null,
+        lon:          d.longitude    || null,
+      };
+    }
+  } catch { /* fall through */ }
+
+  // ── Fallback: ip-api.com (HTTP only on free plan) ────────────────────────────
+  try {
+    const d = await fetchJson(`http://ip-api.com/json/${ip}?fields=status,city,regionName,country,countryCode,timezone,isp,lat,lon`);
+    if (d && d.status === 'success') {
+      return {
+        city:         d.city       || null,
+        region:       d.regionName || null,
+        country:      d.country    || null,
+        country_code: d.countryCode || null,
+        timezone:     d.timezone   || null,
+        isp:          d.isp        || null,
+        lat:          d.lat        || null,
+        lon:          d.lon        || null,
       };
     }
   } catch { /* silently ignore */ }
-  return { city: null, region: null, country: null, country_code: null, timezone: null, isp: null, lat: null, lon: null };
+
+  return EMPTY;
 }
 
 /**
@@ -167,4 +195,4 @@ async function recordSession(req, userId, authMethod = 'local') {
   }
 }
 
-module.exports = { recordSession };
+module.exports = { recordSession, fetchGeoLocation };
