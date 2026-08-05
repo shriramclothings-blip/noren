@@ -671,6 +671,9 @@ function MidBanner({ banners }) {
     typeof window !== 'undefined' && window.innerWidth < 768
   );
 
+  // Filter first — before any hooks that depend on it
+  const validBanners = banners.filter(b => b.desktop_image || b.mobile_image || b.video_url);
+
   useEffect(() => {
     const fn = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', fn, { passive: true });
@@ -683,8 +686,6 @@ function MidBanner({ banners }) {
     return () => clearInterval(t);
   }, [validBanners.length]);
 
-  // Only show banners that actually have something to display
-  const validBanners = banners.filter(b => b.desktop_image || b.mobile_image || b.video_url);
   if (!validBanners.length) return null;
 
   return (
