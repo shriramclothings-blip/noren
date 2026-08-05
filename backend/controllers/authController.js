@@ -42,6 +42,31 @@ const register = async (req, res) => {
     const user = result.rows[0];
     // Record registration session
     await recordSession(req, user.id, 'register');
+
+    // Welcome email
+    sendMail(email, 'Welcome to NOREN – Account Created',
+      `<div style="font-family:'Inter',Arial,sans-serif;max-width:520px;margin:auto;background:#faf9f7;padding:0">
+        <div style="background:#1a1a18;padding:32px 40px;text-align:center">
+          <div style="font-family:Georgia,serif;font-weight:600;font-size:26px;letter-spacing:0.35em;color:#faf9f7;text-transform:uppercase">NOREN</div>
+          <div style="font-size:8px;letter-spacing:0.28em;color:#5a5750;margin-top:4px;text-transform:uppercase">Fashion House</div>
+        </div>
+        <div style="padding:40px 40px 32px;border:1px solid #e6e0d8;border-top:none">
+          <p style="font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:#c9a96e;margin-bottom:12px">Welcome</p>
+          <h2 style="font-family:Georgia,serif;font-size:24px;font-weight:600;color:#1a1a18;margin:0 0 20px">Hi ${name},</h2>
+          <p style="color:#5a5750;line-height:1.8;font-size:14px;margin-bottom:24px">Your NOREN account has been created successfully. You can now explore our collections and place orders.</p>
+          <div style="background:#f5f0e8;padding:20px 24px;margin-bottom:28px">
+            <p style="margin:0;font-size:12px;color:#5a5750;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px">Registered Email</p>
+            <p style="margin:0;font-size:14px;color:#1a1a18;font-weight:500">${email}</p>
+          </div>
+          <a href="${process.env.FRONTEND_URL}" style="display:inline-block;background:#1a1a18;color:#faf9f7;padding:14px 36px;text-decoration:none;font-size:11px;font-weight:600;letter-spacing:0.18em;text-transform:uppercase">Shop Now</a>
+          <p style="color:#b8a898;font-size:12px;margin-top:28px;padding-top:24px;border-top:1px solid #e6e0d8">If you did not create this account, please contact us at supportnoren1@gmail.com</p>
+        </div>
+        <div style="padding:20px 40px;text-align:center">
+          <p style="color:#b8a898;font-size:11px;letter-spacing:0.06em">© ${new Date().getFullYear()} NOREN. Timeless By Design.</p>
+        </div>
+      </div>`
+    ).catch(() => {});
+
     res.status(201).json({ token: signToken(user), user: await enrichUser(user) });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -60,6 +85,32 @@ const login = async (req, res) => {
 
     // Record session (non-blocking — never fails login)
     await recordSession(req, user.id, 'local');
+
+    // Login notification email
+    const loginTime = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'medium', timeStyle: 'short' });
+    sendMail(email, 'New Login to Your NOREN Account',
+      `<div style="font-family:'Inter',Arial,sans-serif;max-width:520px;margin:auto;background:#faf9f7;padding:0">
+        <div style="background:#1a1a18;padding:32px 40px;text-align:center">
+          <div style="font-family:Georgia,serif;font-weight:600;font-size:26px;letter-spacing:0.35em;color:#faf9f7;text-transform:uppercase">NOREN</div>
+          <div style="font-size:8px;letter-spacing:0.28em;color:#5a5750;margin-top:4px;text-transform:uppercase">Fashion House</div>
+        </div>
+        <div style="padding:40px 40px 32px;border:1px solid #e6e0d8;border-top:none">
+          <p style="font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:#c9a96e;margin-bottom:12px">Security Alert</p>
+          <h2 style="font-family:Georgia,serif;font-size:24px;font-weight:600;color:#1a1a18;margin:0 0 20px">Hi ${user.name},</h2>
+          <p style="color:#5a5750;line-height:1.8;font-size:14px;margin-bottom:24px">A new login was detected on your NOREN account.</p>
+          <div style="background:#f5f0e8;padding:20px 24px;margin-bottom:28px">
+            <table style="width:100%;font-size:13px">
+              <tr><td style="color:#9e9a94;padding:4px 0;width:40%">Time</td><td style="color:#1a1a18;font-weight:500">${loginTime} IST</td></tr>
+              <tr><td style="color:#9e9a94;padding:4px 0">Method</td><td style="color:#1a1a18;font-weight:500">Email & Password</td></tr>
+            </table>
+          </div>
+          <p style="color:#b8a898;font-size:12px;margin-top:8px;padding-top:24px;border-top:1px solid #e6e0d8">If this wasn't you, please reset your password immediately or contact us at supportnoren1@gmail.com</p>
+        </div>
+        <div style="padding:20px 40px;text-align:center">
+          <p style="color:#b8a898;font-size:11px;letter-spacing:0.06em">© ${new Date().getFullYear()} NOREN. Timeless By Design.</p>
+        </div>
+      </div>`
+    ).catch(() => {});
 
     const { password: _, ...safeUser } = user;
     res.json({ token: signToken(user), user: await enrichUser(safeUser) });
@@ -110,12 +161,33 @@ const changePassword = async (req, res) => {
   const { currentPassword, newPassword } = req.body;
   if (!currentPassword || !newPassword) return res.status(400).json({ message: 'Both passwords required' });
   try {
-    const result = await pool.query('SELECT password FROM src_users WHERE id=$1', [req.user.id]);
+    const result = await pool.query('SELECT password, name, email FROM src_users WHERE id=$1', [req.user.id]);
     const user = result.rows[0];
     if (!user || !(await bcrypt.compare(currentPassword, user.password || '')))
       return res.status(401).json({ message: 'Current password is incorrect' });
     const hash = await bcrypt.hash(newPassword, 12);
     await pool.query('UPDATE src_users SET password=$1 WHERE id=$2', [hash, req.user.id]);
+
+    // Password changed notification
+    const changedTime = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'medium', timeStyle: 'short' });
+    sendMail(user.email, 'Your NOREN Password Was Changed',
+      `<div style="font-family:'Inter',Arial,sans-serif;max-width:520px;margin:auto;background:#faf9f7;padding:0">
+        <div style="background:#1a1a18;padding:32px 40px;text-align:center">
+          <div style="font-family:Georgia,serif;font-weight:600;font-size:26px;letter-spacing:0.35em;color:#faf9f7;text-transform:uppercase">NOREN</div>
+          <div style="font-size:8px;letter-spacing:0.28em;color:#5a5750;margin-top:4px;text-transform:uppercase">Fashion House</div>
+        </div>
+        <div style="padding:40px 40px 32px;border:1px solid #e6e0d8;border-top:none">
+          <p style="font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:#c9a96e;margin-bottom:12px">Security Alert</p>
+          <h2 style="font-family:Georgia,serif;font-size:24px;font-weight:600;color:#1a1a18;margin:0 0 20px">Hi ${user.name},</h2>
+          <p style="color:#5a5750;line-height:1.8;font-size:14px;margin-bottom:24px">Your NOREN account password was successfully changed on <strong style="color:#1a1a18">${changedTime} IST</strong>.</p>
+          <p style="color:#b8a898;font-size:12px;padding-top:24px;border-top:1px solid #e6e0d8">If you did not make this change, contact us immediately at supportnoren1@gmail.com</p>
+        </div>
+        <div style="padding:20px 40px;text-align:center">
+          <p style="color:#b8a898;font-size:11px;letter-spacing:0.06em">© ${new Date().getFullYear()} NOREN. Timeless By Design.</p>
+        </div>
+      </div>`
+    ).catch(() => {});
+
     res.json({ message: 'Password updated successfully' });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -222,6 +294,60 @@ const googleLogin = async (req, res) => {
     const safeUser = fresh.rows[0];
     // Record Google session
     await recordSession(req, safeUser.id, 'google');
+
+    // Send email — welcome if new user, login alert if existing
+    const loginTime = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'medium', timeStyle: 'short' });
+    if (!result.rows.length) {
+      // New Google user — welcome email
+      sendMail(safeUser.email, 'Welcome to NOREN – Account Created',
+        `<div style="font-family:'Inter',Arial,sans-serif;max-width:520px;margin:auto;background:#faf9f7;padding:0">
+          <div style="background:#1a1a18;padding:32px 40px;text-align:center">
+            <div style="font-family:Georgia,serif;font-weight:600;font-size:26px;letter-spacing:0.35em;color:#faf9f7;text-transform:uppercase">NOREN</div>
+            <div style="font-size:8px;letter-spacing:0.28em;color:#5a5750;margin-top:4px;text-transform:uppercase">Fashion House</div>
+          </div>
+          <div style="padding:40px 40px 32px;border:1px solid #e6e0d8;border-top:none">
+            <p style="font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:#c9a96e;margin-bottom:12px">Welcome</p>
+            <h2 style="font-family:Georgia,serif;font-size:24px;font-weight:600;color:#1a1a18;margin:0 0 20px">Hi ${safeUser.name},</h2>
+            <p style="color:#5a5750;line-height:1.8;font-size:14px;margin-bottom:24px">Your NOREN account has been created using Google Sign-In. You can now explore our collections and place orders.</p>
+            <div style="background:#f5f0e8;padding:20px 24px;margin-bottom:28px">
+              <p style="margin:0;font-size:12px;color:#5a5750;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px">Registered Email</p>
+              <p style="margin:0;font-size:14px;color:#1a1a18;font-weight:500">${safeUser.email}</p>
+            </div>
+            <a href="${process.env.FRONTEND_URL}" style="display:inline-block;background:#1a1a18;color:#faf9f7;padding:14px 36px;text-decoration:none;font-size:11px;font-weight:600;letter-spacing:0.18em;text-transform:uppercase">Shop Now</a>
+            <p style="color:#b8a898;font-size:12px;margin-top:28px;padding-top:24px;border-top:1px solid #e6e0d8">If you did not create this account, contact us at supportnoren1@gmail.com</p>
+          </div>
+          <div style="padding:20px 40px;text-align:center">
+            <p style="color:#b8a898;font-size:11px;letter-spacing:0.06em">© ${new Date().getFullYear()} NOREN. Timeless By Design.</p>
+          </div>
+        </div>`
+      ).catch(() => {});
+    } else {
+      // Existing Google user — login alert
+      sendMail(safeUser.email, 'New Login to Your NOREN Account',
+        `<div style="font-family:'Inter',Arial,sans-serif;max-width:520px;margin:auto;background:#faf9f7;padding:0">
+          <div style="background:#1a1a18;padding:32px 40px;text-align:center">
+            <div style="font-family:Georgia,serif;font-weight:600;font-size:26px;letter-spacing:0.35em;color:#faf9f7;text-transform:uppercase">NOREN</div>
+            <div style="font-size:8px;letter-spacing:0.28em;color:#5a5750;margin-top:4px;text-transform:uppercase">Fashion House</div>
+          </div>
+          <div style="padding:40px 40px 32px;border:1px solid #e6e0d8;border-top:none">
+            <p style="font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:#c9a96e;margin-bottom:12px">Security Alert</p>
+            <h2 style="font-family:Georgia,serif;font-size:24px;font-weight:600;color:#1a1a18;margin:0 0 20px">Hi ${safeUser.name},</h2>
+            <p style="color:#5a5750;line-height:1.8;font-size:14px;margin-bottom:24px">A new login was detected on your NOREN account.</p>
+            <div style="background:#f5f0e8;padding:20px 24px;margin-bottom:28px">
+              <table style="width:100%;font-size:13px">
+                <tr><td style="color:#9e9a94;padding:4px 0;width:40%">Time</td><td style="color:#1a1a18;font-weight:500">${loginTime} IST</td></tr>
+                <tr><td style="color:#9e9a94;padding:4px 0">Method</td><td style="color:#1a1a18;font-weight:500">Google Sign-In</td></tr>
+              </table>
+            </div>
+            <p style="color:#b8a898;font-size:12px;padding-top:24px;border-top:1px solid #e6e0d8">If this wasn't you, contact us immediately at supportnoren1@gmail.com</p>
+          </div>
+          <div style="padding:20px 40px;text-align:center">
+            <p style="color:#b8a898;font-size:11px;letter-spacing:0.06em">© ${new Date().getFullYear()} NOREN. Timeless By Design.</p>
+          </div>
+        </div>`
+      ).catch(() => {});
+    }
+
     res.json({ token: signToken(safeUser), user: await enrichUser(safeUser) });
   } catch (err) {
     console.error('Google login error:', err.message);
