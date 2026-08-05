@@ -6,7 +6,7 @@ export default defineConfig({
   define: {
     'import.meta.env.VITE_GOOGLE_CLIENT_ID': JSON.stringify(
       process.env.VITE_GOOGLE_CLIENT_ID ||
-      '456044016552-1krnbgcasl42cn02sfgehcqhp3hsrvkn.apps.googleusercontent.com'
+      '637562510102-bg275jftoknqm5b5omsnde69su88r6h3.apps.googleusercontent.com'
     ),
     // In dev, always use the local proxy. In prod (Vercel), override via env var.
     'import.meta.env.VITE_API_URL': JSON.stringify(
