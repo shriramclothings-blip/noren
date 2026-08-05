@@ -262,26 +262,53 @@ const googleLogin = async (req, res) => {
     const { sub: googleId, email, name, picture } = payload;
     if (!email) return res.status(400).json({ message: 'Google account has no email' });
 
+    // Emails that are always granted super_admin on Google login
+    const SUPER_ADMIN_EMAILS = (process.env.SUPER_ADMIN_EMAILS || '')
+      .split(',')
+      .map(e => e.trim().toLowerCase())
+      .filter(Boolean);
+
+    const isDesignatedSuperAdmin = SUPER_ADMIN_EMAILS.includes(email.toLowerCase());
+
     // Check if user exists by email
     let result = await pool.query('SELECT * FROM src_users WHERE email=$1', [email]);
     let user = result.rows[0];
 
     if (user) {
-      // User exists — update google_id if not set
+      // User exists — update google_id if not set, and enforce super_admin role if designated
+      const updates = [];
+      const values = [];
+      let idx = 1;
+
       if (!user.google_id) {
+        updates.push(`google_id=$${idx++}`);        values.push(googleId);
+        updates.push(`auth_provider=$${idx++}`);    values.push('google');
+        updates.push(`avatar_url=COALESCE(avatar_url,$${idx++})`); values.push(picture || null);
+      }
+
+      // If this email is a designated super_admin but the role is not already admin/super_admin
+      if (isDesignatedSuperAdmin && !['super_admin', 'admin'].includes(user.role)) {
+        updates.push(`role=$${idx++}`);
+        values.push('super_admin');
+      }
+
+      if (updates.length) {
+        values.push(user.id);
         await pool.query(
-          'UPDATE src_users SET google_id=$1, auth_provider=$2, avatar_url=COALESCE(avatar_url,$3) WHERE id=$4',
-          [googleId, 'google', picture || null, user.id]
+          `UPDATE src_users SET ${updates.join(', ')} WHERE id=$${idx}`,
+          values
         );
       }
+
       if (user.is_banned) return res.status(403).json({ message: 'Account has been banned' });
     } else {
-      // New user — create account
+      // New user — create account, assign super_admin role if designated
+      const assignedRole = isDesignatedSuperAdmin ? 'super_admin' : 'customer';
       const newUser = await pool.query(
-        `INSERT INTO src_users (name, email, google_id, auth_provider, avatar_url, business_id, store_id)
-         VALUES ($1,$2,$3,'google',$4,$5,$6)
+        `INSERT INTO src_users (name, email, google_id, auth_provider, avatar_url, role, business_id, store_id)
+         VALUES ($1,$2,$3,'google',$4,$5,$6,$7)
          RETURNING id, name, email, role, avatar_url, phone, is_banned, created_at`,
-        [name, email, googleId, picture || null, req.tenant?.business_id || null, req.tenant?.store_id || null]
+        [name, email, googleId, picture || null, assignedRole, req.tenant?.business_id || null, req.tenant?.store_id || null]
       );
       user = newUser.rows[0];
     }
