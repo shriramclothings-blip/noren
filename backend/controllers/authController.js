@@ -251,6 +251,12 @@ const resetPassword = async (req, res) => {
 const googleLogin = async (req, res) => {
   const { credential } = req.body;
   if (!credential) return res.status(400).json({ message: 'Google credential required' });
+
+  if (!process.env.GOOGLE_CLIENT_ID) {
+    console.error('Google login error: GOOGLE_CLIENT_ID env variable is not set');
+    return res.status(500).json({ message: 'Google login is not configured on the server.' });
+  }
+
   try {
     const { OAuth2Client } = require('google-auth-library');
     const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
@@ -275,20 +281,19 @@ const googleLogin = async (req, res) => {
     let user = result.rows[0];
 
     if (user) {
-      // User exists — build update set cleanly
+      // Build UPDATE only for fields that need changing
       const setClauses = [];
-      const values = [];
+      const values    = [];
 
       if (!user.google_id) {
-        setClauses.push(`google_id=$${setClauses.length + 1}`);      values.push(googleId);
-        setClauses.push(`auth_provider=$${setClauses.length + 1}`);  values.push('google');
-        setClauses.push(`avatar_url=COALESCE(avatar_url,$${setClauses.length + 1})`); values.push(picture || null);
+        values.push(googleId);   setClauses.push(`google_id=$${values.length}`);
+        values.push('google');   setClauses.push(`auth_provider=$${values.length}`);
+        values.push(picture || null); setClauses.push(`avatar_url=COALESCE(avatar_url,$${values.length})`);
       }
 
-      // Enforce super_admin role if this is a designated email and role isn't already elevated
       if (isDesignatedSuperAdmin && !['super_admin', 'admin'].includes(user.role)) {
-        setClauses.push(`role=$${setClauses.length + 1}`);
         values.push('super_admin');
+        setClauses.push(`role=$${values.length}`);
       }
 
       if (setClauses.length) {
@@ -376,7 +381,7 @@ const googleLogin = async (req, res) => {
 
     res.json({ token: signToken(safeUser), user: await enrichUser(safeUser) });
   } catch (err) {
-    console.error('Google login error:', err.message);
+    console.error('Google login error:', err.message, err.stack);
     res.status(401).json({ message: 'Google authentication failed. Please try again.' });
   }
 };
