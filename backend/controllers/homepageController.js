@@ -26,12 +26,13 @@ const createBanner = async (req, res) => {
   const { heading, subheading, cta_text, cta_link, sort_order, is_active, starts_at, ends_at } = req.body;
   const desktop_image = req.files?.desktop?.[0]?.path || req.body.desktop_image || null;
   const mobile_image  = req.files?.mobile?.[0]?.path  || req.body.mobile_image  || null;
+  const video_url     = req.files?.video?.[0]?.path   || req.body.video_url     || null;
   try {
     const result = await pool.query(
-      `INSERT INTO src_banners (heading, subheading, cta_text, cta_link, desktop_image, mobile_image, sort_order, is_active, starts_at, ends_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,
+      `INSERT INTO src_banners (heading, subheading, cta_text, cta_link, desktop_image, mobile_image, video_url, sort_order, is_active, starts_at, ends_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
       [heading || null, subheading || null, cta_text || null, cta_link || null,
-       desktop_image, mobile_image, sort_order || 0, is_active !== 'false',
+       desktop_image, mobile_image, video_url, sort_order || 0, is_active !== 'false',
        starts_at || null, ends_at || null]
     );
     res.status(201).json(result.rows[0]);
@@ -42,6 +43,7 @@ const updateBanner = async (req, res) => {
   const { heading, subheading, cta_text, cta_link, sort_order, is_active, starts_at, ends_at } = req.body;
   const desktop_image = req.files?.desktop?.[0]?.path || req.body.desktop_image;
   const mobile_image  = req.files?.mobile?.[0]?.path  || req.body.mobile_image;
+  const video_url     = req.files?.video?.[0]?.path   || req.body.video_url;
   try {
     const fields = [], values = [];
     let idx = 1;
@@ -56,6 +58,8 @@ const updateBanner = async (req, res) => {
     set('ends_at', ends_at || null);
     if (desktop_image) { fields.push(`desktop_image=$${idx++}`); values.push(desktop_image); }
     if (mobile_image)  { fields.push(`mobile_image=$${idx++}`);  values.push(mobile_image); }
+    if (video_url)     { fields.push(`video_url=$${idx++}`);     values.push(video_url); }
+    if (req.body.remove_video === 'true') { fields.push(`video_url=$${idx++}`); values.push(null); }
     if (!fields.length) return res.status(400).json({ message: 'Nothing to update' });
     values.push(req.params.id);
     const result = await pool.query(`UPDATE src_banners SET ${fields.join(',')} WHERE id=$${idx} RETURNING *`, values);

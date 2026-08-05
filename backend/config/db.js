@@ -480,12 +480,20 @@ const initDB = async () => {
         cta_link VARCHAR(300),
         desktop_image TEXT,
         mobile_image TEXT,
+        video_url TEXT,
         sort_order INTEGER DEFAULT 0,
         is_active BOOLEAN DEFAULT TRUE,
         starts_at TIMESTAMP,
         ends_at TIMESTAMP,
         created_at TIMESTAMP DEFAULT NOW()
       );
+
+      -- Add video_url column if it doesn't exist yet (migration for existing DBs)
+      DO $$ BEGIN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='src_banners' AND column_name='video_url') THEN
+          ALTER TABLE src_banners ADD COLUMN video_url TEXT;
+        END IF;
+      END $$;
 
       CREATE TABLE IF NOT EXISTS src_homepage_sections (
         id SERIAL PRIMARY KEY,

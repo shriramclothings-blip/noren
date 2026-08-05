@@ -98,22 +98,39 @@ function HeroBanner({ banners, settings }) {
               width: '100%',
             }}>
 
-              {/* Background image — scale down to fit full width on mobile */}
-              {bgImg
-                ? <img
-                    src={bgImg}
-                    alt={ban.heading || 'NOREN'}
-                    style={{
-                      width: '100%',
-                      height: '100%',
-                      objectFit: isMobile ? 'contain' : 'cover',
-                      objectPosition: 'center center',
-                      display: 'block',
-                      background: '#1a1a18',
-                    }}
-                    loading={i === 0 ? 'eager' : 'lazy'}
-                  />
-                : <div style={{ width: '100%', height: '100%', background: '#1a1a18' }} />
+              {/* Background — video takes priority over image on desktop */}
+              {bgImg && !ban.video_url && (
+                <img
+                  src={bgImg}
+                  alt={ban.heading || 'NOREN'}
+                  style={{ width: '100%', height: '100%', objectFit: isMobile ? 'contain' : 'cover', objectPosition: 'center center', display: 'block', background: '#1a1a18' }}
+                  loading={i === 0 ? 'eager' : 'lazy'}
+                />
+              )}
+              {ban.video_url && !isMobile && (
+                <video
+                  src={ban.video_url}
+                  autoPlay muted loop playsInline
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', background: '#1a1a18' }}
+                />
+              )}
+              {ban.video_url && isMobile && bgImg && (
+                /* On mobile show image fallback for video banners (saves data) */
+                <img
+                  src={bgImg}
+                  alt={ban.heading || 'NOREN'}
+                  style={{ width: '100%', objectFit: 'contain', display: 'block', background: '#1a1a18' }}
+                  loading={i === 0 ? 'eager' : 'lazy'}
+                />
+              )}
+              {ban.video_url && isMobile && !bgImg && (
+                <video
+                  src={ban.video_url}
+                  autoPlay muted loop playsInline
+                  style={{ width: '100%', objectFit: 'contain', display: 'block', background: '#1a1a18' }}
+                />
+              )}
+              {!bgImg && !ban.video_url && <div style={{ width: '100%', height: '100%', background: '#1a1a18' }} />
               }
 
               {/* Dark overlay — only on desktop (on mobile image has its own design) */}
@@ -647,7 +664,116 @@ function WomensCollectionBanner() {
   );
 }
 
-//  Main Home Component 
+//  Horizontal Video Section
+function HorizontalVideoSection({ section }) {
+  const videoUrl = section.config?.video_url || '';
+  const [playing, setPlaying] = useState(false);
+  const videoRef = useRef(null);
+
+  const togglePlay = () => {
+    if (!videoRef.current) return;
+    if (videoRef.current.paused) { videoRef.current.play(); setPlaying(true); }
+    else { videoRef.current.pause(); setPlaying(false); }
+  };
+
+  if (!videoUrl) return null;
+
+  return (
+    <section style={{ background: '#0f0f0d', padding: 'clamp(40px, 6vw, 80px) 0', overflow: 'hidden' }}>
+      <div className="wrap">
+        {/* Section header */}
+        <div style={{ textAlign: 'center', marginBottom: 'clamp(20px, 3vw, 36px)' }}>
+          {section.title && (
+            <>
+              <p className="section-label" style={{ marginBottom: 10, color: '#c9a96e' }}>
+                {section.config?.label || 'Campaign Film'}
+              </p>
+              <h2 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 'clamp(24px, 4vw, 48px)', fontWeight: 600, color: '#faf9f7', letterSpacing: '-0.01em' }}>
+                {section.title}
+              </h2>
+              {section.subtitle && (
+                <p style={{ fontSize: 'clamp(13px, 1.4vw, 15px)', color: 'rgba(250,249,247,0.5)', marginTop: 10, maxWidth: 480, margin: '10px auto 0', fontWeight: 300 }}>
+                  {section.subtitle}
+                </p>
+              )}
+            </>
+          )}
+        </div>
+
+        {/* Video player */}
+        <div style={{
+          position: 'relative',
+          borderRadius: 'clamp(8px, 1.5vw, 16px)',
+          overflow: 'hidden',
+          background: '#000',
+          aspectRatio: '16/9',
+          maxHeight: '70vh',
+          cursor: 'pointer',
+          boxShadow: '0 24px 80px rgba(0,0,0,0.6)',
+        }} onClick={togglePlay}>
+
+          <video
+            ref={videoRef}
+            src={videoUrl}
+            poster={section.config?.poster || undefined}
+            playsInline
+            loop
+            muted={false}
+            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+            onPlay={() => setPlaying(true)}
+            onPause={() => setPlaying(false)}
+          />
+
+          {/* Gold gradient overlay — fades out when playing */}
+          <div style={{
+            position: 'absolute', inset: 0,
+            background: 'linear-gradient(to top, rgba(0,0,0,0.5) 0%, transparent 40%)',
+            opacity: playing ? 0 : 1,
+            transition: 'opacity 0.4s ease',
+            pointerEvents: 'none',
+          }} />
+
+          {/* Play / Pause button */}
+          <div style={{
+            position: 'absolute', inset: 0,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            opacity: playing ? 0 : 1,
+            transition: 'opacity 0.3s ease',
+          }}>
+            <div style={{
+              width: 'clamp(56px, 8vw, 80px)', height: 'clamp(56px, 8vw, 80px)',
+              borderRadius: '50%',
+              background: 'rgba(201,169,110,0.92)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: '0 8px 32px rgba(201,169,110,0.4)',
+              transform: playing ? 'scale(0.8)' : 'scale(1)',
+              transition: 'transform 0.3s ease',
+            }}>
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="#1a1a18">
+                <polygon points="5,3 19,12 5,21" />
+              </svg>
+            </div>
+          </div>
+
+          {/* Title overlay at bottom */}
+          {(section.config?.cta_text || section.title) && !playing && (
+            <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: 'clamp(16px, 3vw, 28px)', background: 'linear-gradient(to top, rgba(0,0,0,0.8), transparent)' }}>
+              {section.config?.cta_text && (
+                <a href={section.config?.cta_link || '/shop'}
+                  onClick={e => e.stopPropagation()}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 22px', background: '#c9a96e', color: '#1a1a18', fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', textDecoration: 'none', borderRadius: 4, marginTop: 8 }}>
+                  {section.config.cta_text} <ArrowRight size={13} />
+                </a>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+
 export default function Home() {
   const { settings }              = useSiteSettings();
   const [banners, setBanners]     = useState([]);
@@ -686,6 +812,8 @@ export default function Home() {
         return <EditorialBanner key={section.id} section={section} />;
       case 'women_collection_banner':
         return <WomensCollectionBanner key={section.id} />;
+      case 'video_section':
+        return <HorizontalVideoSection key={section.id} section={section} />;
       case 'reels':
         return reels.length > 0 ? <ReelsSection key={section.id} reels={reels} /> : null;
       default:

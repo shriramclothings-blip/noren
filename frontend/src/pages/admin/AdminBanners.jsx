@@ -14,8 +14,10 @@ export default function AdminBanners() {
   const [form, setForm] = useState(blank);
   const [desktopFile, setDesktopFile] = useState(null);
   const [mobileFile, setMobileFile] = useState(null);
+  const [videoFile, setVideoFile] = useState(null);
   const [desktopPreview, setDesktopPreview] = useState('');
   const [mobilePreview, setMobilePreview] = useState('');
+  const [videoPreview, setVideoPreview] = useState('');
   const [saving, setSaving] = useState(false);
 
   const load = async () => {
@@ -30,8 +32,8 @@ export default function AdminBanners() {
 
   const openAdd = () => {
     setEditing(null); setForm(blank);
-    setDesktopFile(null); setMobileFile(null);
-    setDesktopPreview(''); setMobilePreview('');
+    setDesktopFile(null); setMobileFile(null); setVideoFile(null);
+    setDesktopPreview(''); setMobilePreview(''); setVideoPreview('');
     setShowForm(true);
   };
 
@@ -44,9 +46,10 @@ export default function AdminBanners() {
       starts_at: b.starts_at ? b.starts_at.slice(0, 16) : '',
       ends_at: b.ends_at ? b.ends_at.slice(0, 16) : '',
     });
-    setDesktopFile(null); setMobileFile(null);
+    setDesktopFile(null); setMobileFile(null); setVideoFile(null);
     setDesktopPreview(b.desktop_image || '');
     setMobilePreview(b.mobile_image || '');
+    setVideoPreview(b.video_url || '');
     setShowForm(true);
   };
 
@@ -58,6 +61,12 @@ export default function AdminBanners() {
     const f = e.target.files[0]; if (!f) return;
     setMobileFile(f); setMobilePreview(URL.createObjectURL(f));
   };
+  const handleVideo = (e) => {
+    const f = e.target.files[0]; if (!f) return;
+    if (f.size > 200 * 1024 * 1024) { toast.error('Video must be under 200MB'); return; }
+    setVideoFile(f); setVideoPreview(URL.createObjectURL(f));
+  };
+  const removeVideo = () => { setVideoFile(null); setVideoPreview(''); };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -66,7 +75,8 @@ export default function AdminBanners() {
       const fd = new FormData();
       Object.entries(form).forEach(([k, v]) => fd.append(k, v));
       if (desktopFile) fd.append('desktop', desktopFile);
-      if (mobileFile)  fd.append('mobile', mobileFile);
+      if (mobileFile)  fd.append('mobile',  mobileFile);
+      if (videoFile)   fd.append('video',   videoFile);
       if (editing) {
         await api.put(`/homepage/admin/banners/${editing.id}`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
         toast.success('Banner updated!');
@@ -170,6 +180,43 @@ export default function AdminBanners() {
             </div>
           </div>
 
+          {/* Video upload */}
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: '#374151', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
+              🎬 Background Video <span style={{ fontSize: 11, fontWeight: 400, color: '#9ca3af' }}>(optional — plays silently instead of image on desktop)</span>
+            </div>
+            <div style={{ fontSize: 11, color: '#9ca3af', marginBottom: 8 }}>
+              Upload a horizontal MP4/WebM video (max 200MB). If both image and video are set, video takes priority on desktop.
+            </div>
+            {videoPreview ? (
+              <div style={{ position: 'relative', borderRadius: 10, overflow: 'hidden', background: '#000', height: 120 }}>
+                <video src={videoPreview} muted autoPlay loop playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <div style={{ position: 'absolute', top: 8, right: 8, display: 'flex', gap: 6 }}>
+                  <label style={{ padding: '4px 10px', background: 'rgba(255,255,255,0.9)', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: 'pointer', color: '#374151' }}>
+                    Change
+                    <input type="file" accept="video/mp4,video/webm,video/mov" style={{ display: 'none' }} onChange={handleVideo} />
+                  </label>
+                  <button type="button" onClick={removeVideo}
+                    style={{ padding: '4px 10px', background: 'rgba(239,68,68,0.9)', borderRadius: 6, fontSize: 11, fontWeight: 600, color: '#fff', border: 'none', cursor: 'pointer' }}>
+                    Remove
+                  </button>
+                </div>
+                <div style={{ position: 'absolute', bottom: 8, left: 8, background: 'rgba(0,0,0,0.6)', color: '#fff', fontSize: 10, padding: '2px 8px', borderRadius: 4 }}>
+                  {videoFile ? videoFile.name : 'Current video'}
+                </div>
+              </div>
+            ) : (
+              <label style={{ display: 'block', cursor: 'pointer' }}>
+                <div style={{ height: 100, border: '2px dashed #c9a96e', borderRadius: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, background: '#fffbf5' }}>
+                  <span style={{ fontSize: 24 }}>🎬</span>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: '#c9a96e' }}>Click to upload banner video</span>
+                  <span style={{ fontSize: 10, color: '#9ca3af' }}>MP4 · WebM · MOV · Max 200MB · Horizontal (16:9)</span>
+                </div>
+                <input type="file" accept="video/mp4,video/webm,video/mov,video/quicktime" style={{ display: 'none' }} onChange={handleVideo} />
+              </label>
+            )}
+          </div>
+
           {/* Text fields */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             <div style={{ gridColumn: '1 / -1' }}>
@@ -239,11 +286,16 @@ export default function AdminBanners() {
                   style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', padding: 2, opacity: idx === banners.length - 1 ? 0.3 : 1, fontSize: 10 }}></button>
               </div>
 
-              {/* Preview image */}
-              <div style={{ width: 80, height: 50, borderRadius: 8, overflow: 'hidden', background: '#f9fafb', flexShrink: 0 }}>
-                {b.desktop_image
-                  ? <img src={b.desktop_image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}></div>
+              {/* Preview */}
+              <div style={{ width: 80, height: 50, borderRadius: 8, overflow: 'hidden', background: '#111', flexShrink: 0, position: 'relative' }}>
+                {b.video_url
+                  ? <>
+                      <video src={b.video_url} muted playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <div style={{ position: 'absolute', bottom: 2, right: 3, background: 'rgba(0,0,0,0.7)', color: '#c9a96e', fontSize: 9, padding: '1px 5px', borderRadius: 3, fontWeight: 700 }}>VIDEO</div>
+                    </>
+                  : b.desktop_image
+                    ? <img src={b.desktop_image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>🖼</div>
                 }
               </div>
 

@@ -46,7 +46,8 @@ const SECTION_TYPES = [
   { value: 'women_trending',         label: '👗 Women — Trending',            desc: 'Trending products for women' },
   { value: 'women_ethnic',           label: '👗 Women — Ethnic Collection',   desc: 'Kurtis, suits, ethnic wear' },
   { value: 'women_western',          label: '👗 Women — Western Collection',  desc: 'Dresses, tops, western wear' },
-  { value: 'reels',                  label: '🎬 Reels / Videos',              desc: 'Short video shop-the-look section' },
+  { value: 'reels',                  label: '🎬 Reels / Videos',              desc: 'Short vertical video shop-the-look section' },
+  { value: 'video_section',          label: '📽️ Horizontal Video Section',    desc: 'Full-width cinematic video player (16:9)' },
 ];
 
 const DEFAULT_SECTIONS = [
@@ -65,7 +66,7 @@ const DEFAULT_SECTIONS = [
 ];
 
 const inp = { width: '100%', padding: '9px 12px', fontSize: 13, border: '1.5px solid #e5e7eb', borderRadius: 8, outline: 'none', fontFamily: 'inherit', color: '#111827', background: '#fff' };
-const blank = { type: 'new_arrivals', title: '', subtitle: '', sort_order: 0, is_active: true };
+const blank = { type: 'new_arrivals', title: '', subtitle: '', sort_order: 0, is_active: true, config: {} };
 
 /* ── Section Products Panel ─────────────────────────────── */
 function SectionProducts({ section }) {
@@ -187,7 +188,7 @@ export default function AdminSections() {
   const openAdd  = () => { setEditing(null); setForm(blank); setShowForm(true); };
   const openEdit = (s) => {
     setEditing(s);
-    setForm({ type: s.type, title: s.title || '', subtitle: s.subtitle || '', sort_order: s.sort_order, is_active: s.is_active });
+    setForm({ type: s.type, title: s.title || '', subtitle: s.subtitle || '', sort_order: s.sort_order, is_active: s.is_active, config: s.config || {} });
     setShowForm(true);
   };
 
@@ -314,6 +315,38 @@ export default function AdminSections() {
               <label htmlFor="sec_active" style={{ fontSize: 13, fontWeight: 600, color: '#374151', cursor: 'pointer' }}>Visible on homepage</label>
             </div>
           </div>
+
+          {/* Extra config for video_section */}
+          {form.type === 'video_section' && (
+            <div style={{ background: '#f9fafb', borderRadius: 10, padding: 14, border: '1px solid #e5e7eb', display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#374151', marginBottom: 2 }}>📽️ Video Section Settings</div>
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 600, color: '#6b7280', display: 'block', marginBottom: 5 }}>Video URL * <span style={{ fontWeight: 400 }}>(Cloudinary or any direct MP4 URL)</span></label>
+                <input value={form.config?.video_url || ''} onChange={e => setForm(p => ({ ...p, config: { ...p.config, video_url: e.target.value } }))} placeholder="https://res.cloudinary.com/.../video.mp4" style={inp} />
+              </div>
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 600, color: '#6b7280', display: 'block', marginBottom: 5 }}>Poster / Thumbnail URL <span style={{ fontWeight: 400 }}>(shown before video loads)</span></label>
+                <input value={form.config?.poster || ''} onChange={e => setForm(p => ({ ...p, config: { ...p.config, poster: e.target.value } }))} placeholder="https://..." style={inp} />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: '#6b7280', display: 'block', marginBottom: 5 }}>Label text <span style={{ fontWeight: 400 }}>(above title)</span></label>
+                  <input value={form.config?.label || ''} onChange={e => setForm(p => ({ ...p, config: { ...p.config, label: e.target.value } }))} placeholder="Campaign Film" style={inp} />
+                </div>
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: '#6b7280', display: 'block', marginBottom: 5 }}>CTA Button text</label>
+                  <input value={form.config?.cta_text || ''} onChange={e => setForm(p => ({ ...p, config: { ...p.config, cta_text: e.target.value } }))} placeholder="Shop the Look" style={inp} />
+                </div>
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: '#6b7280', display: 'block', marginBottom: 5 }}>CTA Link</label>
+                  <input value={form.config?.cta_link || ''} onChange={e => setForm(p => ({ ...p, config: { ...p.config, cta_link: e.target.value } }))} placeholder="/shop" style={inp} />
+                </div>
+              </div>
+              <div style={{ fontSize: 11, color: '#9ca3af', lineHeight: 1.5 }}>
+                💡 Upload the video in Admin → Homepage → Banners, copy the Cloudinary URL and paste it above. Video plays on click with sound, looping, in 16:9 format.
+              </div>
+            </div>
+          )}
           <div style={{ display: 'flex', gap: 10 }}>
             <button type="submit" disabled={saving} className="btn-orange" style={{ padding: '9px 20px', borderRadius: 10, fontSize: 13 }}>
               {saving ? 'Saving...' : editing ? 'Update Section' : 'Add Section'}

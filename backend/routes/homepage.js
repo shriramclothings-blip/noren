@@ -7,10 +7,18 @@ const hp = require('../controllers/homepageController');
 
 const guard = [auth, requireRole('admin', 'super_admin')];
 
-// Cloudinary storage for banners (images)
+// Cloudinary storage for banners (images + videos)
 const bannerStorage = new CloudinaryStorage({
   cloudinary,
-  params: { folder: 'shriram-clothings/banners', allowed_formats: ['jpg','jpeg','png','webp'], transformation: [{ quality: 'auto', fetch_format: 'auto' }] },
+  params: (req, file) => {
+    const isVideo = file.mimetype.startsWith('video/');
+    return {
+      folder: 'shriram-clothings/banners',
+      resource_type: isVideo ? 'video' : 'image',
+      allowed_formats: isVideo ? ['mp4','mov','webm'] : ['jpg','jpeg','png','webp'],
+      transformation: isVideo ? [] : [{ quality: 'auto', fetch_format: 'auto' }],
+    };
+  },
 });
 
 // Cloudinary storage for reels (videos + thumbnails)
