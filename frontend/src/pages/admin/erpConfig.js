@@ -63,6 +63,7 @@ export const ERP_NAV_GROUPS = [
     key: 'internal-communications',
     label: 'Internal Communications',
     items: [
+      { key: 'email-center', label: 'Email Center', icon: 'Mail', componentKey: 'email-center', roles: ['admin', 'super_admin', 'business_owner'], description: 'Send updates, new launches, deals and custom emails to all or specific users.' },
       { key: 'chat-support', label: 'Chat Support', icon: 'MessageSquare', componentKey: 'chat-support', roles: ['admin','super_admin','business_owner','store_admin','store_manager','cashier','warehouse_manager','accountant','employee'], description: 'Internal chat for admin and employee collaboration.' },
       { key: 'private-chat', label: 'Private Messages', icon: 'MessageCircle', componentKey: 'private-chat', roles: ['admin','super_admin','business_owner','store_admin','store_manager','cashier','warehouse_manager','accountant','employee'], description: 'Search users by email or phone and exchange private messages.' },
       { key: 'video-calls', label: 'Video Calls', icon: 'Video', componentKey: 'video-calls', roles: ['admin','super_admin','business_owner','store_admin','store_manager','cashier','warehouse_manager','accountant','employee'], description: 'Launch or join internal video meetings for the team.' },

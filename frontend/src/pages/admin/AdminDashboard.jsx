@@ -20,6 +20,7 @@ import {
   Layout,
   LayoutDashboard,
   LogOut,
+  Mail,
   MapPinned,
   Menu,
   MessageCircle,
@@ -90,6 +91,7 @@ const AdminPrivateChat    = lazy(() => import('./erp/AdminPrivateChat'));
 const AdminConversationMonitor = lazy(() => import('./erp/AdminConversationMonitor'));
 const AdminVideoCalls     = lazy(() => import('./erp/AdminVideoCalls'));
 const AdminVoiceCalls     = lazy(() => import('./erp/AdminVoiceCalls'));
+const AdminEmailCenter    = lazy(() => import('./erp/AdminEmailCenter'));
 
 const iconMap = {
   LayoutDashboard,
@@ -128,6 +130,7 @@ const iconMap = {
   Tag,
   Cloud,
   Eye,
+  Mail,
 };
 
 //  Error boundary for ERP modules 
@@ -244,6 +247,8 @@ export default function AdminDashboard() {
         return <AdminSuperAdmin />;
       case 'chat-support':
         return <AdminChatSupport />;
+      case 'email-center':
+        return <AdminEmailCenter />;
       case 'private-chat':
         return <AdminPrivateChat />;
       case 'conversations':

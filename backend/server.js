@@ -73,6 +73,7 @@ app.use('/api/users', require('./routes/users'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/erp', require('./routes/erp'));
 app.use('/api/erp/communications', require('./routes/communications'));
+app.use('/api/erp/email', require('./routes/email'));
 app.use('/api/erp/pos', require('./routes/pos'));
 app.use('/api/erp/inventory', require('./routes/inventory'));
 app.use('/api/erp/customers', require('./routes/customers'));
