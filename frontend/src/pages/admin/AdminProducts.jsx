@@ -9,6 +9,19 @@ const MAX_SIZE_MB = 5;
 const blank = { title: '', description: '', price: '', discount_percent: '', category_id: '', gender: 'men' };
 const inp = { width: '100%', padding: '9px 12px', fontSize: 13, border: '1.5px solid #e5e7eb', borderRadius: 8, outline: 'none', fontFamily: 'inherit', color: '#111827', background: '#fff' };
 
+// Compute which homepage sections a product currently appears in
+function getProductSections(p) {
+  const sections = [];
+  if (p.is_featured)                                          sections.push({ label: 'Signature',        color: '#fef9c3', text: '#854d0e' });
+  if (p.is_trending && p.gender !== 'women')                 sections.push({ label: 'Trending Men',     color: '#fee2e2', text: '#991b1b' });
+  if (p.is_trending && (p.gender === 'women' || p.gender === 'unisex')) sections.push({ label: 'Trending Women', color: '#fce7f3', text: '#be185d' });
+  if (p.gender !== 'women')                                  sections.push({ label: 'New Arrivals',     color: '#f0fdf4', text: '#166534' });
+  if (p.gender === 'women')                                  sections.push({ label: "Women's New",      color: '#fdf4ff', text: '#7e22ce' });
+  if (p.category_slug === 'kurtis' && p.gender === 'women') sections.push({ label: 'Ethnic Women',     color: '#fff7ed', text: '#c2410c' });
+  if (p.category_slug === 'dresses' && p.gender === 'women')sections.push({ label: 'Western Women',    color: '#eff6ff', text: '#1d4ed8' });
+  return sections;
+}
+
 export default function AdminProducts() {
   const [products, setProducts] = useState([]);
   const [total, setTotal] = useState(0);
@@ -450,7 +463,7 @@ export default function AdminProducts() {
                     onChange={toggleSelectAll}
                     style={{ accentColor: '#c9a96e', width: 15, height: 15, cursor: 'pointer' }} />
                 </th>
-                {['Product', 'Category', 'Gender', 'Price', 'Status', 'Featured', 'Trending', 'Actions'].map(h => (
+                {['Product', 'Category', 'Gender', 'Price', 'Status', 'Appears In Sections', 'Featured', 'Trending', 'Actions'].map(h => (
                   <th key={h} style={{ textAlign: 'left', padding: '10px 14px', fontSize: 11, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>{h}</th>
                 ))}
               </tr>
@@ -458,7 +471,7 @@ export default function AdminProducts() {
             <tbody>
               {loading ? (
                 Array.from({ length: 5 }).map((_, i) => (
-                  <tr key={i}><td colSpan={9} style={{ padding: '10px 14px' }}><div className="skeleton" style={{ height: 32, borderRadius: 8 }} /></td></tr>
+                  <tr key={i}><td colSpan={10} style={{ padding: '10px 14px' }}><div className="skeleton" style={{ height: 32, borderRadius: 8 }} /></td></tr>
                 ))
               ) : products.map(p => (
                 <tr key={p.id} style={{ borderTop: '1px solid #f9fafb', background: selected.has(p.id) ? '#fffbeb' : 'transparent' }}
@@ -505,6 +518,18 @@ export default function AdminProducts() {
                       </button>
                     )}
                   </td>
+                  {/* Sections this product appears in */}
+                  <td style={{ padding: '10px 14px', maxWidth: 200 }}>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                      {getProductSections(p).length === 0 ? (
+                        <span style={{ fontSize: 11, color: '#d1d5db', fontStyle: 'italic' }}>None</span>
+                      ) : getProductSections(p).map(sec => (
+                        <span key={sec.label} style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 100, background: sec.color, color: sec.text, whiteSpace: 'nowrap' }}>
+                          {sec.label}
+                        </span>
+                      ))}
+                    </div>
+                  </td>
                   {/* Featured toggle */}
                   <td style={{ padding: '10px 14px' }}>
                     <button onClick={() => toggle(p.id, 'is_featured', p.is_featured)}
@@ -535,7 +560,7 @@ export default function AdminProducts() {
                 </tr>
               ))}
               {!loading && !products.length && (
-                <tr><td colSpan={9} style={{ padding: '48px', textAlign: 'center', color: '#9ca3af', fontSize: 13 }}>No products found. Try adjusting your filters.</td></tr>
+                <tr><td colSpan={10} style={{ padding: '48px', textAlign: 'center', color: '#9ca3af', fontSize: 13 }}>No products found. Try adjusting your filters.</td></tr>
               )}
             </tbody>
           </table>
