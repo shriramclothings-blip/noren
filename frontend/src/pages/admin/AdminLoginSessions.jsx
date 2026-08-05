@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Search, Monitor, Smartphone, Tablet, Globe, Shield, ShieldAlert, MapPin, Wifi, Clock, LogOut, RefreshCw, User, Filter } from 'lucide-react';
+import { Search, Monitor, Smartphone, Tablet, Globe, Shield, ShieldAlert, MapPin, Wifi, Clock, LogOut, RefreshCw, User, Filter, ExternalLink } from 'lucide-react';
 import api from '../../utils/api';
 import toast from 'react-hot-toast';
 
@@ -24,9 +24,75 @@ const AUTH_COLOR = {
   register: { bg: '#f0fdf4', color: '#166534', label: 'Register' },
 };
 
+/** Build a human-readable location name from city / region / country fields */
+function buildLocationName(s) {
+  const parts = [s.city, s.region, s.country].filter(Boolean);
+  return parts.length ? parts.join(', ') : (s.location || null);
+}
+
+/** Small OpenStreetMap embed via iframe — no API key needed */
+function MiniMap({ lat, lon, locationName }) {
+  if (!lat || !lon) return null;
+
+  const latN  = Number(lat);
+  const lonN  = Number(lon);
+  const zoom  = 10;
+  // OpenStreetMap iframe embed URL
+  const mapUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${lonN - 0.5},${latN - 0.5},${lonN + 0.5},${latN + 0.5}&layer=mapnik&marker=${latN},${lonN}`;
+  const osmLink = `https://www.openstreetmap.org/?mlat=${latN}&mlon=${lonN}#map=${zoom}/${latN}/${lonN}`;
+
+  return (
+    <div style={{ background: '#faf9f7', borderRadius: 10, border: '1px solid #f0ebe3', overflow: 'hidden' }}>
+      {/* Header */}
+      <div style={{ padding: '10px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, borderBottom: '1px solid #f0ebe3' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <MapPin size={13} color="#c9a96e" />
+          <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.16em', textTransform: 'uppercase', color: '#c9a96e' }}>
+            Location
+          </span>
+        </div>
+        <a
+          href={osmLink}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, color: '#6b7280', textDecoration: 'none', fontWeight: 500 }}
+          onMouseEnter={e => e.currentTarget.style.color = '#c9a96e'}
+          onMouseLeave={e => e.currentTarget.style.color = '#6b7280'}
+        >
+          Open in OSM <ExternalLink size={10} />
+        </a>
+      </div>
+
+      {/* Location name pill */}
+      {locationName && (
+        <div style={{ padding: '8px 14px 4px', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <MapPin size={12} color="#374151" />
+          <span style={{ fontSize: 13, fontWeight: 700, color: '#111827' }}>{locationName}</span>
+        </div>
+      )}
+
+      {/* Coordinates */}
+      <div style={{ padding: '2px 14px 8px', fontSize: 11, color: '#9ca3af', fontFamily: 'monospace' }}>
+        {latN.toFixed(5)}, {lonN.toFixed(5)}
+      </div>
+
+      {/* Map iframe */}
+      <iframe
+        src={mapUrl}
+        title={`Map — ${locationName || 'Login location'}`}
+        style={{ width: '100%', height: 200, border: 'none', display: 'block' }}
+        loading="lazy"
+        sandbox="allow-scripts allow-same-origin"
+      />
+    </div>
+  );
+}
+
 function SessionCard({ s, onTerminate }) {
   const [open, setOpen] = useState(false);
   const auth = AUTH_COLOR[s.auth_method] || AUTH_COLOR.local;
+  const locationName = buildLocationName(s);
+  const hasMap = !!(s.latitude && s.longitude);
 
   return (
     <div style={{ background: '#fff', borderRadius: 14, border: `1px solid ${s.is_suspicious ? '#fecaca' : '#f3f4f6'}`, overflow: 'hidden', transition: 'border-color 0.2s' }}>
@@ -65,7 +131,14 @@ function SessionCard({ s, onTerminate }) {
             <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><DeviceIcon type={s.device_type} size={12} /> {s.device_type}</span>
             <span>{s.browser} {s.browser_version}</span>
             <span>{s.os}</span>
-            {s.location && <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}><MapPin size={11} />{s.location}</span>}
+            {/* Location name shown prominently in header */}
+            {locationName && (
+              <span style={{ display: 'flex', alignItems: 'center', gap: 3, color: hasMap ? '#374151' : '#6b7280', fontWeight: hasMap ? 600 : 400 }}>
+                <MapPin size={11} color={hasMap ? '#c9a96e' : '#9ca3af'} />
+                {locationName}
+                {hasMap && <span style={{ fontSize: 10, background: '#fef3c7', color: '#92400e', padding: '1px 5px', borderRadius: 4, fontWeight: 700 }}>MAP</span>}
+              </span>
+            )}
           </div>
         </div>
 
@@ -142,6 +215,25 @@ function SessionCard({ s, onTerminate }) {
               {s.user_agent?.slice(0, 220)}{s.user_agent?.length > 220 ? '…' : ''}
             </div>
           </div>
+
+          {/* Location map — full-width row when lat/lon available */}
+          {hasMap && (
+            <div style={{ gridColumn: '1 / -1' }}>
+              <MiniMap lat={s.latitude} lon={s.longitude} locationName={locationName} />
+            </div>
+          )}
+
+          {/* No-coordinates fallback: show location name in a card */}
+          {!hasMap && locationName && (
+            <div style={{ gridColumn: '1 / -1', background: '#faf9f7', borderRadius: 10, padding: '12px 14px', border: '1px solid #f0ebe3', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <MapPin size={14} color="#c9a96e" />
+              <div>
+                <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.16em', textTransform: 'uppercase', color: '#c9a96e', margin: 0, marginBottom: 2 }}>Location</p>
+                <span style={{ fontSize: 13, fontWeight: 700, color: '#111827' }}>{locationName}</span>
+                <span style={{ fontSize: 11, color: '#9ca3af', marginLeft: 8 }}>(coordinates not available)</span>
+              </div>
+            </div>
+          )}
 
           {/* Actions */}
           {s.is_active && onTerminate && (
