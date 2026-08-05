@@ -218,6 +218,9 @@ const PORT = process.env.PORT || 5000;
 initDB().catch(err => {
   console.warn(`⚠️  initDB warning (non-fatal): ${err.message} — server will still start, failover active`);
 });
+// Verify email config on startup so misconfigurations are visible in logs
+const { testMailConfig } = require('./services/mailService');
+testMailConfig().catch(() => {});
 httpServer.listen(PORT, '0.0.0.0', () => console.log(`🚀 NOREN API running on port ${PORT}`));
 
   // ── Socket.IO real-time chat ──────────────────────────────────────────────

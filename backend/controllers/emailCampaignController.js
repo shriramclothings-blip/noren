@@ -112,7 +112,7 @@ const sendCampaign = async (req, res) => {
     let successCount = 0;
     for (let i = 0; i < recipients.length; i += 10) {
       const batch = recipients.slice(i, i + 10);
-      await Promise.allSettled(
+      const results = await Promise.allSettled(
         batch.map(async (u) => {
           // Personalise greeting if possible
           const personalBody = custom_html?.trim()
@@ -127,10 +127,12 @@ const sendCampaign = async (req, res) => {
                  </a>
                </div>`;
           const personalHtml = buildHtml(subject, badge.label, badge.color, personalBody);
-          await sendMail(u.email, subject, personalHtml);
-          successCount++;
+          const ok = await sendMail(u.email, subject, personalHtml);
+          return ok;
         })
       );
+      // Count only confirmed successes
+      successCount += results.filter(r => r.status === 'fulfilled' && r.value === true).length;
     }
 
     // Log campaign
