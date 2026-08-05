@@ -683,13 +683,7 @@ function MidBanner({ banners }) {
     return () => clearInterval(t);
   }, [banners.length]);
 
-  if (!banners.length) return (
-    <section style={{ background: '#1a1a18', padding: '40px 0', textAlign: 'center' }}>
-      <div style={{ fontSize: 13, color: 'rgba(250,249,247,0.4)', letterSpacing: '0.1em' }}>
-        Mid-page banner slot — add banners tagged "Mid-Page" in Admin → Banners
-      </div>
-    </section>
-  );
+  if (!banners.length) return null;
 
   return (
     <section style={{ position: 'relative', background: '#0f0f0d', overflow: 'hidden' }}>
