@@ -56,14 +56,15 @@ const DEFAULT_SECTIONS = [
   { type: 'new_arrivals',           title: 'New Arrivals',           subtitle: 'Just dropped for you',           sort_order: 2 },
   { type: 'offer_banner',           title: 'Crafted Beyond Trends.', subtitle: 'Wear confidence. Designed to endure. Modern heritage for every journey.', sort_order: 3 },
   { type: 'featured_products',      title: 'Signature Collection',   subtitle: 'Handpicked by our team',         sort_order: 4 },
-  { type: 'women_collection_banner',title: '',                       subtitle: '',                               sort_order: 5 },
-  { type: 'women_new_arrivals',     title: "Women's New Arrivals",   subtitle: '',                               sort_order: 6 },
-  { type: 'trending_products',      title: 'Trending Now',           subtitle: '',                               sort_order: 7 },
-  { type: 'women_trending',         title: 'Trending in Women',      subtitle: '',                               sort_order: 8 },
-  { type: 'women_ethnic',           title: 'Ethnic Wear for Women',  subtitle: '',                               sort_order: 9 },
-  { type: 'best_sellers',           title: 'Best Sellers',           subtitle: '',                               sort_order: 10 },
-  { type: 'women_western',          title: "Women's Western Collection", subtitle: '',                           sort_order: 11 },
-  { type: 'reels',                  title: 'Shop the Look',          subtitle: '',                               sort_order: 12 },
+  { type: 'mid_banner',             title: 'Mid-Page Banner',        subtitle: '',                               sort_order: 5 },
+  { type: 'women_collection_banner',title: '',                       subtitle: '',                               sort_order: 6 },
+  { type: 'women_new_arrivals',     title: "Women's New Arrivals",   subtitle: '',                               sort_order: 7 },
+  { type: 'trending_products',      title: 'Trending Now',           subtitle: '',                               sort_order: 8 },
+  { type: 'women_trending',         title: 'Trending in Women',      subtitle: '',                               sort_order: 9 },
+  { type: 'women_ethnic',           title: 'Ethnic Wear for Women',  subtitle: '',                               sort_order: 10 },
+  { type: 'best_sellers',           title: 'Best Sellers',           subtitle: '',                               sort_order: 11 },
+  { type: 'women_western',          title: "Women's Western Collection", subtitle: '',                           sort_order: 12 },
+  { type: 'reels',                  title: 'Shop the Look',          subtitle: '',                               sort_order: 13 },
 ];
 
 const inp = { width: '100%', padding: '9px 12px', fontSize: 13, border: '1.5px solid #e5e7eb', borderRadius: 8, outline: 'none', fontFamily: 'inherit', color: '#111827', background: '#fff' };

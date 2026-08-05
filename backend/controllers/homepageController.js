@@ -34,7 +34,11 @@ const getActiveMidBanners = async (req, res) => {
       ORDER BY sort_order ASC
     `);
     res.json(result.rows);
-  } catch (err) { res.status(500).json({ message: err.message }); }
+  } catch (err) {
+    // If banner_slot column doesn't exist yet, return empty array gracefully
+    console.warn('mid-banners query failed (column may not exist yet):', err.message);
+    res.json([]);
+  }
 };
 
 const createBanner = async (req, res) => {
