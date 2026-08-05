@@ -3,7 +3,7 @@ import { Plus, Pencil, Trash2, X, Upload, ToggleLeft, ToggleRight, GripVertical 
 import api from '../../utils/api';
 import toast from 'react-hot-toast';
 
-const blank = { heading: '', subheading: '', cta_text: '', cta_link: '', sort_order: 0, is_active: true, starts_at: '', ends_at: '' };
+const blank = { heading: '', subheading: '', cta_text: '', cta_link: '', sort_order: 0, is_active: true, starts_at: '', ends_at: '', banner_slot: 'hero' };
 const inp = { width: '100%', padding: '9px 12px', fontSize: 13, border: '1.5px solid #e5e7eb', borderRadius: 8, outline: 'none', fontFamily: 'inherit', color: '#111827', background: '#fff' };
 
 export default function AdminBanners() {
@@ -45,6 +45,7 @@ export default function AdminBanners() {
       sort_order: b.sort_order || 0, is_active: b.is_active,
       starts_at: b.starts_at ? b.starts_at.slice(0, 16) : '',
       ends_at: b.ends_at ? b.ends_at.slice(0, 16) : '',
+      banner_slot: b.banner_slot || 'hero',
     });
     setDesktopFile(null); setMobileFile(null); setVideoFile(null);
     setDesktopPreview(b.desktop_image || '');
@@ -253,6 +254,35 @@ export default function AdminBanners() {
             </div>
           </div>
 
+          {/* Banner Placement */}
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 700, color: '#374151', display: 'block', marginBottom: 10 }}>
+              📍 Banner Placement — where does this banner appear?
+            </label>
+            <div style={{ display: 'flex', gap: 10 }}>
+              {[
+                { value: 'hero', label: '🏠 Hero Banner',      desc: 'Top of homepage — full screen slider', color: '#1a1a18' },
+                { value: 'mid',  label: '🎯 Mid-Page Banner',  desc: 'Middle of homepage — between sections', color: '#7c3aed' },
+              ].map(opt => (
+                <label key={opt.value} style={{ flex: 1, cursor: 'pointer' }}>
+                  <input type="radio" name="banner_slot" value={opt.value}
+                    checked={form.banner_slot === opt.value}
+                    onChange={e => setForm(p => ({ ...p, banner_slot: e.target.value }))}
+                    style={{ display: 'none' }} />
+                  <div style={{ padding: '12px 14px', borderRadius: 10, border: `2px solid ${form.banner_slot === opt.value ? opt.color : '#e5e7eb'}`, background: form.banner_slot === opt.value ? `${opt.color}10` : '#fff', transition: 'all 0.15s' }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: form.banner_slot === opt.value ? opt.color : '#374151', marginBottom: 3 }}>{opt.label}</div>
+                    <div style={{ fontSize: 11, color: '#9ca3af' }}>{opt.desc}</div>
+                  </div>
+                </label>
+              ))}
+            </div>
+            {form.banner_slot === 'mid' && (
+              <div style={{ marginTop: 10, padding: '10px 14px', background: '#f5f3ff', border: '1px solid #ddd6fe', borderRadius: 8, fontSize: 12, color: '#6d28d9' }}>
+                💡 Add a <strong>Mid-Page Banner</strong> section in <strong>Admin → Homepage → Sections</strong> to control where it appears on the homepage.
+              </div>
+            )}
+          </div>
+
           <div style={{ display: 'flex', gap: 10 }}>
             <button type="submit" disabled={saving} className="btn-orange" style={{ padding: '9px 20px', borderRadius: 10, fontSize: 13 }}>
               {saving ? 'Saving...' : editing ? 'Update Banner' : 'Create Banner'}
@@ -301,10 +331,16 @@ export default function AdminBanners() {
 
               {/* Info */}
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: '#111827', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {b.heading || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>No heading</span>}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: '#111827', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {b.heading || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>No heading</span>}
+                  </div>
+                  <span style={{ flexShrink: 0, fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 100, background: b.banner_slot === 'mid' ? '#f5f3ff' : '#f3f4f6', color: b.banner_slot === 'mid' ? '#7c3aed' : '#374151' }}>
+                    {b.banner_slot === 'mid' ? '🎯 Mid-Page' : '🏠 Hero'}
+                  </span>
+                  {b.video_url && <span style={{ flexShrink: 0, fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 100, background: '#fef9c3', color: '#854d0e' }}>🎬 Video</span>}
                 </div>
-                <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <div style={{ fontSize: 11, color: '#9ca3af', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {b.subheading || 'No subheading'}
                 </div>
                 {(b.starts_at || b.ends_at) && (

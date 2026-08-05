@@ -14,6 +14,21 @@ const getActiveBanners = async (req, res) => {
     const result = await pool.query(`
       SELECT * FROM src_banners
       WHERE is_active = TRUE
+        AND (banner_slot = 'hero' OR banner_slot IS NULL)
+        AND (starts_at IS NULL OR starts_at <= NOW())
+        AND (ends_at IS NULL OR ends_at >= NOW())
+      ORDER BY sort_order ASC
+    `);
+    res.json(result.rows);
+  } catch (err) { res.status(500).json({ message: err.message }); }
+};
+
+const getActiveMidBanners = async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT * FROM src_banners
+      WHERE is_active = TRUE
+        AND banner_slot = 'mid'
         AND (starts_at IS NULL OR starts_at <= NOW())
         AND (ends_at IS NULL OR ends_at >= NOW())
       ORDER BY sort_order ASC
@@ -23,16 +38,17 @@ const getActiveBanners = async (req, res) => {
 };
 
 const createBanner = async (req, res) => {
-  const { heading, subheading, cta_text, cta_link, sort_order, is_active, starts_at, ends_at } = req.body;
+  const { heading, subheading, cta_text, cta_link, sort_order, is_active, starts_at, ends_at, banner_slot } = req.body;
   const desktop_image = req.files?.desktop?.[0]?.path || req.body.desktop_image || null;
   const mobile_image  = req.files?.mobile?.[0]?.path  || req.body.mobile_image  || null;
   const video_url     = req.files?.video?.[0]?.path   || req.body.video_url     || null;
   try {
     const result = await pool.query(
-      `INSERT INTO src_banners (heading, subheading, cta_text, cta_link, desktop_image, mobile_image, video_url, sort_order, is_active, starts_at, ends_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
+      `INSERT INTO src_banners (heading, subheading, cta_text, cta_link, desktop_image, mobile_image, video_url, banner_slot, sort_order, is_active, starts_at, ends_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING *`,
       [heading || null, subheading || null, cta_text || null, cta_link || null,
-       desktop_image, mobile_image, video_url, sort_order || 0, is_active !== 'false',
+       desktop_image, mobile_image, video_url, banner_slot || 'hero',
+       sort_order || 0, is_active !== 'false',
        starts_at || null, ends_at || null]
     );
     res.status(201).json(result.rows[0]);
@@ -40,7 +56,7 @@ const createBanner = async (req, res) => {
 };
 
 const updateBanner = async (req, res) => {
-  const { heading, subheading, cta_text, cta_link, sort_order, is_active, starts_at, ends_at } = req.body;
+  const { heading, subheading, cta_text, cta_link, sort_order, is_active, starts_at, ends_at, banner_slot } = req.body;
   const desktop_image = req.files?.desktop?.[0]?.path || req.body.desktop_image;
   const mobile_image  = req.files?.mobile?.[0]?.path  || req.body.mobile_image;
   const video_url     = req.files?.video?.[0]?.path   || req.body.video_url;
@@ -53,6 +69,7 @@ const updateBanner = async (req, res) => {
     set('cta_text', cta_text);
     set('cta_link', cta_link);
     set('sort_order', sort_order);
+    set('banner_slot', banner_slot);
     set('is_active', is_active !== undefined ? is_active !== 'false' && is_active !== false : undefined);
     set('starts_at', starts_at || null);
     set('ends_at', ends_at || null);
@@ -247,7 +264,7 @@ const updateSettings = async (req, res) => {
 };
 
 module.exports = {
-  getBanners, getActiveBanners, createBanner, updateBanner, deleteBanner, reorderBanners,
+  getBanners, getActiveBanners, getActiveMidBanners, createBanner, updateBanner, deleteBanner, reorderBanners,
   getSections, getActiveSections, createSection, updateSection, deleteSection, reorderSections,
   getReels, getActiveReels, createReel, updateReel, deleteReel,
   getSettings, updateSettings,

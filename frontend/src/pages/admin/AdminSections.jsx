@@ -48,6 +48,7 @@ const SECTION_TYPES = [
   { value: 'women_western',          label: '👗 Women — Western Collection',  desc: 'Dresses, tops, western wear' },
   { value: 'reels',                  label: '🎬 Reels / Videos',              desc: 'Short vertical video shop-the-look section' },
   { value: 'video_section',          label: '📽️ Horizontal Video Section',    desc: 'Full-width cinematic video player (16:9)' },
+  { value: 'mid_banner',             label: '🎯 Mid-Page Banner',              desc: 'Full-width banner slider in the middle of homepage' },
 ];
 
 const DEFAULT_SECTIONS = [

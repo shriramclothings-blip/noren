@@ -664,7 +664,149 @@ function WomensCollectionBanner() {
   );
 }
 
-//  Horizontal Video Section
+//  Mid-Page Banner Slider (same as HeroBanner but for middle of page)
+function MidBanner({ banners }) {
+  const [current, setCurrent] = useState(0);
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== 'undefined' && window.innerWidth < 640
+  );
+
+  useEffect(() => {
+    const fn = () => setIsMobile(window.innerWidth < 640);
+    window.addEventListener('resize', fn, { passive: true });
+    return () => window.removeEventListener('resize', fn);
+  }, []);
+
+  useEffect(() => {
+    if (banners.length <= 1) return;
+    const t = setInterval(() => setCurrent(c => (c + 1) % banners.length), 5000);
+    return () => clearInterval(t);
+  }, [banners.length]);
+
+  if (!banners.length) return null;
+
+  return (
+    <section style={{ position: 'relative', background: '#1a1a18', overflow: 'hidden' }}>
+
+      <div style={{
+        position: 'relative', width: '100%',
+        height: isMobile ? 'auto' : undefined,
+        aspectRatio: isMobile ? 'auto' : '16/6',
+        maxHeight: isMobile ? 'none' : '65vh',
+        minHeight: isMobile ? 'auto' : 320,
+      }}>
+        {banners.map((ban, i) => {
+          const bgImg = (isMobile && ban.mobile_image) ? ban.mobile_image : ban.desktop_image;
+          const isActive = i === current;
+          return (
+            <div key={ban.id} style={{
+              position: isMobile ? 'relative' : 'absolute',
+              inset: isMobile ? undefined : 0,
+              display: isMobile ? (isActive ? 'block' : 'none') : 'block',
+              transition: isMobile ? 'none' : 'opacity 0.8s ease',
+              opacity: isMobile ? 1 : (isActive ? 1 : 0),
+              pointerEvents: isActive ? 'auto' : 'none',
+              width: '100%',
+            }}>
+              {/* Video background */}
+              {ban.video_url && !isMobile && (
+                <video src={ban.video_url} autoPlay muted loop playsInline
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', background: '#1a1a18' }} />
+              )}
+              {/* Image background */}
+              {bgImg && (!ban.video_url || isMobile) && (
+                <img src={bgImg} alt={ban.heading || 'NOREN'}
+                  style={{ width: '100%', height: isMobile ? 'auto' : '100%', objectFit: isMobile ? 'contain' : 'cover', display: 'block', background: '#1a1a18' }}
+                  loading="lazy" />
+              )}
+              {!bgImg && !ban.video_url && <div style={{ width: '100%', minHeight: 280, background: 'linear-gradient(135deg, #1a1a18 0%, #2c2c29 100%)' }} />}
+
+              {/* Dark overlay — desktop only */}
+              {!isMobile && (
+                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(105deg, rgba(10,10,8,0.78) 0%, rgba(10,10,8,0.35) 55%, transparent 100%)' }} />
+              )}
+
+              {/* Text content */}
+              {(ban.heading || ban.cta_text) && (
+                isMobile ? (
+                  <div style={{ background: '#1a1a18', padding: '18px 20px 24px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                      <div style={{ width: 16, height: 1, background: '#c9a96e' }} />
+                      <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#c9a96e' }}>NOREN</span>
+                    </div>
+                    {ban.heading && <h2 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 26, fontWeight: 600, color: '#faf9f7', lineHeight: 1.15, marginBottom: 8 }}>{ban.heading}</h2>}
+                    {ban.subheading && <p style={{ fontSize: 13, color: 'rgba(250,249,247,0.65)', marginBottom: 16, lineHeight: 1.6, fontWeight: 300 }}>{ban.subheading}</p>}
+                    {ban.cta_text && (
+                      <Link to={ban.cta_link || '/shop'} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '11px 22px', background: '#faf9f7', color: '#1a1a18', fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', textDecoration: 'none', minHeight: 44 }}>
+                        {ban.cta_text} <ArrowRight size={13} />
+                      </Link>
+                    )}
+                  </div>
+                ) : (
+                  <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center' }}>
+                    <div className="wrap" style={{ width: '100%' }}>
+                      <div style={{ maxWidth: 520 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+                          <div style={{ width: 18, height: 1, background: '#c9a96e' }} />
+                          <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', color: '#c9a96e' }}>NOREN</span>
+                        </div>
+                        {ban.heading && <h2 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 'clamp(28px, 4vw, 60px)', fontWeight: 600, color: '#faf9f7', lineHeight: 1.1, marginBottom: 12, letterSpacing: '-0.01em', textShadow: '0 2px 12px rgba(0,0,0,0.4)' }}>{ban.heading}</h2>}
+                        {ban.subheading && <p style={{ fontSize: 'clamp(13px, 1.3vw, 15px)', color: 'rgba(250,249,247,0.72)', marginBottom: 24, lineHeight: 1.65, fontWeight: 300, maxWidth: 380 }}>{ban.subheading}</p>}
+                        {ban.cta_text && (
+                          <Link to={ban.cta_link || '/shop'}
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '12px 28px', background: '#faf9f7', color: '#1a1a18', fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', textDecoration: 'none', transition: 'all 0.2s', minHeight: 44 }}
+                            onMouseEnter={e => e.currentTarget.style.background = '#c9a96e'}
+                            onMouseLeave={e => e.currentTarget.style.background = '#faf9f7'}>
+                            {ban.cta_text} <ArrowRight size={13} />
+                          </Link>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )
+              )}
+            </div>
+          );
+        })}
+
+        {/* Desktop arrows */}
+        {banners.length > 1 && !isMobile && (
+          <>
+            <button onClick={() => setCurrent(c => (c - 1 + banners.length) % banners.length)}
+              style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', width: 40, height: 40, background: 'rgba(250,249,247,0.1)', border: '1px solid rgba(250,249,247,0.2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#faf9f7', zIndex: 10 }}>
+              <ChevronLeft size={16} />
+            </button>
+            <button onClick={() => setCurrent(c => (c + 1) % banners.length)}
+              style={{ position: 'absolute', right: 16, top: '50%', transform: 'translateY(-50%)', width: 40, height: 40, background: 'rgba(250,249,247,0.1)', border: '1px solid rgba(250,249,247,0.2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#faf9f7', zIndex: 10 }}>
+              <ChevronRight size={16} />
+            </button>
+          </>
+        )}
+
+        {/* Desktop dots */}
+        {banners.length > 1 && !isMobile && (
+          <div style={{ position: 'absolute', bottom: 16, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 6, zIndex: 10 }}>
+            {banners.map((_, i) => (
+              <button key={i} onClick={() => setCurrent(i)} style={{ width: i === current ? 20 : 6, height: 6, borderRadius: 3, background: i === current ? '#c9a96e' : 'rgba(250,249,247,0.4)', border: 'none', cursor: 'pointer', transition: 'all 0.3s', padding: 0 }} />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Mobile dots */}
+      {banners.length > 1 && isMobile && (
+        <div style={{ background: '#1a1a18', display: 'flex', justifyContent: 'center', gap: 6, padding: '8px 0 16px' }}>
+          {banners.map((_, i) => (
+            <button key={i} onClick={() => setCurrent(i)} style={{ width: i === current ? 20 : 6, height: 6, borderRadius: 3, background: i === current ? '#c9a96e' : 'rgba(250,249,247,0.3)', border: 'none', cursor: 'pointer', transition: 'all 0.3s', padding: 0 }} />
+          ))}
+        </div>
+      )}
+
+    </section>
+  );
+}
+
+
 function HorizontalVideoSection({ section }) {
   const videoUrl = section.config?.video_url || '';
   const [playing, setPlaying] = useState(false);
@@ -777,6 +919,7 @@ function HorizontalVideoSection({ section }) {
 export default function Home() {
   const { settings }              = useSiteSettings();
   const [banners, setBanners]     = useState([]);
+  const [midBanners, setMidBanners] = useState([]);
   const [sections, setSections]   = useState([]);
   const [reels, setReels]         = useState([]);
   const [loaded, setLoaded]       = useState(false);
@@ -784,10 +927,12 @@ export default function Home() {
   useEffect(() => {
     Promise.all([
       api.get('/homepage/banners').catch(() => ({ data: [] })),
+      api.get('/homepage/mid-banners').catch(() => ({ data: [] })),
       api.get('/homepage/sections').catch(() => ({ data: [] })),
       api.get('/homepage/reels').catch(() => ({ data: [] })),
-    ]).then(([b, s, r]) => {
+    ]).then(([b, mb, s, r]) => {
       setBanners(b.data || []);
+      setMidBanners(mb.data || []);
       setSections(s.data || []);
       setReels(r.data || []);
     }).finally(() => setLoaded(true));
@@ -814,6 +959,8 @@ export default function Home() {
         return <WomensCollectionBanner key={section.id} />;
       case 'video_section':
         return <HorizontalVideoSection key={section.id} section={section} />;
+      case 'mid_banner':
+        return midBanners.length > 0 ? <MidBanner key={section.id} banners={midBanners} /> : null;
       case 'reels':
         return reels.length > 0 ? <ReelsSection key={section.id} reels={reels} /> : null;
       default:

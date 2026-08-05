@@ -38,8 +38,9 @@ const uploadReel = multer({ storage: reelStorage, limits: { fileSize: 100 * 1024
   .fields([{ name: 'video', maxCount: 1 }, { name: 'thumbnail', maxCount: 1 }]);
 
 // ── Public routes (homepage reads) ───────────────────────────────────────────
-router.get('/banners',  hp.getActiveBanners);
-router.get('/sections', hp.getActiveSections);
+router.get('/banners',      hp.getActiveBanners);
+router.get('/mid-banners',  hp.getActiveMidBanners);
+router.get('/sections',     hp.getActiveSections);
 router.get('/reels',    hp.getActiveReels);
 router.get('/settings', hp.getSettings);
 

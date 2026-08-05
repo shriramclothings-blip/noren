@@ -481,6 +481,7 @@ const initDB = async () => {
         desktop_image TEXT,
         mobile_image TEXT,
         video_url TEXT,
+        banner_slot VARCHAR(20) DEFAULT 'hero',
         sort_order INTEGER DEFAULT 0,
         is_active BOOLEAN DEFAULT TRUE,
         starts_at TIMESTAMP,
@@ -492,6 +493,13 @@ const initDB = async () => {
       DO $$ BEGIN
         IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='src_banners' AND column_name='video_url') THEN
           ALTER TABLE src_banners ADD COLUMN video_url TEXT;
+        END IF;
+      END $$;
+
+      -- Add banner_slot column if it doesn't exist yet
+      DO $$ BEGIN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='src_banners' AND column_name='banner_slot') THEN
+          ALTER TABLE src_banners ADD COLUMN banner_slot VARCHAR(20) DEFAULT 'hero';
         END IF;
       END $$;
 
