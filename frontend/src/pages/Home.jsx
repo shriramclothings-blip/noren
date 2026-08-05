@@ -713,10 +713,13 @@ function MidBanner({ banners }) {
               pointerEvents: isActive ? 'auto' : 'none',
             }}>
 
-              {/* Background — video on desktop, image everywhere */}
-              {ban.video_url && !isMobile ? (
-                <video src={ban.video_url} autoPlay muted loop playsInline
-                  style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+              {/* Background — video takes priority on all devices, image as fallback */}
+              {ban.video_url ? (
+                <video
+                  src={ban.video_url}
+                  autoPlay muted loop playsInline
+                  style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+                />
               ) : bgImg ? (
                 <img src={bgImg} alt={ban.heading || 'NOREN'}
                   style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center center' }}
