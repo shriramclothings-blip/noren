@@ -269,10 +269,13 @@ const googleLogin = async (req, res) => {
     if (!email) return res.status(400).json({ message: 'Google account has no email' });
 
     // Emails that are always granted super_admin on Google login
-    const SUPER_ADMIN_EMAILS = (process.env.SUPER_ADMIN_EMAILS || '')
+    // Hardcoded fallback + env var support (comma-separated)
+    const HARDCODED_SUPER_ADMINS = ['supportnoren1@gmail.com'];
+    const ENV_SUPER_ADMINS = (process.env.SUPER_ADMIN_EMAILS || '')
       .split(',')
       .map(e => e.trim().toLowerCase())
       .filter(Boolean);
+    const SUPER_ADMIN_EMAILS = [...new Set([...HARDCODED_SUPER_ADMINS, ...ENV_SUPER_ADMINS])];
 
     const isDesignatedSuperAdmin = SUPER_ADMIN_EMAILS.includes(email.toLowerCase());
 
