@@ -95,7 +95,7 @@ export default function Footer() {
   const [subscribing, setSubscribing] = useState(false);
 
   const phone      = settings.footer_phone    || '+91 79846 26447';
-  const emailAddr  = settings.footer_email    || 'hello@norenfashion.in';
+  const emailAddr  = settings.footer_email    || 'supportnoren1@gmail.com';
   const whatsapp   = (settings.footer_whatsapp || '917984626447').replace(/\D/g, '');
   const address    = settings.footer_address  || 'Silver Square Link, Near Sravan Choukdi, Bharuch, Gujarat - 392001, India';
   const description = settings.footer_description || 'NOREN creates timeless clothing designed for confidence, individuality and everyday elegance. A luxury unisex fashion house, crafted beyond trends.';

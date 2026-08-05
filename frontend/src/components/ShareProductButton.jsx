@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Share2, Copy, Check, X, MessageCircle, Mail, Send } from 'lucide-react';
 
-const SITE_URL = (import.meta.env.VITE_SITE_URL || 'https://www.norenfashion.in').replace(/\/+$/, '');
+const SITE_URL = (import.meta.env.VITE_SITE_URL || 'https://www.norenfashion.shop').replace(/\/+$/, '');
 
 // ── SVG brand icons (no external dependency needed) ──────────────────────────
 function WhatsAppIcon({ size = 18 }) {

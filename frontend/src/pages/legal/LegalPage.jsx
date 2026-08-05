@@ -3,13 +3,13 @@
 export const BRAND    = 'NOREN';
 export const OPERATOR = 'Dinesh Global Enterprise Private Limited';
 export const COMPANY  = OPERATOR; // alias for backward compat
-export const EMAIL    = 'support@norenfashion.in';
-export const SUPPORT  = 'support@norenfashion.in';
+export const EMAIL    = 'supportnoren1@gmail.com';
+export const SUPPORT  = 'supportnoren1@gmail.com';
 export const ADDRESS  = 'Silver Square Link, Near Sravan Choukdi, Bharuch, Gujarat  392001, India';
 export const PHONE    = '+91 7984626447';
-export const WEBSITE  = 'https://www.norenfashion.in';
+export const WEBSITE  = 'https://www.norenfashion.shop';
 export const GRIEVANCE_OFFICER = 'Mayur Rawal';
-export const GRIEVANCE_EMAIL   = 'support@norenfashion.in';
+export const GRIEVANCE_EMAIL   = 'supportnoren1@gmail.com';
 
 // Legal identity line used across all policy pages
 export const LEGAL_IDENTITY = `${BRAND} is an independent men's fashion and ecommerce brand. The ecommerce platform, infrastructure, technical operations, and platform management services are operated and supported by ${OPERATOR}. ${OPERATOR} acts solely as the managing, operational, technology, and support partner for ${BRAND}. The brand identity, business operations, and associated intellectual assets of ${BRAND} remain independently associated with ${BRAND}.`;

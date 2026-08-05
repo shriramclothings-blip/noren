@@ -14,7 +14,7 @@ const DEFAULTS = {
   seo_keywords: 'NOREN, luxury fashion, premium clothing, unisex fashion, timeless design, oversized t-shirts, luxury shirts, premium jeans, designer hoodies',
   footer_description: 'NOREN creates timeless clothing designed for confidence, individuality and everyday elegance. A luxury unisex fashion house, crafted beyond trends.',
   footer_phone: '+91 79846 26447',
-  footer_email: 'hello@norenfashion.in',
+  footer_email: 'supportnoren1@gmail.com',
   footer_whatsapp: '917984626447',
   footer_address: 'Silver Square Link, Near Sravan Choukdi, Bharuch, Gujarat - 392001, India',
   footer_maps_url: 'https://maps.google.com/?q=Bharuch,Gujarat,India',

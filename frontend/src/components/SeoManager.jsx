@@ -2,7 +2,7 @@
 import { useLocation } from 'react-router-dom';
 import api from '../utils/api';
 
-const SITE_URL = (import.meta.env.VITE_SITE_URL || 'https://www.norenfashion.in').replace(/\/+$/, '');
+const SITE_URL = (import.meta.env.VITE_SITE_URL || 'https://www.norenfashion.shop').replace(/\/+$/, '');
 const DEFAULT_OG_IMAGE = `${SITE_URL}/og-image.jpg`;
 
 // SEO configuration for each route

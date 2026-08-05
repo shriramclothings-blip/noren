@@ -201,7 +201,7 @@ export default function Contact() {
             <div style={{ background: '#111827', borderRadius: 16, padding: 24 }}>
               <h3 style={{ fontSize: 15, fontWeight: 700, color: '#fff', marginBottom: 20 }}>Contact Information</h3>
               {[
-                { icon: Mail,  label: 'Email', value: 'support@norenfashion.in', href: 'mailto:support@norenfashion.in' },
+                { icon: Mail,  label: 'Email', value: 'supportnoren1@gmail.com', href: 'mailto:supportnoren1@gmail.com' },
                 { icon: Phone, label: 'Phone', value: '+91 98765 43210', href: 'tel:+919876543210' },
                 { icon: MapPin,label: 'Address', value: 'Mumbai, Maharashtra, India', href: null },
                 { icon: Clock, label: 'Working Hours', value: 'MonSat, 10am7pm IST', href: null },
