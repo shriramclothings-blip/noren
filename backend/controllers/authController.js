@@ -307,7 +307,7 @@ const googleLogin = async (req, res) => {
       if (user.is_banned) return res.status(403).json({ message: 'Account has been banned' });
     } else {
       // New user — create account, assign super_admin role if designated
-      const assignedRole = isDesignatedSuperAdmin ? 'super_admin' : 'customer';
+      const assignedRole = isDesignatedSuperAdmin ? 'super_admin' : 'user';
       const newUser = await pool.query(
         `INSERT INTO src_users (name, email, google_id, auth_provider, avatar_url, role, business_id, store_id)
          VALUES ($1,$2,$3,'google',$4,$5,$6,$7)
