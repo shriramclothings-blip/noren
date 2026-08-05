@@ -275,27 +275,26 @@ const googleLogin = async (req, res) => {
     let user = result.rows[0];
 
     if (user) {
-      // User exists — update google_id if not set, and enforce super_admin role if designated
-      const updates = [];
+      // User exists — build update set cleanly
+      const setClauses = [];
       const values = [];
-      let idx = 1;
 
       if (!user.google_id) {
-        updates.push(`google_id=$${idx++}`);        values.push(googleId);
-        updates.push(`auth_provider=$${idx++}`);    values.push('google');
-        updates.push(`avatar_url=COALESCE(avatar_url,$${idx++})`); values.push(picture || null);
+        setClauses.push(`google_id=$${setClauses.length + 1}`);      values.push(googleId);
+        setClauses.push(`auth_provider=$${setClauses.length + 1}`);  values.push('google');
+        setClauses.push(`avatar_url=COALESCE(avatar_url,$${setClauses.length + 1})`); values.push(picture || null);
       }
 
-      // If this email is a designated super_admin but the role is not already admin/super_admin
+      // Enforce super_admin role if this is a designated email and role isn't already elevated
       if (isDesignatedSuperAdmin && !['super_admin', 'admin'].includes(user.role)) {
-        updates.push(`role=$${idx++}`);
+        setClauses.push(`role=$${setClauses.length + 1}`);
         values.push('super_admin');
       }
 
-      if (updates.length) {
+      if (setClauses.length) {
         values.push(user.id);
         await pool.query(
-          `UPDATE src_users SET ${updates.join(', ')} WHERE id=$${idx}`,
+          `UPDATE src_users SET ${setClauses.join(', ')} WHERE id=$${values.length}`,
           values
         );
       }
