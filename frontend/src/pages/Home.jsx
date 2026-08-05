@@ -683,7 +683,13 @@ function MidBanner({ banners }) {
     return () => clearInterval(t);
   }, [banners.length]);
 
-  if (!banners.length) return null;
+  if (!banners.length) return (
+    <section style={{ background: '#1a1a18', padding: '40px 0', textAlign: 'center' }}>
+      <div style={{ fontSize: 13, color: 'rgba(250,249,247,0.4)', letterSpacing: '0.1em' }}>
+        Mid-page banner slot — add banners tagged "Mid-Page" in Admin → Banners
+      </div>
+    </section>
+  );
 
   return (
     <section style={{ position: 'relative', background: '#1a1a18', overflow: 'hidden' }}>
@@ -960,7 +966,7 @@ export default function Home() {
       case 'video_section':
         return <HorizontalVideoSection key={section.id} section={section} />;
       case 'mid_banner':
-        return midBanners.length > 0 ? <MidBanner key={section.id} banners={midBanners} /> : null;
+        return <MidBanner key={section.id} banners={midBanners} />;
       case 'reels':
         return reels.length > 0 ? <ReelsSection key={section.id} reels={reels} /> : null;
       default:
