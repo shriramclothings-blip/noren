@@ -13,17 +13,17 @@
       ]
     },
     {
+      "source": "/sitemap.xml",
+      "headers": [
+        { "key": "Content-Type", "value": "application/xml; charset=utf-8" },
+        { "key": "Cache-Control", "value": "public, max-age=86400" }
+      ]
+    },
+    {
       "source": "/assets/(.*)",
       "headers": [
         { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
       ]
-    }
-  ],
-  "redirects": [
-    {
-      "source": "/sitemap.xml",
-      "destination": "https://noren-iqk3.onrender.com/sitemap.xml",
-      "permanent": false
     }
   ],
   "rewrites": [
