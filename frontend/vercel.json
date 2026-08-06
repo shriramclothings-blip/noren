@@ -3,7 +3,6 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "installCommand": "npm install",
-  "framework": "vite",
   "headers": [
     {
       "source": "/sw.js",
@@ -19,22 +18,17 @@
       ]
     }
   ],
-  "rewrites": [
+  "routes": [
+    { "src": "/sitemap.xml", "dest": "/api/sitemap" },
+    { "src": "/sw.js",       "dest": "/sw.js" },
     {
-      "source": "/sw.js",
-      "destination": "/sw.js"
+      "src": "/assets/(.*)",
+      "dest": "/assets/$1"
     },
     {
-      "source": "/sitemap.xml",
-      "destination": "/api/sitemap.xml"
+      "src": "/(.*\\.(?:js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|webp|avif|map|json|txt))",
+      "dest": "/$1"
     },
-    {
-      "source": "/(.*\\.(?:js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|webp|avif|map|json|txt))",
-      "destination": "/$1"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
-    }
+    { "src": "/(.*)", "dest": "/index.html" }
   ]
 }
