@@ -179,7 +179,7 @@ app.get('/sitemap.xml', async (req, res) => {
 
     res.setHeader('X-SRC-Sitemap', 'v2');
     res.setHeader('Content-Type', 'application/xml; charset=utf-8');
-    res.setHeader('Cache-Control', 'public, max-age=3600'); // cache 1 hour
+    res.setHeader('Cache-Control', 'no-cache'); // always fresh — query DB every time
     return res.status(200).send(buildXml(urls));
   } catch (err) {
     console.error('Sitemap error:', err.message);
