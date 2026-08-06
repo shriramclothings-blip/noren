@@ -365,8 +365,8 @@ export default function SeoManager() {
       try {
         const data = JSON.parse(ld.textContent);
         if (data && typeof data === 'object') {
-          data.url  = `${SITE_URL}/`;
-          data.logo = `${SITE_URL}/logo.png`;
+          // Only update url — do NOT touch logo (it's already a proper ImageObject in index.html)
+          data.url = `${SITE_URL}/`;
           ld.textContent = JSON.stringify(data);
         }
       } catch { /* ignore */ }
