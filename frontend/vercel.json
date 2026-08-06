@@ -3,6 +3,7 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "installCommand": "npm install",
+  "framework": "vite",
   "headers": [
     {
       "source": "/sw.js",
@@ -18,17 +19,19 @@
       ]
     }
   ],
-  "routes": [
-    { "src": "/sitemap.xml", "dest": "/api/sitemap" },
-    { "src": "/sw.js",       "dest": "/sw.js" },
+  "redirects": [
     {
-      "src": "/assets/(.*)",
-      "dest": "/assets/$1"
-    },
+      "source": "/sitemap.xml",
+      "destination": "https://noren-iqk3.onrender.com/sitemap.xml",
+      "permanent": false
+    }
+  ],
+  "rewrites": [
+    { "source": "/sw.js", "destination": "/sw.js" },
     {
-      "src": "/(.*\\.(?:js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|webp|avif|map|json|txt))",
-      "dest": "/$1"
+      "source": "/(.*\\.(?:js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|webp|avif|map|json|txt|xml))",
+      "destination": "/$1"
     },
-    { "src": "/(.*)", "dest": "/index.html" }
+    { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
