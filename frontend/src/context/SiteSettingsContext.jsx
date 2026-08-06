@@ -44,7 +44,8 @@ export function SiteSettingsProvider({ children }) {
 
   useEffect(() => {
     if (!loaded) return;
-    if (settings.seo_title) document.title = settings.seo_title;
+    // NOTE: document.title is managed by SeoManager per-page.
+    // Only update meta description here from CMS settings.
     let metaDesc = document.querySelector('meta[name="description"]');
     if (!metaDesc) {
       metaDesc = document.createElement('meta');
