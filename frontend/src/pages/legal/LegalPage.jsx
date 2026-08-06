@@ -1,4 +1,4 @@
-﻿import { useEffect } from 'react';
+import { useEffect } from 'react';
 
 export const BRAND    = 'NOREN';
 export const OPERATOR = 'Dinesh Global Enterprise Private Limited';
@@ -7,7 +7,7 @@ export const EMAIL    = 'supportnoren1@gmail.com';
 export const SUPPORT  = 'supportnoren1@gmail.com';
 export const ADDRESS  = 'Silver Square Link, Near Sravan Choukdi, Bharuch, Gujarat  392001, India';
 export const PHONE    = '+91 7984626447';
-export const WEBSITE  = 'https://www.norenfashion.shop';
+export const WEBSITE  = 'https://www.norenfastion.shop';
 export const GRIEVANCE_OFFICER = 'Mayur Rawal';
 export const GRIEVANCE_EMAIL   = 'supportnoren1@gmail.com';
 

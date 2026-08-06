@@ -11,7 +11,7 @@ const NOREN_HEADER = `
 const NOREN_FOOTER = `
   <div style="padding:18px 40px;text-align:center;border-top:1px solid #e6e0d8;margin-top:8px">
     <p style="color:#b8a898;font-size:11px;letter-spacing:0.06em;margin:0">© ${new Date().getFullYear()} NOREN. Timeless By Design.</p>
-    <p style="color:#d1cdc8;font-size:10px;margin:6px 0 0">You are receiving this email because you have an account at www.norenfashion.shop</p>
+    <p style="color:#d1cdc8;font-size:10px;margin:6px 0 0">You are receiving this email because you have an account at www.norenfastion.shop</p>
   </div>`;
 
 const buildHtml = (subject, badgeLabel, badgeColor, bodyHtml) => `
@@ -84,7 +84,7 @@ const sendCampaign = async (req, res) => {
     : `<h2 style="font-family:Georgia,serif;font-size:22px;font-weight:600;color:#1a1a18;margin:0 0 16px">${subject}</h2>
        <div style="color:#5a5750;line-height:1.9;font-size:14px;white-space:pre-wrap">${message}</div>
        <div style="margin-top:28px;padding-top:20px;border-top:1px solid #e6e0d8">
-         <a href="${process.env.FRONTEND_URL || 'https://www.norenfashion.shop'}" 
+         <a href="${process.env.FRONTEND_URL || 'https://www.norenfastion.shop'}" 
             style="display:inline-block;background:#1a1a18;color:#faf9f7;padding:13px 32px;text-decoration:none;font-size:11px;font-weight:600;letter-spacing:0.16em;text-transform:uppercase">
            Visit NOREN
          </a>
@@ -121,7 +121,7 @@ const sendCampaign = async (req, res) => {
                <h2 style="font-family:Georgia,serif;font-size:22px;font-weight:600;color:#1a1a18;margin:0 0 16px">${subject}</h2>
                <div style="color:#5a5750;line-height:1.9;font-size:14px;white-space:pre-wrap">${message}</div>
                <div style="margin-top:28px;padding-top:20px;border-top:1px solid #e6e0d8">
-                 <a href="${process.env.FRONTEND_URL || 'https://www.norenfashion.shop'}"
+                 <a href="${process.env.FRONTEND_URL || 'https://www.norenfastion.shop'}"
                     style="display:inline-block;background:#1a1a18;color:#faf9f7;padding:13px 32px;text-decoration:none;font-size:11px;font-weight:600;letter-spacing:0.16em;text-transform:uppercase">
                    Visit NOREN
                  </a>

@@ -20,7 +20,7 @@ const sendMail = async (to, subject, html) => {
   }
 
   try {
-    const from = process.env.EMAIL_FROM || 'NOREN <noreply@norenfashion.shop>';
+    const from = process.env.EMAIL_FROM || 'NOREN <noreply@norenfastion.shop>';
     const { data, error } = await getClient().emails.send({ from, to, subject, html });
 
     if (error) {

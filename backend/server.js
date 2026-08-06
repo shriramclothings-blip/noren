@@ -123,7 +123,7 @@ app.get('/sitemap.xml', async (req, res) => {
   };
 
   // Hardcoded — never depend on env vars for the sitemap domain
-  const SITE_URL = 'https://www.norenfashion.shop';
+  const SITE_URL = 'https://www.norenfastion.shop';
 
   const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
 

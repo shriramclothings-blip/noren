@@ -13,7 +13,7 @@ const __dir  = dirname(fileURLToPath(import.meta.url));
 const DIST   = join(__dir, '..', 'dist');
 const OUT    = join(DIST, 'sitemap.xml');
 const BACKEND = 'https://noren-iqk3.onrender.com/sitemap.xml';
-const SITE    = 'https://www.norenfashion.shop';
+const SITE    = 'https://www.norenfastion.shop';
 const today   = new Date().toISOString().split('T')[0];
 
 /* ── Fallback: all static routes with correct domain ─── */
@@ -67,7 +67,7 @@ async function run() {
 
   const xml = await fetchWithRetry(BACKEND);
 
-  if (xml && xml.includes('norenfashion.shop') && xml.includes('<urlset')) {
+  if (xml && xml.includes('norenfastion.shop') && xml.includes('<urlset')) {
     writeFileSync(OUT, xml, 'utf8');
     const count = (xml.match(/<url>/g) || []).length;
     console.log(`[sitemap] ✓ Success — ${count} URLs written to dist/sitemap.xml`);
