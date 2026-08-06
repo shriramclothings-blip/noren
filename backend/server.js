@@ -92,8 +92,21 @@ app.use('/api/homepage', require('./routes/homepage'));
 app.use('/api/contact', require('./routes/contact'));
 app.use('/api/notifications', require('./routes/notifications'));
 
+// ── Sitemap in-memory cache (one DB query per 24 hours) ──────────────────
+const SITEMAP_CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+let _sitemapCache = null;   // { xml: string, builtAt: number }
+
 // ── Public: Dynamic sitemap.xml ──
 app.get('/sitemap.xml', async (req, res) => {
+  // Serve from cache if still fresh — NO DB hit
+  if (_sitemapCache && (Date.now() - _sitemapCache.builtAt) < SITEMAP_CACHE_TTL_MS) {
+    res.setHeader('X-SRC-Sitemap', 'v2-cached');
+    res.setHeader('Content-Type', 'application/xml; charset=utf-8');
+    // Tell crawlers & CDN they can cache this for 24 h too
+    res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=3600');
+    return res.status(200).send(_sitemapCache.xml);
+  }
+
   const escapeXml = (s = '') =>
     String(s)
       .replace(/&/g, '&amp;')
@@ -110,7 +123,6 @@ app.get('/sitemap.xml', async (req, res) => {
   };
 
   // Hardcoded — never depend on env vars for the sitemap domain
-  // (Render env vars can shadow .env values causing localhost URLs)
   const SITE_URL = 'https://www.norenfashion.shop';
 
   const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
@@ -174,13 +186,18 @@ app.get('/sitemap.xml', async (req, res) => {
       })),
     ];
 
-    res.setHeader('X-SRC-Sitemap', 'v2');
+    const xml = buildXml(urls);
+
+    // Store in cache — next requests within 24 h skip the DB entirely
+    _sitemapCache = { xml, builtAt: Date.now() };
+
+    res.setHeader('X-SRC-Sitemap', 'v2-fresh');
     res.setHeader('Content-Type', 'application/xml; charset=utf-8');
-    res.setHeader('Cache-Control', 'no-cache'); // always fresh — query DB every time
-    return res.status(200).send(buildXml(urls));
+    res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=3600');
+    return res.status(200).send(xml);
   } catch (err) {
     console.error('Sitemap error:', err.message);
-    // Fallback: still return a valid sitemap with static URLs only
+    // Fallback: static URLs only — do NOT cache this so next request retries DB
     const fallbackUrls = staticRoutes.map(r => ({
       loc: `${SITE_URL}${r.path}`,
       changefreq: r.changefreq,
