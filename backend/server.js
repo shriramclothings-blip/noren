@@ -109,21 +109,30 @@ app.get('/sitemap.xml', async (req, res) => {
     return d.toISOString().split('T')[0]; // YYYY-MM-DD
   };
 
-  const SITE_URL = (process.env.SITE_URL || 'https://www.norenfashion.shop').replace(/\/+$/, '');
+  // Use SITE_URL, fall back to FRONTEND_URL, then hardcoded production domain
+  const SITE_URL = (
+    process.env.SITE_URL ||
+    process.env.FRONTEND_URL ||
+    'https://www.norenfashion.shop'
+  ).replace(/\/+$/, '').split(',')[0].trim(); // take first if comma-separated
+
+  const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
 
   const staticRoutes = [
-    { path: '/', changefreq: 'daily', priority: 1.0 },
-    { path: '/shop', changefreq: 'daily', priority: 0.9 },
-    { path: '/contact', changefreq: 'monthly', priority: 0.6 },
-    { path: '/privacy', changefreq: 'yearly', priority: 0.3 },
-    { path: '/terms', changefreq: 'yearly', priority: 0.3 },
-    { path: '/refund', changefreq: 'yearly', priority: 0.3 },
-    { path: '/return-policy', changefreq: 'yearly', priority: 0.3 },
-    { path: '/shipping', changefreq: 'yearly', priority: 0.3 },
-    { path: '/cancellation', changefreq: 'yearly', priority: 0.3 },
-    { path: '/cookies', changefreq: 'yearly', priority: 0.3 },
-    { path: '/disclaimer', changefreq: 'yearly', priority: 0.3 },
-    { path: '/legal', changefreq: 'yearly', priority: 0.3 },
+    { path: '/',              changefreq: 'daily',   priority: 1.0, lastmod: today },
+    { path: '/shop',          changefreq: 'daily',   priority: 0.9, lastmod: today },
+    { path: '/contact',       changefreq: 'monthly', priority: 0.6 },
+    { path: '/login',         changefreq: 'monthly', priority: 0.5 },
+    { path: '/register',      changefreq: 'monthly', priority: 0.5 },
+    { path: '/privacy',       changefreq: 'yearly',  priority: 0.3 },
+    { path: '/terms',         changefreq: 'yearly',  priority: 0.3 },
+    { path: '/refund',        changefreq: 'yearly',  priority: 0.3 },
+    { path: '/return-policy', changefreq: 'yearly',  priority: 0.3 },
+    { path: '/shipping',      changefreq: 'yearly',  priority: 0.3 },
+    { path: '/cancellation',  changefreq: 'yearly',  priority: 0.3 },
+    { path: '/cookies',       changefreq: 'yearly',  priority: 0.3 },
+    { path: '/disclaimer',    changefreq: 'yearly',  priority: 0.3 },
+    { path: '/legal',         changefreq: 'yearly',  priority: 0.3 },
   ];
 
   const makeUrlEntry = ({ loc, lastmod, changefreq, priority }) => {
