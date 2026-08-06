@@ -1,24 +1,22 @@
 /**
  * generate-sitemap.mjs
- * Runs after vite build. Fetches the live sitemap from the Render backend
- * and writes it to dist/sitemap.xml so Vercel serves it as a static file.
- *
- * If the backend is unreachable (cold start / timeout), falls back to
- * a hardcoded sitemap with all static routes so Google never gets a 404.
+ * Runs AFTER vite build during Vercel deployment.
+ * Fetches live sitemap from Render backend → writes to dist/sitemap.xml
+ * Retries up to 3 times to handle Render cold starts (free tier sleeps).
  */
 
 import { writeFileSync, existsSync, mkdirSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const DIST      = join(__dirname, '..', 'dist');
-const BACKEND   = 'https://noren-iqk3.onrender.com';
-const SITE      = 'https://www.norenfashion.shop';
-const OUT       = join(DIST, 'sitemap.xml');
+const __dir  = dirname(fileURLToPath(import.meta.url));
+const DIST   = join(__dir, '..', 'dist');
+const OUT    = join(DIST, 'sitemap.xml');
+const BACKEND = 'https://noren-iqk3.onrender.com/sitemap.xml';
+const SITE    = 'https://www.norenfashion.shop';
+const today   = new Date().toISOString().split('T')[0];
 
-const today = new Date().toISOString().split('T')[0];
-
+/* ── Fallback: all static routes with correct domain ─── */
 const FALLBACK = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>${SITE}/</loc><lastmod>${today}</lastmod><changefreq>daily</changefreq><priority>1.0</priority></url>
@@ -37,36 +35,46 @@ const FALLBACK = `<?xml version="1.0" encoding="UTF-8"?>
   <url><loc>${SITE}/legal</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
 </urlset>`;
 
+/* ── Fetch with retry ────────────────────────────────── */
+async function fetchWithRetry(url, retries = 3, timeoutMs = 30000) {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      console.log(`[sitemap] Attempt ${attempt}/${retries} — fetching ${url}`);
+      const ctrl = new AbortController();
+      const t    = setTimeout(() => ctrl.abort(), timeoutMs);
+      const res  = await fetch(url, {
+        signal: ctrl.signal,
+        headers: { 'User-Agent': 'Vercel-Build-Sitemap/1.0' },
+      });
+      clearTimeout(t);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return await res.text();
+    } catch (err) {
+      console.warn(`[sitemap] Attempt ${attempt} failed: ${err.message}`);
+      if (attempt < retries) {
+        const wait = attempt * 10000; // 10s, 20s between retries
+        console.log(`[sitemap] Waiting ${wait / 1000}s before retry...`);
+        await new Promise(r => setTimeout(r, wait));
+      }
+    }
+  }
+  return null;
+}
+
+/* ── Main ────────────────────────────────────────────── */
 async function run() {
   if (!existsSync(DIST)) mkdirSync(DIST, { recursive: true });
 
-  console.log('[sitemap] Fetching from backend...');
-  try {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 20000); // 20s timeout
+  const xml = await fetchWithRetry(BACKEND);
 
-    const res = await fetch(`${BACKEND}/sitemap.xml`, {
-      signal: controller.signal,
-      headers: { 'User-Agent': 'Vercel-Build-Sitemap/1.0' },
-    });
-    clearTimeout(timer);
-
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-
-    const xml = await res.text();
-
-    // Sanity check — must contain our domain
-    if (!xml.includes('norenfashion.shop')) {
-      throw new Error('Sitemap contains wrong domain, using fallback');
-    }
-
+  if (xml && xml.includes('norenfashion.shop') && xml.includes('<urlset')) {
     writeFileSync(OUT, xml, 'utf8');
-    console.log(`[sitemap] ✓ Written to dist/sitemap.xml (${xml.length} bytes)`);
-
-  } catch (err) {
-    console.warn(`[sitemap] Backend fetch failed: ${err.message} — using fallback`);
+    const count = (xml.match(/<url>/g) || []).length;
+    console.log(`[sitemap] ✓ Success — ${count} URLs written to dist/sitemap.xml`);
+  } else {
+    console.warn('[sitemap] Using fallback sitemap (backend unreachable or wrong data)');
     writeFileSync(OUT, FALLBACK, 'utf8');
-    console.log('[sitemap] ✓ Fallback sitemap written to dist/sitemap.xml');
+    console.log('[sitemap] ✓ Fallback written to dist/sitemap.xml');
   }
 }
 
