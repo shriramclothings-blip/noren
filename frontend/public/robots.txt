@@ -3,7 +3,7 @@ Allow: /
 Disallow: /admin/
 Disallow: /api/
 
-Sitemap: https://www.norenfashion.in/sitemap.xml
+Sitemap: https://www.norenfashion.shop/sitemap.xml
 
 # NOREN Fashion House
-# https://www.norenfashion.in
+# https://www.norenfashion.shop

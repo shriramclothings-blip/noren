@@ -109,7 +109,7 @@ app.get('/sitemap.xml', async (req, res) => {
     return d.toISOString().split('T')[0]; // YYYY-MM-DD
   };
 
-  const SITE_URL = (process.env.SITE_URL || 'https://www.norenfashion.in').replace(/\/+$/, '');
+  const SITE_URL = (process.env.SITE_URL || 'https://www.norenfashion.shop').replace(/\/+$/, '');
 
   const staticRoutes = [
     { path: '/', changefreq: 'daily', priority: 1.0 },
