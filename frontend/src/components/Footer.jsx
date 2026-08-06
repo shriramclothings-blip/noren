@@ -212,7 +212,11 @@ export default function Footer() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 <a href={`tel:${phone.replace(/\s/g, '')}`} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, textDecoration: 'none', color: '#6b6760' }} onMouseEnter={hoverGold} onMouseLeave={unhover}>
                   <div style={{ width: 30, height: 30, border: '1px solid rgba(201,169,110,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Phone size={13} color="#c9a96e" /></div>
-                  <div><p style={{ fontSize: 9, color: '#3d3d39', letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: 3 }}>Call</p><p style={{ fontSize: 13, color: '#9e9a94' }}>{phone}</p></div>
+                  <div>
+                    <p style={{ fontSize: 9, color: '#3d3d39', letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: 3 }}>Call</p>
+                    <p style={{ fontSize: 13, color: '#9e9a94' }}>{phone}</p>
+                    <p style={{ fontSize: 13, color: '#9e9a94', marginTop: 3 }}>+91 87588 69112</p>
+                  </div>
                 </a>
                 <a href={`mailto:${emailAddr}`} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, textDecoration: 'none', color: '#6b6760' }} onMouseEnter={hoverGold} onMouseLeave={unhover}>
                   <div style={{ width: 30, height: 30, border: '1px solid rgba(201,169,110,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Mail size={13} color="#c9a96e" /></div>

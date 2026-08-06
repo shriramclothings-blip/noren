@@ -11,8 +11,8 @@ const SEO_CONFIG = {
     description: "India's premium unisex luxury fashion house. Oversized T-Shirts, Shirts, Jeans, Jackets & more. Quiet luxury. Bold identity. Shop NOREN - crafted for those who move with purpose.",
   },
   '/shop': {
-    title: 'Shop NOREN - Premium Luxury Clothing. New Arrivals Daily.',
-    description: 'Explore the full NOREN collection - Oversized T-Shirts, Premium Shirts, Jeans, Hoodies, Jackets & Ethnic Wear. Quiet luxury, bold identity. Find your fit. Shop now.',
+    title: 'Shop NOREN - Premium Fashion for Men & Women India.',
+    description: 'Shop premium fashion for men & women at NOREN. Kurtis, Anarkali, Salwar Suits, T-Shirts, Shirts, Jeans, Jackets & more. Indian & western wear. Shop now.',
   },
   '/cart': {
     title: 'Your Bag - NOREN Luxury Fashion',
@@ -130,8 +130,13 @@ export default function SeoManager() {
 
   useEffect(() => {
     const cleanPath = location.pathname;
-    const absoluteUrl = `${SITE_URL}${cleanPath === '/' ? '' : cleanPath}`;
+    const search    = location.search;
+    const params    = new URLSearchParams(search);
+    const gender    = params.get('gender')   || '';
+    const category  = params.get('category') || '';
+    const absoluteUrl = `${SITE_URL}${cleanPath === '/' ? '' : cleanPath}${search}`;
 
+    // -- Product detail page --------------------------------------------------
     const productMatch = cleanPath.match(/^\/product\/(\d+)$/);
     if (productMatch) {
       const productId = productMatch[1];
@@ -148,26 +153,57 @@ export default function SeoManager() {
             const trimmed = p.description.trim().replace(/\s+/g, ' ').slice(0, 120);
             description = `${trimmed}... Shop ${name} on NOREN.${price}`;
           } else {
-            description = `Shop ${name} on NOREN - India's premium luxury fashion house.${cat}${price} Free delivery on eligible orders. Easy 7-day returns.`;
+            description = `Shop ${name} on NOREN - India's premium fashion house.${cat}${price} Free delivery. Easy 7-day returns.`;
           }
           if (description.length > 155) description = description.slice(0, 152) + '...';
 
           const image = p.images?.[0]?.image_url || p.primary_image || DEFAULT_OG_IMAGE;
-          applyFullSeo({ title, description, url: absoluteUrl, image });
+          applyFullSeo({ title, description, url: `${SITE_URL}/product/${productId}`, image });
           ensureMeta({ selector: 'meta[property="og:type"]', createAttrs: { property: 'og:type' }, setAttrs: { content: 'product' } });
         })
-        .catch(() => {
-          document.title = 'Premium Product - NOREN';
-        });
+        .catch(() => { document.title = 'Premium Product - NOREN'; });
       return;
     }
 
+    // -- Shop page: dynamic SEO based on gender + category --------------------
+    if (cleanPath === '/shop') {
+      let title, description;
+
+      if (gender === 'women' && category) {
+        const catLabel = category.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+        title       = `${catLabel} for Women - NOREN | Premium Indian & Western Wear`;
+        description = `Shop premium ${catLabel} for women at NOREN. Exclusive Indian & western wear collection. Kurtis, Anarkali, Salwar Suits, Dresses, Tops & more. Free delivery on eligible orders.`;
+      } else if (gender === 'women') {
+        title       = "Women's Fashion - NOREN | Indian & Western Wear Online";
+        description = "Shop women's fashion at NOREN - India's premium unisex fashion house. Kurtis, Anarkali Suits, Salwar Suits, Dresses, Co-Ord Sets, Tops & Ethnic Wear. Indian & western styles. Shop now.";
+      } else if (gender === 'men' && category) {
+        const catLabel = category.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+        title       = `${catLabel} for Men - NOREN | Premium Luxury Fashion`;
+        description = `Shop premium ${catLabel} for men at NOREN. Oversized T-Shirts, Shirts, Jeans, Jackets, Hoodies & more. Quiet luxury. Bold identity. Free delivery on eligible orders.`;
+      } else if (gender === 'men') {
+        title       = "Men's Fashion - NOREN | Premium Luxury Clothing India";
+        description = "Shop men's premium fashion at NOREN. Oversized T-Shirts, Shirts, Polo, Jeans, Jackets, Hoodies, Ethnic Wear & more. Quiet luxury. Bold identity. New arrivals daily.";
+      } else if (category) {
+        const catLabel = category.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+        title       = `${catLabel} - NOREN | Premium Fashion for Everyone`;
+        description = `Shop ${catLabel} at NOREN - premium fashion for men & women. Indian & western wear. Free delivery on eligible orders. Easy 7-day returns.`;
+      } else {
+        title       = 'Shop NOREN - Premium Fashion for Men & Women India.';
+        description = 'Shop premium fashion for men & women at NOREN. Kurtis, Anarkali, Salwar Suits, T-Shirts, Shirts, Jeans, Jackets & more. Indian & western wear. Shop now.';
+      }
+
+      if (description.length > 155) description = description.slice(0, 152) + '...';
+      applyFullSeo({ title, description, url: absoluteUrl });
+      return;
+    }
+
+    // -- All other pages ------------------------------------------------------
     const pageSeo = SEO_CONFIG[cleanPath] || {
-      title: 'NOREN - Premium Luxury Fashion India',
-      description: "India's premium unisex luxury fashion house. Quiet luxury. Bold identity. Shop Oversized T-Shirts, Shirts, Jeans, Jackets & more at NOREN.",
+      title: 'NOREN - Premium Fashion for Men & Women India',
+      description: "India's premium unisex fashion house. Indian & western wear for men & women. Kurtis, T-Shirts, Shirts, Jeans, Jackets & more at NOREN.",
     };
 
-    applyFullSeo({ title: pageSeo.title, description: pageSeo.description, url: absoluteUrl });
+    applyFullSeo({ title: pageSeo.title, description: pageSeo.description, url: `${SITE_URL}${cleanPath === '/' ? '' : cleanPath}` });
 
     const ld = document.head.querySelector('script[type="application/ld+json"]');
     if (ld?.textContent) {
