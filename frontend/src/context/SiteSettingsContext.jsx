@@ -19,7 +19,7 @@ const DEFAULTS = {
   footer_address: 'Silver Square Link, Near Sravan Choukdi, Bharuch, Gujarat - 392001, India',
   footer_maps_url: 'https://maps.google.com/?q=Bharuch,Gujarat,India',
   footer_hours: 'Mon - Sat: 9:00 AM to 8:00 PM',
-  footer_instagram: 'https://www.instagram.com/norenfashion',
+  footer_instagram: 'https://www.instagram.com/noren_in',
   footer_facebook: 'https://facebook.com/norenfashion',
   footer_youtube: 'https://youtube.com/@norenfashion',
 };
