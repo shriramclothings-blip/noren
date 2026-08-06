@@ -1,8 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Share2, Copy, Check, X, MessageCircle, Mail, Send } from 'lucide-react';
 
-const SITE_URL = (import.meta.env.VITE_SITE_URL || 'https://www.norenfashion.shop').replace(/\/+$/, '');
-
 // ── SVG brand icons (no external dependency needed) ──────────────────────────
 function WhatsAppIcon({ size = 18 }) {
   return (
@@ -109,7 +107,9 @@ export default function ShareProductButton({ product }) {
   const popoverRef = useRef(null);
   const buttonRef = useRef(null);
 
-  const productUrl = `${SITE_URL}/product/${product.id}`;
+  // Use window.location.origin so the link is always correct regardless of
+  // whether VITE_SITE_URL is set in the deployment environment.
+  const productUrl = `${window.location.origin}/product/${product.id}`;
   const shareText = `Check out "${product.title}" on NOREN`;
   const channels = getShareChannels(productUrl, shareText);
 
