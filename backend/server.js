@@ -109,12 +109,9 @@ app.get('/sitemap.xml', async (req, res) => {
     return d.toISOString().split('T')[0]; // YYYY-MM-DD
   };
 
-  // Use SITE_URL, fall back to FRONTEND_URL, then hardcoded production domain
-  const SITE_URL = (
-    process.env.SITE_URL ||
-    process.env.FRONTEND_URL ||
-    'https://www.norenfashion.shop'
-  ).replace(/\/+$/, '').split(',')[0].trim(); // take first if comma-separated
+  // Hardcoded — never depend on env vars for the sitemap domain
+  // (Render env vars can shadow .env values causing localhost URLs)
+  const SITE_URL = 'https://www.norenfashion.shop';
 
   const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
 
