@@ -33,6 +33,10 @@ router.get('/audit-logs/export',    ...auditGuard, erp.exportAuditLogs);
 router.get('/settings', ...settingsGuard, erp.getSettings);
 router.put('/settings', ...settingsGuard, erp.updateSettings);
 
+// Tenant-specific Business Configuration
+router.get('/business-config', ...settingsGuard, erp.getBusinessConfig);
+router.put('/business-config', ...settingsGuard, erp.updateBusinessConfig);
+
 // Store Management
 router.post('/stores', ...settingsGuard, erp.createStore);
 router.put('/stores/:id', ...settingsGuard, erp.updateStore);

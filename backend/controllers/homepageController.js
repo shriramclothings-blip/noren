@@ -243,24 +243,56 @@ const deleteReel = async (req, res) => {
 };
 
 // ── HOMEPAGE SETTINGS ─────────────────────────────────────────────────────────
+// Settings are scoped to a business_id.  NULL business_id = global/platform defaults.
+// Public GET resolves: tenant-specific → global fallback → empty object.
+
+const getScopedBusinessId = (req) =>
+  req.tenant?.business_id || req.user?.business_id || null;
 
 const getSettings = async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM src_homepage_settings');
+    const businessId = getScopedBusinessId(req);
+
+    if (businessId) {
+      // Tenant-scoped: merge global defaults (business_id IS NULL) with tenant overrides
+      const result = await pool.query(
+        `SELECT DISTINCT ON (key) key, value
+         FROM src_homepage_settings
+         WHERE business_id = $1 OR business_id IS NULL
+         ORDER BY key, business_id NULLS LAST`,
+        [businessId]
+      );
+      const settings = {};
+      result.rows.forEach(r => { settings[r.key] = r.value; });
+      return res.json(settings);
+    }
+
+    // No tenant context — return global defaults only
+    const result = await pool.query(
+      `SELECT key, value FROM src_homepage_settings WHERE business_id IS NULL`
+    );
     const settings = {};
     result.rows.forEach(r => { settings[r.key] = r.value; });
-    res.json(settings);
+    return res.json(settings);
   } catch (err) { res.status(500).json({ message: err.message }); }
 };
 
 const updateSettings = async (req, res) => {
   const settings = req.body; // { key: value, ... }
+  const businessId = getScopedBusinessId(req);
+
+  // Guard: admins must have a business context to write settings
+  if (req.user && !businessId) {
+    return res.status(400).json({ message: 'Business context required to save settings' });
+  }
+
   try {
     for (const [key, value] of Object.entries(settings)) {
       await pool.query(
-        `INSERT INTO src_homepage_settings (key, value, updated_at) VALUES ($1,$2,NOW())
-         ON CONFLICT (key) DO UPDATE SET value=$2, updated_at=NOW()`,
-        [key, value]
+        `INSERT INTO src_homepage_settings (business_id, key, value, updated_at)
+         VALUES ($1, $2, $3, NOW())
+         ON CONFLICT (business_id, key) DO UPDATE SET value = $3, updated_at = NOW()`,
+        [businessId, key, value]
       );
     }
     res.json({ message: 'Settings saved' });

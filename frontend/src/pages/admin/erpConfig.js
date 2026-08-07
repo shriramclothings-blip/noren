@@ -36,6 +36,7 @@ export const ERP_NAV_GROUPS = [
       { key: 'notifications', label: 'Notifications', icon: 'Bell', componentKey: 'notifications', permissions: ['erp.manage_notifications'], description: 'Push campaigns, alerts, and internal communications.' },
       { key: 'settings', label: 'Settings', icon: 'Settings', componentKey: 'settings', permissions: ['erp.manage_settings'], description: 'Core ERP behavior, taxes, invoice, printers, and integration settings.' },
       { key: 'business-settings', label: 'Business Settings', icon: 'Building2', componentKey: 'settings', permissions: ['erp.manage_settings'], description: 'Business-level branding, GST, financial year, and local configuration.' },
+      { key: 'business-config', label: 'Business Config', icon: 'Cpu', componentKey: 'business-config', permissions: ['erp.manage_settings'], description: 'Tenant-specific config: tax, invoice, theme, features, notifications, checkout, and shipping.' },
       { key: 'store-management', label: 'Store Management', icon: 'Store', permissions: ['erp.manage_settings'], description: 'Store setup, mapping, and branch-level operational settings.' },
       { key: 'user-management', label: 'User Management', icon: 'ShieldCheck', componentKey: 'user-management', permissions: ['erp.manage_users'], description: 'Users, employees, and operational account administration.' },
       { key: 'role-management', label: 'Role Management', icon: 'KeyRound', roles: ['super_admin', 'business_owner', 'store_admin'], description: 'Role templates and permission assignments across the ERP.' },

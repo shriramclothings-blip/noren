@@ -172,10 +172,21 @@ const initDB = async () => {
         currency VARCHAR(10) DEFAULT 'INR',
         timezone VARCHAR(50) DEFAULT 'Asia/Kolkata',
         settings JSONB DEFAULT '{}'::jsonb,
+        business_config JSONB DEFAULT '{}'::jsonb,
         is_active BOOLEAN DEFAULT TRUE,
         created_at TIMESTAMP DEFAULT NOW(),
         updated_at TIMESTAMP DEFAULT NOW()
       );
+
+      -- Add business_config column to existing tables (upgrade path)
+      DO $$ BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns
+          WHERE table_name = 'src_businesses' AND column_name = 'business_config'
+        ) THEN
+          ALTER TABLE src_businesses ADD COLUMN business_config JSONB DEFAULT '{}'::jsonb;
+        END IF;
+      END $$;
 
       CREATE TABLE IF NOT EXISTS src_stores (
         id SERIAL PRIMARY KEY,
@@ -526,10 +537,29 @@ const initDB = async () => {
       );
 
       CREATE TABLE IF NOT EXISTS src_homepage_settings (
-        key VARCHAR(100) PRIMARY KEY,
+        id SERIAL PRIMARY KEY,
+        business_id INTEGER REFERENCES src_businesses(id) ON DELETE CASCADE,
+        key VARCHAR(100) NOT NULL,
         value TEXT,
-        updated_at TIMESTAMP DEFAULT NOW()
+        updated_at TIMESTAMP DEFAULT NOW(),
+        UNIQUE (business_id, key)
       );
+
+      -- ── Migrate legacy global settings (business_id IS NULL) to composite key ──
+      -- If the old single-column PK constraint still exists, recreate safely.
+      DO $$ BEGIN
+        -- Add business_id column if it doesn't exist (upgrade path)
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns
+          WHERE table_name = 'src_homepage_settings' AND column_name = 'business_id'
+        ) THEN
+          ALTER TABLE src_homepage_settings ADD COLUMN business_id INTEGER REFERENCES src_businesses(id) ON DELETE CASCADE;
+          -- Add the unique composite constraint
+          ALTER TABLE src_homepage_settings DROP CONSTRAINT IF EXISTS src_homepage_settings_pkey;
+          ALTER TABLE src_homepage_settings ADD COLUMN IF NOT EXISTS id SERIAL;
+          ALTER TABLE src_homepage_settings ADD CONSTRAINT src_homepage_settings_biz_key_unique UNIQUE (business_id, key);
+        END IF;
+      END $$;
 
       CREATE TABLE IF NOT EXISTS src_queries (
         id SERIAL PRIMARY KEY,

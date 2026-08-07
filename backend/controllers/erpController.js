@@ -1365,6 +1365,175 @@ const suspendBusiness = async (req, res) => {
   } catch (err) { res.status(500).json({ message: err.message }); }
 };
 
+// ── Tenant-specific Business Configuration ────────────────────────────────────
+// Stored in src_businesses.business_config JSONB.
+// Covers: tax, invoice, storefront theme, feature flags, notifications, checkout, shipping.
+
+const DEFAULT_BUSINESS_CONFIG = {
+  tax: {
+    gst_enabled: true,
+    default_gst_rate: 0,
+    tax_inclusive_pricing: false,
+    hsn_mandatory: false,
+  },
+  invoice: {
+    prefix: 'INV',
+    show_logo: true,
+    show_gst: true,
+    show_signature_line: false,
+    footer_note: '',
+    terms_and_conditions: '',
+    bank_details: '',
+  },
+  theme: {
+    primary_color: '#c9a96e',
+    accent_color: '#1a1a18',
+    font: 'Inter',
+    logo_url: '',
+    favicon_url: '',
+    store_mode: 'b2c',
+  },
+  features: {
+    loyalty_enabled: true,
+    reviews_enabled: true,
+    wishlist_enabled: true,
+    coupons_enabled: true,
+    pos_enabled: true,
+    online_store_enabled: true,
+    multi_store_enabled: false,
+    inventory_alerts: true,
+    whatsapp_notifications: false,
+  },
+  notifications: {
+    order_sms: false,
+    order_email: true,
+    order_whatsapp: false,
+    low_stock_email: true,
+    low_stock_threshold: 5,
+  },
+  checkout: {
+    require_phone: true,
+    require_email: false,
+    allow_guest_checkout: true,
+    cod_enabled: true,
+    min_order_amount: 0,
+    max_cod_amount: 0,
+  },
+  shipping: {
+    free_above: 999,
+    standard_cost: 99,
+    free_always: false,
+    carrier: '',
+  },
+};
+
+/** Simple deep-merge: target ← source (source wins on scalar conflicts) */
+function deepMergeConfig(target, source) {
+  const out = { ...target };
+  for (const key of Object.keys(source)) {
+    if (
+      source[key] && typeof source[key] === 'object' && !Array.isArray(source[key]) &&
+      target[key] && typeof target[key] === 'object' && !Array.isArray(target[key])
+    ) {
+      out[key] = deepMergeConfig(target[key], source[key]);
+    } else {
+      out[key] = source[key];
+    }
+  }
+  return out;
+}
+
+/**
+ * GET /api/erp/business-config
+ * Returns full business_config JSONB deep-merged with defaults.
+ */
+const getBusinessConfig = async (req, res) => {
+  try {
+    const businessId = getScopedBusinessId(req);
+    if (!businessId) return res.status(400).json({ message: 'Business context required' });
+
+    const result = await pool.query(
+      `SELECT business_config, name, currency, timezone, gst_number, phone, email, address
+       FROM src_businesses WHERE id = $1`,
+      [businessId]
+    );
+
+    if (!result.rows.length) return res.status(404).json({ message: 'Business not found' });
+
+    const row = result.rows[0];
+    const mergedConfig = deepMergeConfig(DEFAULT_BUSINESS_CONFIG, row.business_config || {});
+
+    res.json({
+      business_id: businessId,
+      name: row.name,
+      currency: row.currency,
+      timezone: row.timezone,
+      gst_number: row.gst_number,
+      phone: row.phone,
+      email: row.email,
+      address: row.address,
+      config: mergedConfig,
+      defaults: DEFAULT_BUSINESS_CONFIG,
+    });
+  } catch (err) {
+    console.error('getBusinessConfig:', err.message);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+/**
+ * PUT /api/erp/business-config
+ * Accepts a partial config object; deep-merges into existing business_config JSONB.
+ * Supported sections: tax | invoice | theme | features | notifications | checkout | shipping
+ */
+const updateBusinessConfig = async (req, res) => {
+  try {
+    const businessId = getScopedBusinessId(req);
+    if (!businessId) return res.status(400).json({ message: 'Business context required' });
+
+    const patch = req.body;
+    if (!patch || typeof patch !== 'object') {
+      return res.status(400).json({ message: 'Config object required' });
+    }
+
+    const ALLOWED_SECTIONS = ['tax', 'invoice', 'theme', 'features', 'notifications', 'checkout', 'shipping'];
+    const invalidKeys = Object.keys(patch).filter(k => !ALLOWED_SECTIONS.includes(k));
+    if (invalidKeys.length) {
+      return res.status(400).json({
+        message: `Invalid config section(s): ${invalidKeys.join(', ')}`,
+        allowed: ALLOWED_SECTIONS,
+      });
+    }
+
+    // Merge each section individually so unrelated keys are preserved
+    const result = await pool.query(
+      `UPDATE src_businesses
+       SET business_config = COALESCE(business_config, '{}'::jsonb) || $1::jsonb,
+           updated_at = NOW()
+       WHERE id = $2
+       RETURNING business_config, name`,
+      [JSON.stringify(patch), businessId]
+    );
+
+    if (!result.rows.length) return res.status(404).json({ message: 'Business not found' });
+
+    const mergedConfig = deepMergeConfig(DEFAULT_BUSINESS_CONFIG, result.rows[0].business_config || {});
+
+    await logAudit(pool, {
+      adminId: req.user?.id,
+      action: 'update_business_config',
+      targetType: 'business',
+      targetId: businessId,
+      details: `Updated sections: ${Object.keys(patch).join(', ')}`,
+    });
+
+    res.json({ message: 'Business configuration updated', config: mergedConfig });
+  } catch (err) {
+    console.error('updateBusinessConfig:', err.message);
+    res.status(500).json({ message: err.message });
+  }
+};
+
 // ── Warehouse CRUD ────────────────────────────────────────────────────────────
 const createWarehouse = async (req, res) => {
   try {
@@ -1432,6 +1601,8 @@ module.exports = {
   exportAuditLogs,
   getSettings,
   updateSettings,
+  getBusinessConfig,
+  updateBusinessConfig,
   getTenantInfo,
   listBusinesses,
   listStores,

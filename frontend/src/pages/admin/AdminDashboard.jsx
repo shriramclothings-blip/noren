@@ -46,6 +46,7 @@ const AdminAuditLogs           = lazy(() => import('./erp/AdminAuditLogs'));
 const BarcodeEngine            = lazy(() => import('./erp/BarcodeEngine'));
 const AdminSalesOrders         = lazy(() => import('./erp/AdminSalesOrders'));
 const AdminSettings            = lazy(() => import('./erp/AdminSettings'));
+const BusinessConfigSettings   = lazy(() => import('./erp/BusinessConfigSettings'));
 const AdminStoreManagement     = lazy(() => import('./erp/AdminStoreManagement'));
 const AdminRoleManagement      = lazy(() => import('./erp/AdminRoleManagement'));
 const AdminSuperAdmin          = lazy(() => import('./erp/AdminSuperAdmin'));
@@ -130,6 +131,7 @@ function renderSection(section, user, navigate) {
     case 'sales-orders':      return <AdminSalesOrders />;
     case 'settings':
     case 'business-settings': return <AdminSettings />;
+    case 'business-config':   return <BusinessConfigSettings />;
     case 'store-management':  return <AdminStoreManagement />;
     case 'role-management':   return <AdminRoleManagement />;
     case 'super-admin':       return <AdminSuperAdmin />;
