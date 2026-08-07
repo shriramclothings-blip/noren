@@ -173,6 +173,8 @@ function Sidebar({ collapsed, onToggleCollapse, filteredGroups, sidebarFilter,
       height: '100vh',
       overflow: 'hidden',
       borderRight: '1px solid rgba(255,255,255,0.06)',
+      transition: 'width 0.2s ease, min-width 0.2s ease',
+      position: 'relative',
     }}>
 
       {/* ── Brand row ─────────────────────────────────────────────────── */}
@@ -223,9 +225,11 @@ function Sidebar({ collapsed, onToggleCollapse, filteredGroups, sidebarFilter,
       )}
 
       {/* ── Nav ───────────────────────────────────────────────────────── */}
-      <nav style={{
-        flex: 1, overflowY: 'auto', overflowX: 'hidden',
-        padding: collapsed ? '6px 8px' : '4px 8px 8px',
+      <nav className="admin-sidebar-nav" style={{
+        flex: 1, overflowY: 'scroll', overflowX: 'hidden',
+        padding: collapsed ? '6px 4px' : '4px 6px 8px',
+        scrollbarWidth: 'none',       /* Firefox */
+        msOverflowStyle: 'none',      /* IE/Edge */
       }}>
         {filteredGroups.length === 0 && (
           <div style={{ padding: '12px 10px', fontSize: 12, color: '#475569' }}>No results</div>
@@ -234,7 +238,7 @@ function Sidebar({ collapsed, onToggleCollapse, filteredGroups, sidebarFilter,
           <div key={group.key}>
             {!collapsed && (
               <div style={{
-                padding: gi === 0 ? '8px 8px 3px' : '12px 8px 3px',
+                padding: gi === 0 ? '8px 10px 3px' : '12px 10px 3px',
                 fontSize: 9.5,
                 fontWeight: 700,
                 letterSpacing: '0.11em',
@@ -254,35 +258,39 @@ function Sidebar({ collapsed, onToggleCollapse, filteredGroups, sidebarFilter,
                     navigate(key === 'dashboard' ? '/admin/dashboard' : `/admin/${key}`);
                     onClose();
                   }}
-                  title={collapsed ? label : undefined}
+                  title={label}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: 8,
+                    gap: 9,
                     width: '100%',
-                    padding: collapsed ? '7px 0' : '6px 9px',
+                    boxSizing: 'border-box',
+                    padding: collapsed ? '8px 0' : '7px 10px',
                     justifyContent: collapsed ? 'center' : 'flex-start',
-                    background: active ? 'rgba(201,169,110,0.14)' : 'transparent',
+                    background: active ? 'rgba(201,169,110,0.13)' : 'transparent',
                     color: active ? '#c9a96e' : '#64748b',
                     border: 'none',
-                    borderRadius: 6,
+                    borderLeft: active && !collapsed ? '2px solid #c9a96e' : '2px solid transparent',
+                    borderRadius: collapsed ? 6 : '0 6px 6px 0',
                     cursor: 'pointer',
                     fontSize: 12.5,
                     fontWeight: active ? 600 : 400,
                     textAlign: 'left',
                     whiteSpace: 'nowrap',
                     overflow: 'hidden',
-                    lineHeight: '20px',
+                    lineHeight: '18px',
+                    marginBottom: 1,
                     transition: 'background 0.1s, color 0.1s',
+                    outline: 'none',
                   }}
                   onMouseEnter={e => {
-                    if (!active) { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.color = '#cbd5e1'; }
+                    if (!active) { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.color = '#cbd5e1'; }
                   }}
                   onMouseLeave={e => {
                     if (!active) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#64748b'; }
                   }}
                 >
-                  <Icon size={14} style={{ flexShrink: 0, opacity: active ? 1 : 0.75 }} />
+                  <Icon size={14} style={{ flexShrink: 0, opacity: active ? 1 : 0.7 }} />
                   {!collapsed && <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</span>}
                 </button>
               );

@@ -250,6 +250,10 @@ input, textarea, select { font-family: inherit; }
 ::-webkit-scrollbar-thumb { background: var(--noren-light-gray); border-radius: 2px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--noren-stone); }
 
+/* Admin sidebar nav — completely hide scrollbar on all browsers */
+.admin-sidebar-nav::-webkit-scrollbar { width: 0 !important; display: none; }
+.admin-sidebar-nav { scrollbar-width: none; -ms-overflow-style: none; }
+
 /*  Container  */
 .wrap { width: 100%; max-width: 1380px; margin: 0 auto; padding: 0 16px; }
 @media (min-width: 480px)  { .wrap { padding: 0 20px; } }
