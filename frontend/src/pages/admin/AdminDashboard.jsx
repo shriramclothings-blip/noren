@@ -63,6 +63,7 @@ import AdminModuleWorkspace from './AdminModuleWorkspace';
 import AdminPaymentSettings from './AdminPaymentSettings';
 import AdminOrders from './AdminOrders';
 import AdminLoginSessions from './AdminLoginSessions';
+const AdminUTMTracker = lazy(() => import('./erp/AdminUTMTracker'));
 import { ADMIN_ROUTE_ALIASES, ERP_MODULE_MAP, getVisibleNavGroups, canAccessModule } from './erpConfig';
 
 //  Lazy-load ALL ERP modules so a broken one doesn't crash the whole dashboard 
@@ -285,6 +286,8 @@ export default function AdminDashboard() {
         return <AdminOrders />;
       case 'login-sessions':
         return <AdminLoginSessions />;
+      case 'utm-tracker':
+        return <AdminUTMTracker />;
       default:
         return <AdminModuleWorkspace module={module} user={user} />;
     }

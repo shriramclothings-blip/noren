@@ -80,6 +80,13 @@ router.delete('/sessions/:sessionId',     ...superAdminGuard, sysCtrl.terminateS
 router.get('/sessions/history',           ...adminGuard,      sysCtrl.getLoginHistory);
 router.post('/sessions/backfill-geo',     ...superAdminGuard, sysCtrl.backfillSessionGeo);
 
+// ── UTM Link Tracker ──────────────────────────────────────────────────────────
+const utmCtrl = require('../controllers/utmController');
+router.get('/utm/links',           ...adminGuard,      utmCtrl.listLinks);
+router.post('/utm/links',          ...adminGuard,      utmCtrl.createLink);
+router.delete('/utm/links/:id',    ...adminGuard,      utmCtrl.deleteLink);
+router.get('/utm/links/:id/clicks',...adminGuard,      utmCtrl.getLinkClicks);
+
 // ── Phase 2: System health + global analytics (super_admin) ───────────────────
 router.get('/system/health',          ...superAdminGuard, sysCtrl.getSystemHealth);
 router.get('/system/global-revenue',  ...superAdminGuard, sysCtrl.getGlobalRevenue);

@@ -85,6 +85,10 @@ app.use('/api/erp/reports', require('./routes/reports'));
 app.use('/api/erp/employees', require('./routes/employees'));
 app.use('/api/erp/attendance', require('./routes/attendance'));
 app.use('/api/erp/expenses', require('./routes/expenses'));
+
+// ── UTM tracking — public redirect ───────────────────────────────────────────
+const utmCtrl = require('./controllers/utmController');
+app.get('/t/:slug', utmCtrl.trackRedirect);
 app.use('/api/erp/roles', require('./routes/roles'));
 app.use('/api/erp/sales', require('./routes/salesOrders'));
 app.use('/api/erp/payroll', require('./routes/payroll'));

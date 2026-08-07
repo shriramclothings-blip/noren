@@ -1100,6 +1100,41 @@ const initDB = async () => {
       CREATE INDEX IF NOT EXISTS idx_login_sessions_time ON src_login_sessions(logged_in_at DESC);
     `).catch(() => {});
 
+    // UTM tracking links table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS src_utm_links (
+        id          SERIAL PRIMARY KEY,
+        created_by  INTEGER REFERENCES src_users(id) ON DELETE SET NULL,
+        name        VARCHAR(200) NOT NULL,
+        slug        VARCHAR(80)  UNIQUE NOT NULL,
+        destination TEXT         NOT NULL,
+        source      VARCHAR(100),
+        medium      VARCHAR(100),
+        campaign    VARCHAR(200),
+        total_clicks INTEGER DEFAULT 0,
+        unique_clicks INTEGER DEFAULT 0,
+        is_active   BOOLEAN DEFAULT TRUE,
+        created_at  TIMESTAMP DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS src_utm_clicks (
+        id          SERIAL PRIMARY KEY,
+        link_id     INTEGER REFERENCES src_utm_links(id) ON DELETE CASCADE,
+        ip_address  VARCHAR(60),
+        city        VARCHAR(100),
+        region      VARCHAR(100),
+        country     VARCHAR(100),
+        device_type VARCHAR(50),
+        device_model VARCHAR(120),
+        browser     VARCHAR(100),
+        os          VARCHAR(100),
+        referer     TEXT,
+        user_agent  TEXT,
+        clicked_at  TIMESTAMP DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_utm_clicks_link ON src_utm_clicks(link_id, clicked_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_utm_links_slug  ON src_utm_links(slug);
+    `).catch(() => {});
+
     // POS sessions table
     await client.query(`
       CREATE TABLE IF NOT EXISTS src_erp_pos_sessions (
