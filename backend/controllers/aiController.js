@@ -5,10 +5,12 @@ const https    = require('https');
 
 const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent';
 
-// ── Helper: call Gemini API ───────────────────────────────────────────────────
+// Helper: call Gemini
 async function callGemini(prompt) {
   const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey || apiKey.startsWith('REPLACE')) throw new Error('Gemini API key not configured. Add GEMINI_API_KEY to Render environment variables.');
+  if (!apiKey || apiKey.startsWith('REPLACE')) {
+    throw new Error('Gemini API key not configured. Add GEMINI_API_KEY to Render environment variables.');
+  }
 
   const body = JSON.stringify({
     contents: [{ role: 'user', parts: [{ text: prompt }] }],
@@ -16,65 +18,47 @@ async function callGemini(prompt) {
   });
 
   return new Promise((resolve, reject) => {
-    const url = `${GEMINI_URL}?key=${apiKey}`;
-    const options = {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(body),
-      },
-    };
-
-    const req = https.request(url, options, (res) => {
-      let data = '';
-      res.on('data', c => { data += c; });
-      res.on('end', () => {
-        try {
-          const json = JSON.parse(data);
-
-          // Log full response for debugging
-          if (res.statusCode !== 200) {
-            console.error('[Gemini] HTTP', res.statusCode, JSON.stringify(json).slice(0, 300));
-            const errMsg = json.error?.message || `Gemini HTTP ${res.statusCode}`;
-            return reject(new Error(errMsg));
+    const req = https.request(
+      `${GEMINI_URL}?key=${apiKey}`,
+      { method: 'POST', headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) } },
+      (res) => {
+        let data = '';
+        res.on('data', c => { data += c; });
+        res.on('end', () => {
+          try {
+            const json = JSON.parse(data);
+            if (res.statusCode !== 200) {
+              const errMsg = json.error?.message || ('Gemini HTTP ' + res.statusCode);
+              return reject(new Error(errMsg));
+            }
+            const text = json?.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (!text) return reject(new Error('Gemini returned empty response'));
+            resolve(text.trim());
+          } catch (e) {
+            reject(new Error('Failed to parse Gemini response'));
           }
-
-          const text = json?.candidates?.[0]?.content?.parts?.[0]?.text;
-          if (!text) {
-            console.error('[Gemini] Empty response:', JSON.stringify(json).slice(0, 300));
-            return reject(new Error('Gemini returned empty response. The prompt may have been blocked.'));
-          }
-          resolve(text.trim());
-        } catch (e) {
-          console.error('[Gemini] Parse error:', data.slice(0, 200));
-          reject(new Error('Failed to parse Gemini response'));
-        }
-      });
-    });
-
-    req.on('error', (e) => {
-      console.error('[Gemini] Request error:', e.message);
-      reject(e);
-    });
-    req.setTimeout(20000, () => {
-      req.destroy();
-      reject(new Error('Gemini request timed out after 20s'));
-    });
+        });
+      }
+    );
+    req.on('error', reject);
+    req.setTimeout(20000, () => { req.destroy(); reject(new Error('Gemini timeout')); });
     req.write(body);
     req.end();
   });
 }
 
-// ── Fetch all live business metrics ──────────────────────────────────────────
+// Helper: fetch all live business metrics
 async function fetchLiveMetrics(businessId) {
   const bId    = businessId ? parseInt(businessId) : null;
-  // Safe parameterized scoping — avoids ambiguous column refs
-  const oWhere = bId ? `AND o.business_id = ${bId}` : '';
-  const sWhere = bId ? `AND s.business_id = ${bId}` : '';
-  const eWhere = bId ? `AND e.business_id = ${bId}` : '';
-  const iWhere = bId ? `AND i.business_id = ${bId}` : '';
-  const mWhere = bId ? `AND m.business_id = ${bId}` : '';
-  const nowStr = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+  const oWhere = bId ? ('AND o.business_id = ' + bId) : '';
+  const sWhere = bId ? ('AND s.business_id = ' + bId) : '';
+  const eWhere = bId ? ('AND e.business_id = ' + bId) : '';
+  const iWhere = bId ? ('AND i.business_id = ' + bId) : '';
+  const nowStr = new Date().toLocaleString('en-IN', {
+    timeZone: 'Asia/Kolkata', weekday: 'long',
+    year: 'numeric', month: 'long', day: 'numeric',
+    hour: '2-digit', minute: '2-digit',
+  });
 
   const [
     ordersRow, usersRow, productsRow, sessionsRow,
@@ -82,7 +66,6 @@ async function fetchLiveMetrics(businessId) {
     topProductsRow, lowStockRow, recentOrdersRow,
     utmLinksRow, utmClicksTodayRow,
   ] = await Promise.all([
-    // Commerce orders
     pool.query(`SELECT
       COUNT(*) FILTER (WHERE DATE(o.created_at)=CURRENT_DATE) AS today,
       COUNT(*) FILTER (WHERE o.created_at>=DATE_TRUNC('week',NOW())) AS this_week,
@@ -91,9 +74,8 @@ async function fetchLiveMetrics(businessId) {
       COUNT(*) FILTER (WHERE o.status='delivered') AS delivered,
       COALESCE(SUM(o.total) FILTER (WHERE DATE(o.created_at)=CURRENT_DATE AND o.payment_status='paid'),0) AS revenue_today,
       COALESCE(SUM(o.total) FILTER (WHERE o.created_at>=DATE_TRUNC('month',NOW()) AND o.payment_status='paid'),0) AS revenue_month
-      FROM src_orders o WHERE 1=1 ${oWhere}`),
+      FROM src_orders o WHERE 1=1 ` + oWhere),
 
-    // Users (no business_id on users table — global)
     pool.query(`SELECT
       COUNT(*) AS total,
       COUNT(*) FILTER (WHERE DATE(u.created_at)=CURRENT_DATE) AS today,
@@ -103,79 +85,74 @@ async function fetchLiveMetrics(businessId) {
       COUNT(*) FILTER (WHERE u.is_banned=TRUE) AS banned
       FROM src_users u`),
 
-    // Products
     pool.query(`SELECT
       COUNT(*) AS total,
       COUNT(*) FILTER (WHERE p.status='approved') AS approved,
       COUNT(*) FILTER (WHERE p.status='pending') AS pending,
-      COUNT(*) FILTER (WHERE p.is_featured=TRUE) AS featured,
-      COUNT(*) FILTER (WHERE p.is_trending=TRUE) AS trending
+      COUNT(*) FILTER (WHERE p.is_featured=TRUE) AS featured
       FROM src_products p WHERE p.deleted_at IS NULL`),
 
-    // Active login sessions
     pool.query(`SELECT COUNT(*) AS active FROM src_login_sessions WHERE is_active=TRUE`),
 
-    // POS / ERP sales
     pool.query(`SELECT
       COUNT(*) FILTER (WHERE DATE(s.created_at)=CURRENT_DATE AND s.status='completed') AS bills_today,
       COALESCE(SUM(s.total) FILTER (WHERE DATE(s.created_at)=CURRENT_DATE AND s.status='completed'),0) AS pos_today,
       COALESCE(SUM(s.total) FILTER (WHERE s.created_at>=DATE_TRUNC('month',NOW()) AND s.status='completed'),0) AS pos_month
-      FROM src_erp_sales s WHERE 1=1 ${sWhere}`),
+      FROM src_erp_sales s WHERE 1=1 ` + sWhere),
 
-    // Expenses this month
     pool.query(`SELECT COALESCE(SUM(e.amount),0) AS total FROM src_erp_expenses e
-      WHERE e.expense_date>=DATE_TRUNC('month',CURRENT_DATE) ${eWhere}`),
+      WHERE e.expense_date>=DATE_TRUNC('month',CURRENT_DATE) ` + eWhere),
 
-    // Inventory
     pool.query(`SELECT
       COUNT(*) AS total_items,
       COUNT(*) FILTER (WHERE i.current_stock<=i.reorder_level) AS low_stock,
       COUNT(*) FILTER (WHERE i.current_stock=0) AS out_of_stock,
       COALESCE(SUM(i.current_stock*i.purchase_price),0) AS inventory_value
-      FROM src_erp_inventory_items i WHERE i.status='active' ${iWhere}`),
+      FROM src_erp_inventory_items i WHERE i.status='active' ` + iWhere),
 
-    // New users today
-    pool.query(`SELECT u.name, u.email, u.created_at FROM src_users u
+    pool.query(`SELECT u.name, u.email FROM src_users u
       WHERE DATE(u.created_at)=CURRENT_DATE ORDER BY u.created_at DESC LIMIT 5`),
 
-    // Top products this month
     pool.query(`SELECT COALESCE(inv.title, si.title) AS name,
       SUM(si.quantity) AS qty, SUM(si.line_total) AS rev
       FROM src_erp_sale_items si
       JOIN src_erp_sales s ON s.id=si.sale_id
       LEFT JOIN src_erp_inventory_items inv ON inv.id=si.inventory_item_id
-      WHERE s.status='completed' AND s.created_at>=DATE_TRUNC('month',NOW()) ${sWhere}
+      WHERE s.status='completed' AND s.created_at>=DATE_TRUNC('month',NOW()) ` + sWhere + `
       GROUP BY COALESCE(inv.title,si.title) ORDER BY rev DESC LIMIT 5`),
 
-    // Low stock items
     pool.query(`SELECT i.title, i.sku, i.current_stock, i.reorder_level
       FROM src_erp_inventory_items i
-      WHERE i.current_stock<=i.reorder_level AND i.status='active' ${iWhere}
+      WHERE i.current_stock<=i.reorder_level AND i.status='active' ` + iWhere + `
       ORDER BY i.current_stock ASC LIMIT 8`),
 
-    // Recent orders
-    pool.query(`SELECT o.order_id, o.full_name, o.total, o.status, o.payment_status, o.created_at
-      FROM src_orders o WHERE 1=1 ${oWhere} ORDER BY o.created_at DESC LIMIT 5`),
+    pool.query(`SELECT o.order_id, o.full_name, o.total, o.status, o.payment_status
+      FROM src_orders o WHERE 1=1 ` + oWhere + ` ORDER BY o.created_at DESC LIMIT 5`),
 
-    // UTM links summary
-    pool.query(`SELECT l.name, l.source, l.medium, l.campaign, l.total_clicks, l.unique_clicks, l.created_at
-      FROM src_utm_links l WHERE l.is_active = TRUE ORDER BY l.total_clicks DESC LIMIT 10`),
+    pool.query(`SELECT l.name, l.source, l.medium, l.campaign,
+      l.total_clicks, l.unique_clicks
+      FROM src_utm_links l WHERE l.is_active = TRUE
+      ORDER BY l.total_clicks DESC LIMIT 10`),
 
-    // UTM clicks today
-    pool.query(`SELECT COUNT(*) AS today FROM src_utm_clicks WHERE DATE(clicked_at) = CURRENT_DATE`),
+    pool.query(`SELECT COUNT(*) AS today FROM src_utm_clicks
+      WHERE DATE(clicked_at) = CURRENT_DATE`),
   ]);
 
-  const o  = ordersRow.rows[0]    || {};
-  const u  = usersRow.rows[0]     || {};
-  const p  = productsRow.rows[0]  || {};
-  const s  = sessionsRow.rows[0]  || {};
-  const pos = posRow.rows[0]      || {};
-  const exp = expenseRow.rows[0]  || {};
-  const inv = inventoryRow.rows[0]|| {};
+  const o   = ordersRow.rows[0]    || {};
+  const u   = usersRow.rows[0]     || {};
+  const p   = productsRow.rows[0]  || {};
+  const s   = sessionsRow.rows[0]  || {};
+  const pos = posRow.rows[0]       || {};
+  const exp = expenseRow.rows[0]   || {};
+  const inv = inventoryRow.rows[0] || {};
 
   const revToday = (parseFloat(o.revenue_today)||0) + (parseFloat(pos.pos_today)||0);
   const revMonth = (parseFloat(o.revenue_month)||0) + (parseFloat(pos.pos_month)||0);
   const expenses = parseFloat(exp.total) || 0;
+
+  const utmLinks = utmLinksRow.rows || [];
+  const utmClicksToday = parseInt(utmClicksTodayRow.rows[0]?.today || 0);
+  const utmTotalClicks = utmLinks.reduce((sum, l) => sum + (parseInt(l.total_clicks) || 0), 0);
 
   return {
     datetime: nowStr,
@@ -199,14 +176,11 @@ async function fetchLiveMetrics(businessId) {
       new_today: parseInt(u.today)||0,
       new_this_week: parseInt(u.this_week)||0,
       new_this_month: parseInt(u.this_month)||0,
-      banned: parseInt(u.banned)||0,
     },
     products: {
       total: parseInt(p.total)||0,
       approved: parseInt(p.approved)||0,
       pending_approval: parseInt(p.pending)||0,
-      featured: parseInt(p.featured)||0,
-      trending: parseInt(p.trending)||0,
     },
     inventory: {
       total_items: parseInt(inv.total_items)||0,
@@ -218,93 +192,83 @@ async function fetchLiveMetrics(businessId) {
     new_users_today: newUsersRow.rows.map(r => ({ name: r.name, email: r.email })),
     top_products: topProductsRow.rows.map(r => ({ name: r.name, qty: parseInt(r.qty), rev: parseFloat(r.rev).toFixed(2) })),
     low_stock_items: lowStockRow.rows.map(r => ({ name: r.title, sku: r.sku, stock: r.current_stock, reorder: r.reorder_level })),
-    recent_orders: recentOrdersRow.rows.map(r => ({ id: r.order_id, name: r.full_name, amount: r.total, status: r.status, payment: r.payment_status })),
+    recent_orders: recentOrdersRow.rows.map(r => ({ id: r.order_id, name: r.full_name, amount: r.total, status: r.status })),
     utm: {
-      clicks_today: parseInt(utmClicksTodayRow?.rows?.[0]?.today || 0),
-      total_links: utmLinksRow.rows.length,
-      links: utmLinksRow.rows.map(l => ({
+      total_links: utmLinks.length,
+      total_clicks_all: utmTotalClicks,
+      clicks_today: utmClicksToday,
+      top_source: utmLinks[0]?.source || null,
+      links: utmLinks.map(l => ({
         name: l.name,
         source: l.source,
         medium: l.medium,
-        campaign: l.campaign,
-        total_clicks: l.total_clicks,
-        unique_clicks: l.unique_clicks,
+        campaign: l.campaign || null,
+        total_clicks: parseInt(l.total_clicks) || 0,
+        unique_clicks: parseInt(l.unique_clicks) || 0,
       })),
-      top_source: utmLinksRow.rows.length > 0 ? utmLinksRow.rows[0].source : null,
-      total_clicks_all: utmLinksRow.rows.reduce((sum, l) => sum + (parseInt(l.total_clicks) || 0), 0),
     },
   };
 }
 
-// ── POST /api/erp/ai/brief ────────────────────────────────────────────────────
-// Returns a spoken business briefing using live data
+// Build UTM section string for prompts
+function buildUtmSection(utm) {
+  if (!utm || utm.total_links === 0) {
+    return 'UTM TRACKING: No tracking links have been created yet.';
+  }
+  const lines = utm.links.map((l, i) =>
+    (i + 1) + '. "' + l.name + '" | Source: ' + (l.source || 'unknown') +
+    ' | Medium: ' + (l.medium || 'unknown') +
+    (l.campaign ? (' | Campaign: ' + l.campaign) : '') +
+    ' | Clicks: ' + l.total_clicks + ' total, ' + l.unique_clicks + ' unique'
+  ).join('\n');
+
+  return 'UTM TRACKING LINKS (your marketing performance data):\n' +
+    '- Active tracking links: ' + utm.total_links + '\n' +
+    '- Total clicks (all time): ' + utm.total_clicks_all + '\n' +
+    '- Clicks today: ' + utm.clicks_today + '\n' +
+    '- Top source: ' + (utm.top_source || 'none') + '\n' +
+    '- Link breakdown:\n' + lines;
+}
+
+// POST /api/erp/ai/brief
 const getBrief = async (req, res) => {
   try {
     const businessId = req.tenant?.business_id || req.user?.business_id;
     const metrics    = await fetchLiveMetrics(businessId);
+    const utmSection = buildUtmSection(metrics.utm);
 
-    const prompt = `You are NOREN's AI business assistant — confident, professional, concise. Speak like a sharp business advisor.
-
-Today is ${metrics.datetime}.
-
-Here is the live business data for NOREN Fashion:
-
-ORDERS:
-- Today: ${metrics.orders.today} orders
-- This week: ${metrics.orders.this_week} orders
-- This month: ${metrics.orders.this_month} orders
-- Pending: ${metrics.orders.pending}
-- Delivered: ${metrics.orders.delivered}
-
-REVENUE:
-- Today: ₹${metrics.revenue.today}
-- This month: ₹${metrics.revenue.this_month}
-- POS Bills today: ${metrics.revenue.pos_bills_today}
-- Expenses this month: ₹${metrics.revenue.expenses_month}
-- Profit estimate: ₹${metrics.revenue.profit_estimate}
-
-USERS & CUSTOMERS:
-- Total registered users: ${metrics.users.total}
-- New today: ${metrics.users.new_today}
-- New this week: ${metrics.users.new_this_week}
-- New this month: ${metrics.users.new_this_month}
-${metrics.new_users_today.length > 0 ? `- New users today: ${metrics.new_users_today.map(u => u.name).join(', ')}` : ''}
-
-PRODUCTS:
-- Total: ${metrics.products.total}
-- Approved: ${metrics.products.approved}
-- Pending approval: ${metrics.products.pending_approval}
-- Featured: ${metrics.products.featured}
-
-INVENTORY:
-- Total items: ${metrics.inventory.total_items}
-- Low stock: ${metrics.inventory.low_stock}
-- Out of stock: ${metrics.inventory.out_of_stock}
-- Inventory value: ₹${metrics.inventory.value}
-${metrics.low_stock_items.length > 0 ? `- Critical low stock: ${metrics.low_stock_items.slice(0,3).map(i => `${i.name} (${i.stock} left)`).join(', ')}` : ''}
-
-TOP PRODUCTS THIS MONTH:
-${metrics.top_products.map((p,i) => `${i+1}. ${p.name} — ${p.qty} sold — ₹${p.rev}`).join('\n')}
-
-ACTIVE SESSIONS: ${metrics.active_sessions} users online right now
-
-UTM TRACKING:
-- Total tracking links: ${metrics.utm.total_links}
-- Total clicks (all links): ${metrics.utm.total_clicks_all}
-- Clicks today: ${metrics.utm.clicks_today}
-${metrics.utm.links.length > 0 ? `- Top links by clicks:\n${metrics.utm.links.slice(0,5).map(l => `  • ${l.name} (${l.source}/${l.medium}) — ${l.total_clicks} clicks, ${l.unique_clicks} unique`).join('\n')}` : '- No UTM links created yet'}
-
-Give a sharp, professional spoken briefing. Start with "Good [morning/afternoon/evening], here's your NOREN business update." Cover the most important metrics, flag anything critical (low stock, pending orders, no sales today if applicable). Keep it under 200 words. Speak directly — no bullet points, no markdown, just natural flowing speech. End with one actionable suggestion.`;
+    const prompt =
+      'You are NOREN\'s AI business assistant. You have DIRECT ACCESS to the following live business data. ' +
+      'This data is coming from the NOREN database in real time. Use it fully in your response.\n\n' +
+      'Today is ' + metrics.datetime + '.\n\n' +
+      'ORDERS:\n' +
+      '- Today: ' + metrics.orders.today + ' | This week: ' + metrics.orders.this_week + ' | This month: ' + metrics.orders.this_month + '\n' +
+      '- Pending: ' + metrics.orders.pending + ' | Delivered: ' + metrics.orders.delivered + '\n\n' +
+      'REVENUE:\n' +
+      '- Today: Rs.' + metrics.revenue.today + ' | This month: Rs.' + metrics.revenue.this_month + '\n' +
+      '- Expenses: Rs.' + metrics.revenue.expenses_month + ' | Profit estimate: Rs.' + metrics.revenue.profit_estimate + '\n\n' +
+      'USERS:\n' +
+      '- New today: ' + metrics.users.new_today + ' | New this week: ' + metrics.users.new_this_week + ' | Total: ' + metrics.users.total + '\n' +
+      (metrics.new_users_today.length > 0 ? '- New user names: ' + metrics.new_users_today.map(u => u.name).join(', ') + '\n' : '') + '\n' +
+      'INVENTORY:\n' +
+      '- Low stock: ' + metrics.inventory.low_stock + ' | Out of stock: ' + metrics.inventory.out_of_stock + '\n' +
+      (metrics.low_stock_items.length > 0 ? '- Critical: ' + metrics.low_stock_items.slice(0,3).map(i => i.name + ' (' + i.stock + ' left)').join(', ') + '\n' : '') + '\n' +
+      'TOP PRODUCTS THIS MONTH:\n' +
+      metrics.top_products.map((p,i) => (i+1) + '. ' + p.name + ' - ' + p.qty + ' sold - Rs.' + p.rev).join('\n') + '\n\n' +
+      'ACTIVE SESSIONS: ' + metrics.active_sessions + ' users online\n\n' +
+      utmSection + '\n\n' +
+      'Give a sharp spoken business briefing under 200 words. Start with "Good morning/afternoon/evening, here is your NOREN update." ' +
+      'Cover the most important numbers. Flag anything critical. End with one suggestion. No bullet points, no markdown, speak naturally.';
 
     const response = await callGemini(prompt);
     res.json({ brief: response, metrics });
   } catch (err) {
     console.error('AI brief error:', err.message);
     res.status(500).json({ message: err.message });
-  }};
+  }
+};
 
-// ── POST /api/erp/ai/chat ─────────────────────────────────────────────────────
-// Answers any admin question with live business context
+// POST /api/erp/ai/chat
 const chat = async (req, res) => {
   const { message, history = [] } = req.body;
   if (!message) return res.status(400).json({ message: 'message required' });
@@ -312,27 +276,26 @@ const chat = async (req, res) => {
   try {
     const businessId = req.tenant?.business_id || req.user?.business_id;
     const metrics    = await fetchLiveMetrics(businessId);
-
-    const contextBlock = `CURRENT LIVE NOREN BUSINESS DATA (${metrics.datetime}):
-Revenue today: ₹${metrics.revenue.today} | This month: ₹${metrics.revenue.this_month}
-Orders today: ${metrics.orders.today} | Pending: ${metrics.orders.pending}
-New users today: ${metrics.users.new_today} | Total users: ${metrics.users.total}
-Low stock items: ${metrics.inventory.low_stock} | Out of stock: ${metrics.inventory.out_of_stock}
-Active sessions: ${metrics.active_sessions}
-Top products: ${metrics.top_products.slice(0,3).map(p => p.name).join(', ')}`;
+    const utmSection = buildUtmSection(metrics.utm);
 
     const conversationHistory = history.slice(-6).map(m =>
-      `${m.role === 'user' ? 'Admin' : 'NOREN AI'}: ${m.content}`
+      (m.role === 'user' ? 'Admin' : 'NOREN AI') + ': ' + m.content
     ).join('\n');
 
-    const prompt = `You are NOREN's AI business assistant — sharp, professional, helpful. You have access to live business data.
-
-${contextBlock}
-
-${conversationHistory ? `Recent conversation:\n${conversationHistory}\n` : ''}
-Admin asks: ${message}
-
-Answer directly and professionally. If the question is about business data, use the live data above. Keep responses concise — 2-4 sentences max unless they ask for detail. No markdown, no bullet points. Speak naturally as if in a business meeting. If you don't have specific data they asked for, say so and suggest where to find it.`;
+    const prompt =
+      'You are NOREN\'s AI business assistant. You have DIRECT DATABASE ACCESS to the following live data. ' +
+      'Always use this data when answering. NEVER say you do not have access to any of this data.\n\n' +
+      'LIVE NOREN BUSINESS DATA (' + metrics.datetime + '):\n\n' +
+      'Revenue today: Rs.' + metrics.revenue.today + ' | This month: Rs.' + metrics.revenue.this_month + '\n' +
+      'Orders today: ' + metrics.orders.today + ' | Pending: ' + metrics.orders.pending + ' | This month: ' + metrics.orders.this_month + '\n' +
+      'New users today: ' + metrics.users.new_today + ' | Total users: ' + metrics.users.total + '\n' +
+      'Low stock items: ' + metrics.inventory.low_stock + ' | Out of stock: ' + metrics.inventory.out_of_stock + '\n' +
+      'Active sessions: ' + metrics.active_sessions + '\n' +
+      'Top products: ' + metrics.top_products.slice(0,3).map(p => p.name).join(', ') + '\n\n' +
+      utmSection + '\n\n' +
+      (conversationHistory ? 'Recent conversation:\n' + conversationHistory + '\n\n' : '') +
+      'Admin asks: ' + message + '\n\n' +
+      'Answer directly using the data above. Be concise — 2 to 4 sentences. No markdown. No bullet points. Speak naturally.';
 
     const response = await callGemini(prompt);
     res.json({ response, metrics });
