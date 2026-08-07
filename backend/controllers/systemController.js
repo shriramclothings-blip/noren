@@ -161,7 +161,7 @@ const getLiveSessions = async (req, res) => {
     const result = await pool.query(
       `SELECT
          ls.id, ls.user_id, ls.ip_address, ls.user_agent,
-         ls.device_type, ls.browser, ls.browser_version, ls.os,
+         ls.device_type, ls.device_model, ls.browser, ls.browser_version, ls.os,
          ls.auth_method, ls.is_suspicious,
          ls.city, ls.region, ls.country, ls.country_code,
          ls.timezone, ls.isp, ls.latitude, ls.longitude, ls.location,
@@ -257,7 +257,7 @@ const getLoginHistory = async (req, res) => {
       `SELECT
          ls.id, ls.user_id,
          ls.ip_address, ls.user_agent,
-         ls.device_type, ls.browser, ls.browser_version, ls.os,
+         ls.device_type, ls.device_model, ls.browser, ls.browser_version, ls.os,
          ls.auth_method, ls.is_suspicious,
          ls.city, ls.region, ls.country, ls.country_code,
          ls.timezone, ls.isp, ls.latitude, ls.longitude, ls.location,

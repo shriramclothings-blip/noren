@@ -30,59 +30,46 @@ function buildLocationName(s) {
   return parts.length ? parts.join(', ') : (s.location || null);
 }
 
-/** Small OpenStreetMap embed via iframe — no API key needed */
+/** Small precise map — Google Maps static embed with exact pin */
 function MiniMap({ lat, lon, locationName }) {
   if (!lat || !lon) return null;
 
-  const latN  = Number(lat);
-  const lonN  = Number(lon);
-  const zoom  = 10;
-  // OpenStreetMap iframe embed URL
-  const mapUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${lonN - 0.5},${latN - 0.5},${lonN + 0.5},${latN + 0.5}&layer=mapnik&marker=${latN},${lonN}`;
-  const osmLink = `https://www.openstreetmap.org/?mlat=${latN}&mlon=${lonN}#map=${zoom}/${latN}/${lonN}`;
+  const latN = Number(lat);
+  const lonN = Number(lon);
+  // Google Maps embed — shows precise pin at exact coordinates, zoom 13 = city block level
+  const mapUrl  = `https://maps.google.com/maps?q=${latN},${lonN}&z=13&output=embed`;
+  const gLink   = `https://www.google.com/maps/search/?api=1&query=${latN},${lonN}`;
 
   return (
     <div style={{ background: '#faf9f7', borderRadius: 10, border: '1px solid #f0ebe3', overflow: 'hidden' }}>
-      {/* Header */}
       <div style={{ padding: '10px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, borderBottom: '1px solid #f0ebe3' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <MapPin size={13} color="#c9a96e" />
-          <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.16em', textTransform: 'uppercase', color: '#c9a96e' }}>
-            Location
-          </span>
+          <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.16em', textTransform: 'uppercase', color: '#c9a96e' }}>Location</span>
         </div>
-        <a
-          href={osmLink}
-          target="_blank"
-          rel="noopener noreferrer"
+        <a href={gLink} target="_blank" rel="noopener noreferrer"
           style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, color: '#6b7280', textDecoration: 'none', fontWeight: 500 }}
           onMouseEnter={e => e.currentTarget.style.color = '#c9a96e'}
-          onMouseLeave={e => e.currentTarget.style.color = '#6b7280'}
-        >
-          Open in OSM <ExternalLink size={10} />
+          onMouseLeave={e => e.currentTarget.style.color = '#6b7280'}>
+          Open in Google Maps <ExternalLink size={10} />
         </a>
       </div>
-
-      {/* Location name pill */}
       {locationName && (
-        <div style={{ padding: '8px 14px 4px', display: 'flex', alignItems: 'center', gap: 6 }}>
+        <div style={{ padding: '8px 14px 2px', display: 'flex', alignItems: 'center', gap: 6 }}>
           <MapPin size={12} color="#374151" />
           <span style={{ fontSize: 13, fontWeight: 700, color: '#111827' }}>{locationName}</span>
         </div>
       )}
-
-      {/* Coordinates */}
       <div style={{ padding: '2px 14px 8px', fontSize: 11, color: '#9ca3af', fontFamily: 'monospace' }}>
         {latN.toFixed(5)}, {lonN.toFixed(5)}
       </div>
-
-      {/* Map iframe */}
       <iframe
         src={mapUrl}
         title={`Map — ${locationName || 'Login location'}`}
-        style={{ width: '100%', height: 200, border: 'none', display: 'block' }}
+        style={{ width: '100%', height: 220, border: 'none', display: 'block' }}
         loading="lazy"
-        sandbox="allow-scripts allow-same-origin"
+        allowFullScreen
+        referrerPolicy="no-referrer-when-downgrade"
       />
     </div>
   );
@@ -128,7 +115,10 @@ function SessionCard({ s, onTerminate }) {
             </span>
           </div>
           <div style={{ fontSize: 12, color: '#6b7280', display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-            <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><DeviceIcon type={s.device_type} size={12} /> {s.device_type}</span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <DeviceIcon type={s.device_type} size={12} />
+              {s.device_model || s.device_type}
+            </span>
             <span>{s.browser} {s.browser_version}</span>
             <span>{s.os}</span>
             {/* Location name shown prominently in header */}
@@ -196,7 +186,7 @@ function SessionCard({ s, onTerminate }) {
           <div style={{ background: '#faf9f7', borderRadius: 10, padding: '12px 14px', border: '1px solid #f0ebe3' }}>
             <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.16em', textTransform: 'uppercase', color: '#c9a96e', marginBottom: 10 }}>Device & Session</p>
             {[
-              { icon: Monitor, label: 'Device',     val: s.device_type },
+              { icon: Monitor, label: 'Device',     val: s.device_model ? `${s.device_model} (${s.device_type})` : s.device_type },
               { icon: Globe,   label: 'Browser',    val: s.browser ? `${s.browser} ${s.browser_version || ''}`.trim() : null },
               { icon: Monitor, label: 'OS',         val: s.os },
               { icon: Clock,   label: 'Login At',   val: `${fmtDate(s.logged_in_at)} ${fmtTime(s.logged_in_at)}` },

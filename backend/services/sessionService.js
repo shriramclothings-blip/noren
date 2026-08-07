@@ -48,13 +48,60 @@ function parseOS(ua) {
 }
 
 /**
- * Parse device type from User-Agent string.
+ * Parse device type AND model from User-Agent string.
+ * Returns { type, model } e.g. { type: 'mobile', model: 'Samsung Galaxy S21' }
  */
 function parseDevice(ua) {
-  if (!ua) return 'desktop';
-  if (/tablet|ipad/i.test(ua))          return 'tablet';
-  if (/mobile|android|iphone|ipod/i.test(ua)) return 'mobile';
-  return 'desktop';
+  if (!ua) return { type: 'desktop', model: null };
+
+  // ── iPhone models ──────────────────────────────────────────────────────────
+  const iphoneMatch = ua.match(/iPhone OS ([0-9_]+)/i);
+  if (iphoneMatch) {
+    const ver = iphoneMatch[1].replace(/_/g, '.');
+    const major = parseInt(ver.split('.')[0]);
+    // Approximate model from iOS version
+    const iphoneModel =
+      major >= 17 ? 'iPhone 15 / 16' :
+      major >= 16 ? 'iPhone 14 / 15' :
+      major >= 15 ? 'iPhone 13 / 14' :
+      major >= 14 ? 'iPhone 12 / 13' :
+      major >= 13 ? 'iPhone 11 / 12' :
+      major >= 12 ? 'iPhone X / XS / XR' :
+      'iPhone';
+    return { type: 'mobile', model: iphoneModel };
+  }
+
+  // ── iPad ───────────────────────────────────────────────────────────────────
+  if (/iPad/i.test(ua)) {
+    return { type: 'tablet', model: 'iPad' };
+  }
+
+  // ── Samsung ────────────────────────────────────────────────────────────────
+  const samsungMatch = ua.match(/Samsung(?:Browser)?[/ ][\d.]+.*?;\s*(SM-[A-Z0-9]+)/i)
+    || ua.match(/;\s*(SM-[A-Z0-9]+)\s/i);
+  if (samsungMatch) {
+    return { type: 'mobile', model: `Samsung ${samsungMatch[1]}` };
+  }
+
+  // ── Generic Android device ─────────────────────────────────────────────────
+  const androidMatch = ua.match(/\(Linux;.*?;\s*([^;)]+)\sBuild/i);
+  if (androidMatch) {
+    const model = androidMatch[1].trim();
+    const type = /tablet/i.test(ua) ? 'tablet' : 'mobile';
+    return { type, model: model.length > 2 ? model : null };
+  }
+
+  // ── Android without model ──────────────────────────────────────────────────
+  if (/android/i.test(ua)) {
+    return { type: 'mobile', model: 'Android Device' };
+  }
+
+  // ── Desktop ────────────────────────────────────────────────────────────────
+  if (/Windows/i.test(ua)) return { type: 'desktop', model: 'Windows PC' };
+  if (/Macintosh/i.test(ua)) return { type: 'desktop', model: 'Mac' };
+  if (/Linux/i.test(ua)) return { type: 'desktop', model: 'Linux PC' };
+
+  return { type: 'desktop', model: null };
 }
 
 /**
@@ -146,7 +193,7 @@ async function recordSession(req, userId, authMethod = 'local') {
   try {
     const ua         = (req.headers['user-agent'] || '').slice(0, 500);
     const ip         = getClientIP(req);
-    const device     = parseDevice(ua);
+    const { type: device, model: deviceModel } = parseDevice(ua);
     const { browser, version: browserVersion } = parseBrowser(ua);
     const os         = parseOS(ua);
 
@@ -162,11 +209,11 @@ async function recordSession(req, userId, authMethod = 'local') {
     // Fetch geo async — insert session immediately, update geo after
     const sessionRes = await pool.query(
       `INSERT INTO src_login_sessions
-         (user_id, ip_address, user_agent, device_type, browser, browser_version, os,
+         (user_id, ip_address, user_agent, device_type, device_model, browser, browser_version, os,
           auth_method, is_suspicious, logged_in_at, is_active)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,NOW(),TRUE)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,NOW(),TRUE)
        RETURNING id`,
-      [userId, ip, ua, device, browser, browserVersion, os, authMethod, isSuspicious]
+      [userId, ip, ua, device, deviceModel, browser, browserVersion, os, authMethod, isSuspicious]
     );
 
     const sessionId = sessionRes.rows[0]?.id;

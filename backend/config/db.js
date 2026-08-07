@@ -1094,7 +1094,8 @@ const initDB = async () => {
         ADD COLUMN IF NOT EXISTS latitude        DECIMAL(9,6),
         ADD COLUMN IF NOT EXISTS longitude       DECIMAL(9,6),
         ADD COLUMN IF NOT EXISTS isp             VARCHAR(200),
-        ADD COLUMN IF NOT EXISTS browser_version VARCHAR(40);
+        ADD COLUMN IF NOT EXISTS browser_version VARCHAR(40),
+        ADD COLUMN IF NOT EXISTS device_model    VARCHAR(120);
       CREATE INDEX IF NOT EXISTS idx_login_sessions_ip   ON src_login_sessions(ip_address);
       CREATE INDEX IF NOT EXISTS idx_login_sessions_time ON src_login_sessions(logged_in_at DESC);
     `).catch(() => {});
