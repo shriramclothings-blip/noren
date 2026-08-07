@@ -1,6 +1,7 @@
 ﻿import { useState, useEffect, useMemo, lazy, Suspense, Component } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
+import AdminPushSubscription from '../../components/AdminPushSubscription';
 import {
   BadgePercent, BarChart3, Bell, Boxes, BriefcaseBusiness, Building2,
   CalendarClock, Cloud, Cpu, Crown, DollarSign, Eye, FileClock,
@@ -469,6 +470,7 @@ export default function AdminDashboard() {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+            <AdminPushSubscription />
             <div style={{ textAlign: 'right', lineHeight: 1.3 }}>
               <div style={{ fontSize: 12, fontWeight: 700, color: '#0f172a' }}>{erpBootstrap?.tenant?.business_name || 'NOREN'}</div>
               <div style={{ fontSize: 10, color: '#94a3b8' }}>{erpBootstrap?.tenant?.store_name || 'Main workspace'}</div>

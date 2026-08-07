@@ -4,6 +4,8 @@ const crypto = require('crypto');
 const { pool } = require('../config/db');
 const { sendMail } = require('../services/mailService');
 const { recordSession } = require('../services/sessionService');
+// Lazy import to avoid circular — notificationController requires db which is fine
+const getNotifCtrl = () => require('./notificationController');
 
 const signToken = (user) =>
   jwt.sign({ id: user.id, role: user.role, business_id: user.business_id || null, store_id: user.store_id || null, warehouse_id: user.warehouse_id || null }, process.env.JWT_SECRET, { expiresIn: '7d' });
@@ -66,6 +68,9 @@ const register = async (req, res) => {
         </div>
       </div>`
     ).catch(() => {});
+
+    // Notify super_admin — new user registered
+    getNotifCtrl().notifyAdminNewUser({ userId: user.id, name, email }).catch(() => {});
 
     res.status(201).json({ token: signToken(user), user: await enrichUser(user) });
   } catch (err) {

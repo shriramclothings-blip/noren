@@ -214,6 +214,29 @@ const sendPushToUser = async (userId, payload) => {
   } catch {}
 };
 
+// ── Send push to ALL super_admin users (internal use) ─────────────────────────
+// Used for: new order, new user, new support ticket, low stock, Paytm payment, etc.
+const sendPushToAdmins = async (payload) => {
+  try {
+    // Find all super_admin and admin user IDs
+    const adminUsers = await pool.query(
+      `SELECT DISTINCT ps.endpoint, ps.keys
+       FROM src_push_subscriptions ps
+       JOIN src_users u ON u.id = ps.user_id
+       WHERE u.role IN ('super_admin', 'admin') AND u.is_banned = FALSE`
+    );
+    for (const sub of adminUsers.rows) {
+      const subscription = {
+        endpoint: sub.endpoint,
+        keys: typeof sub.keys === 'string' ? JSON.parse(sub.keys) : sub.keys,
+      };
+      await sendPush(subscription, payload);
+    }
+  } catch (err) {
+    console.error('[sendPushToAdmins]', err.message);
+  }
+};
+
 // ── Admin: Send notification to all or specific user ──────────────────────
 const sendNotification = async (req, res) => {
   const { title, message, redirect_url, image_url, target, user_id } = req.body;
@@ -313,6 +336,69 @@ const requestPushFromUsers = async (req, res) => {
 module.exports = {
   getVapidKey, subscribe, unsubscribe,
   getCampaigns, createCampaign, sendCampaign, deleteCampaign, getNotifStats,
-  sendCartReminders, sendPushToUser, requestPushFromUsers,
+  sendCartReminders, sendPushToUser, sendPushToAdmins, requestPushFromUsers,
   sendNotification, searchUsersForNotif,
+
+  // ── Named admin-alert helpers (called from other controllers) ──────────────
+  notifyAdminNewOrder: async ({ orderId, customerName, total, paymentMethod, itemCount }) => {
+    const emoji = paymentMethod === 'cod' ? '💵' : '💳';
+    await sendPushToAdmins({
+      title: `${emoji} New Order — ₹${Number(total).toLocaleString('en-IN')}`,
+      body: `#${orderId} · ${customerName} · ${itemCount} item${itemCount !== 1 ? 's' : ''} · ${String(paymentMethod).toUpperCase()}`,
+      icon: '/logo.png',
+      badge: '/logo.png',
+      data: { url: '/admin/dashboard?section=orders' },
+      tag: `admin-order-${orderId}`,
+      vibrate: [200, 100, 200, 100, 200],
+    });
+  },
+
+  notifyAdminNewUser: async ({ userId, name, email }) => {
+    await sendPushToAdmins({
+      title: '👤 New User Registered',
+      body: `${name} (${email}) just created an account`,
+      icon: '/logo.png',
+      badge: '/logo.png',
+      data: { url: '/admin/dashboard?section=users' },
+      tag: `admin-user-${userId}`,
+      vibrate: [150, 100, 150],
+    });
+  },
+
+  notifyAdminNewQuery: async ({ ticketId, name, subject, priority }) => {
+    const urgency = priority === 'high' ? '🔴' : priority === 'medium' ? '🟡' : '🟢';
+    await sendPushToAdmins({
+      title: `${urgency} Support Ticket — #${ticketId}`,
+      body: `${name}: "${subject}"`,
+      icon: '/logo.png',
+      badge: '/logo.png',
+      data: { url: '/admin/dashboard?section=queries' },
+      tag: `admin-query-${ticketId}`,
+      vibrate: [200, 100, 200],
+    });
+  },
+
+  notifyAdminLowStock: async ({ itemTitle, sku, currentStock, reorderLevel, storeOrWarehouse }) => {
+    await sendPushToAdmins({
+      title: '⚠️ Low Stock Alert',
+      body: `${itemTitle} (${sku}) — ${currentStock} left (reorder at ${reorderLevel})${storeOrWarehouse ? ` · ${storeOrWarehouse}` : ''}`,
+      icon: '/logo.png',
+      badge: '/logo.png',
+      data: { url: '/admin/dashboard?section=inventory' },
+      tag: `admin-stock-${sku}`,
+      vibrate: [300, 100, 300],
+    });
+  },
+
+  notifyAdminPaymentFailed: async ({ orderId, customerName, total }) => {
+    await sendPushToAdmins({
+      title: '❌ Payment Failed',
+      body: `Order #${orderId} · ${customerName} · ₹${Number(total).toLocaleString('en-IN')} — Paytm verification failed`,
+      icon: '/logo.png',
+      badge: '/logo.png',
+      data: { url: '/admin/dashboard?section=orders' },
+      tag: `admin-fail-${orderId}`,
+      vibrate: [400, 100, 400],
+    });
+  },
 };

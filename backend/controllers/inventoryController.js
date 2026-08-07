@@ -3,6 +3,7 @@
 const { pool, logAudit } = require('../config/db');
 const xlsx = require('xlsx');
 const crypto = require('crypto');
+const getNotifCtrl = () => require('./notificationController');
 
 const getScopedBusinessId = (req) =>
   req.tenant?.business_id || req.user?.business_id || null;
@@ -464,6 +465,29 @@ const adjustStock = async (req, res) => {
     await logAudit(client, { adminId: req.user?.id, action: 'inventory.adjust_stock', targetType: 'inventory_item', targetId: inventory_item_id, details: `delta:${quantity_delta} new_stock:${new_stock}` });
 
     await client.query('COMMIT');
+
+    // Low-stock alert: fire push to admins if stock just fell to or below reorder level
+    pool.query(
+      `SELECT title, sku, reorder_level, w.name AS warehouse_name
+       FROM src_erp_inventory_items i
+       LEFT JOIN src_warehouses w ON w.id = i.warehouse_id
+       WHERE i.id = $1`,
+      [inventory_item_id]
+    ).then(r => {
+      if (!r.rows.length) return;
+      const item = r.rows[0];
+      const rl = Number(item.reorder_level);
+      if (rl > 0 && new_stock <= rl) {
+        getNotifCtrl().notifyAdminLowStock({
+          itemTitle: item.title,
+          sku: item.sku,
+          currentStock: new_stock,
+          reorderLevel: rl,
+          storeOrWarehouse: item.warehouse_name || null,
+        }).catch(() => {});
+      }
+    }).catch(() => {});
+
     return res.json({ new_stock, movement: movRes.rows[0] });
   } catch (err) {
     await client.query('ROLLBACK');

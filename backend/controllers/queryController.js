@@ -1,5 +1,6 @@
 const { pool } = require('../config/db');
 const { sendMail } = require('../services/mailService');
+const getNotifCtrl = () => require('./notificationController');
 
 const genTicketId = () => 'SRC-' + Date.now().toString(36).toUpperCase().slice(-6) + Math.random().toString(36).slice(2,5).toUpperCase();
 
@@ -51,6 +52,14 @@ const submitQuery = async (req, res) => {
     }
 
     res.status(201).json({ message: 'Query submitted successfully', ticket_id, query });
+
+    // Notify super_admin — new support ticket (non-blocking, after response sent)
+    getNotifCtrl().notifyAdminNewQuery({
+      ticketId: ticket_id,
+      name,
+      subject,
+      priority: priority || 'medium',
+    }).catch(() => {});
   } catch (err) { res.status(500).json({ message: err.message }); }
 };
 

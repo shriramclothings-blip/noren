@@ -2,7 +2,7 @@ const PaytmChecksum = require('paytmchecksum');
 const crypto = require('crypto');
 const { pool } = require('../config/db');
 const { sendOrderEmail } = require('./authController');
-const { sendPushToUser } = require('./notificationController');
+const { sendPushToUser, notifyAdminNewOrder, notifyAdminPaymentFailed } = require('./notificationController');
 
 // Lazy init so the whole API doesn't crash on boot if env vars are missing.
 // If Razorpay keys are not configured, only payment endpoints will return an error.
@@ -164,7 +164,7 @@ const placeOrder = async (req, res) => {
       sendOrderEmail(userRes.rows[0].email, userRes.rows[0].name, orderId, total, items).catch(() => {});
     }
 
-    // Send push notification if the user has an active subscription
+    // Send push to customer
     sendPushToUser(req.user.id, {
       title: 'Order confirmed',
       body: `Order #${orderId} has been placed successfully! Total: ₹${total}`,
@@ -172,6 +172,16 @@ const placeOrder = async (req, res) => {
       badge: '/logo.png',
       data: { url: '/orders' },
       tag: `order-${orderId}`,
+    }).catch(() => {});
+
+    // Notify super_admin immediately — new order alert
+    const customerName = userRes.rows[0]?.name || 'Customer';
+    notifyAdminNewOrder({
+      orderId,
+      customerName,
+      total,
+      paymentMethod: req.body.payment_method || 'cod',
+      itemCount: items.length,
     }).catch(() => {});
 
     res.status(201).json({ order, message: 'Order placed successfully' });
@@ -250,7 +260,7 @@ const paytmCallback = async (req, res) => {
           sendOrderEmail(userRes.rows[0].email, userRes.rows[0].name, order.order_id, order.total, itemsRes.rows).catch(() => {});
         }
 
-        // Send push notification if the user has an active subscription
+        // Send push notification to customer
         sendPushToUser(order.user_id, {
           title: 'Order confirmed',
           body: `Order #${order.order_id} has been placed successfully! Total: ₹${order.total}`,
@@ -258,6 +268,15 @@ const paytmCallback = async (req, res) => {
           badge: '/logo.png',
           data: { url: '/orders' },
           tag: `order-${order.order_id}`,
+        }).catch(() => {});
+
+        // Notify super_admin — Paytm-paid order
+        notifyAdminNewOrder({
+          orderId: order.order_id,
+          customerName: userRes.rows[0]?.name || 'Customer',
+          total: order.total,
+          paymentMethod: 'paytm',
+          itemCount: itemsRes.rows.length,
         }).catch(() => {});
 
         const redirectUrl = `${process.env.PAYTM_FRONTEND_URL}/order-success?orderId=${order.id}`;
