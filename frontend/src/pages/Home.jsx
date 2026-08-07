@@ -271,19 +271,19 @@ function BrandPromise() {
 
 //  Shop By Category (gender-aware with tab switcher) 
 const CAT_FALLBACKS = {
-  't-shirts':    'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=600&q=80',
-  'shirts':      'https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=600&q=80',
-  'jeans':       'https://images.unsplash.com/photo-1542272604-787c3835535d?w=600&q=80',
-  'jackets':     'https://images.unsplash.com/photo-1551028719-00167b16eac5?w=600&q=80',
-  'hoodies':     'https://images.unsplash.com/photo-1556821840-3a63f15732ce?w=600&q=80',
-  'accessories': 'https://images.unsplash.com/photo-1523779105320-d1cd346ff52b?w=600&q=80',
-  'kurtis':      'https://images.unsplash.com/photo-1583391733956-6c78276477e2?w=600&q=80',
-  'dresses':     'https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=600&q=80',
-  'tops':        'https://images.unsplash.com/photo-1434389677669-e08b4cac3105?w=600&q=80',
-  'leggings':    'https://images.unsplash.com/photo-1506629082955-511b1aa562c8?w=600&q=80',
-  'salwar-suits':'https://images.unsplash.com/photo-1583391733956-6c78276477e2?w=600&q=80',
+  't-shirts':     '/og-image.jpg',
+  'shirts':       '/og-image.jpg',
+  'jeans':        '/og-image.jpg',
+  'jackets':      '/og-image.jpg',
+  'hoodies':      '/og-image.jpg',
+  'accessories':  '/og-image.jpg',
+  'kurtis':       '/og-image.jpg',
+  'dresses':      '/og-image.jpg',
+  'tops':         '/og-image.jpg',
+  'leggings':     '/og-image.jpg',
+  'salwar-suits': '/og-image.jpg',
 };
-const CAT_DEFAULT = 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=600&q=80';
+const CAT_DEFAULT = '/og-image.jpg';
 
 function CategoriesSection({ section }) {
   const [activeGender, setActiveGender] = useState('men');

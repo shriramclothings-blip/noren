@@ -50,7 +50,7 @@ export default function ProductCard({ product }) {
       {/* Image container */}
       <div style={{ position: 'relative', overflow: 'hidden', background: '#f5f0e8', aspectRatio: '3/4' }}>
         <img
-          src={product.primary_image || product.image_url || 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=600&q=80'}
+          src={product.primary_image || product.image_url || '/og-image.jpg'}
           alt={product.title}
           style={{
             width: '100%', height: '100%', objectFit: 'cover', display: 'block',
