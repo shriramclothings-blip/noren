@@ -1,18 +1,19 @@
 ﻿import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Search, Plus, X, Pencil, ChevronLeft, ChevronRight,
-  User, ShieldCheck, Store, Hash, Ban, CheckCircle, Trash2,
+  User, ShieldCheck, Store, Hash, Ban, CheckCircle, Trash2, Building2,
 } from 'lucide-react';
 import api from '../../../utils/api';
 import toast from 'react-hot-toast';
+import { useAuth } from '../../../context/AuthContext';
 
-//  Style constants 
 const inp = {
   width: '100%', padding: '9px 12px', fontSize: 13,
   border: '1.5px solid #e5e7eb', borderRadius: 8, outline: 'none',
   fontFamily: 'inherit', color: '#111827', background: '#fff',
   boxSizing: 'border-box',
 };
+const lbl = { fontSize: 11, fontWeight: 600, color: '#6b7280', display: 'block', marginBottom: 4 };
 
 const ROLE_OPTIONS = [
   'cashier', 'store_manager', 'warehouse_manager',
@@ -34,11 +35,15 @@ const roleLabel = (r) =>
 
 const BLANK_FORM = {
   name: '', email: '', phone: '', role: 'employee',
-  store_id: '', warehouse_id: '', employee_code: '', password: '',
+  business_id: '', store_id: '', warehouse_id: '',
+  employee_code: '', password: '',
 };
 
 //  Component 
 export default function AdminEmployees() {
+  const { user } = useAuth();
+  const isSuperAdmin = user?.role === 'super_admin' || user?.role === 'admin';
+
   //  List state 
   const [employees, setEmployees] = useState([]);
   const [total, setTotal]         = useState(0);
@@ -50,19 +55,43 @@ export default function AdminEmployees() {
 
   //  Panel state 
   const [showPanel, setShowPanel]   = useState(false);
-  const [editTarget, setEditTarget] = useState(null); // null = add mode
+  const [editTarget, setEditTarget] = useState(null);
   const [form, setForm]             = useState(BLANK_FORM);
   const [saving, setSaving]         = useState(false);
 
-  //  Stores / Warehouses for selects 
-  const [stores, setStores]         = useState([]);
-  const [warehouses, setWarehouses] = useState([]);
+  //  Data for selects 
+  const [businesses, setBusinesses]         = useState([]);
+  const [stores, setStores]                 = useState([]);
+  const [warehouses, setWarehouses]         = useState([]);
+  const [filteredStores, setFilteredStores] = useState([]);
+  const [filteredWarehouses, setFilteredWarehouses] = useState([]);
 
-  //  Load stores + warehouses once 
+  //  Load businesses (super_admin/admin), stores + warehouses once 
   useEffect(() => {
+    if (isSuperAdmin) {
+      api.get('/erp/businesses').then(r => setBusinesses(r.data.businesses || [])).catch(() => {});
+    }
     api.get('/erp/stores').then(r => setStores(r.data.stores || [])).catch(() => {});
     api.get('/erp/warehouses').then(r => setWarehouses(r.data.warehouses || [])).catch(() => {});
-  }, []);
+  }, [isSuperAdmin]);
+
+  // Filter stores+warehouses when business_id changes (super_admin only)
+  useEffect(() => {
+    if (!isSuperAdmin) {
+      setFilteredStores(stores);
+      setFilteredWarehouses(warehouses);
+      return;
+    }
+    if (!form.business_id) {
+      setFilteredStores([]);
+      setFilteredWarehouses([]);
+    } else {
+      const bid = parseInt(form.business_id);
+      setFilteredStores(stores.filter(s => s.business_id === bid));
+      setFilteredWarehouses(warehouses.filter(w => w.business_id === bid));
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.business_id, stores, warehouses, isSuperAdmin]);
 
   //  Fetch employees 
   const fetchEmployees = useCallback(async () => {
@@ -94,7 +123,10 @@ export default function AdminEmployees() {
   //  Panel helpers 
   const openAdd = () => {
     setEditTarget(null);
-    setForm(BLANK_FORM);
+    setForm({
+      ...BLANK_FORM,
+      business_id: !isSuperAdmin && user?.business_id ? String(user.business_id) : '',
+    });
     setShowPanel(true);
   };
 
@@ -105,6 +137,7 @@ export default function AdminEmployees() {
       email:         emp.email         || '',
       phone:         emp.phone         || '',
       role:          emp.role          || 'employee',
+      business_id:   emp.business_id   ? String(emp.business_id)   : '',
       store_id:      emp.store_id      ? String(emp.store_id)      : '',
       warehouse_id:  emp.warehouse_id  ? String(emp.warehouse_id)  : '',
       employee_code: emp.employee_code || '',
@@ -136,6 +169,9 @@ export default function AdminEmployees() {
     e.preventDefault();
     if (!form.name.trim())  return toast.error('Name is required');
     if (!form.email.trim()) return toast.error('Email is required');
+    if (isSuperAdmin && !editTarget && !form.business_id) {
+      return toast.error('Please select a business for this employee');
+    }
 
     setSaving(true);
     try {
@@ -148,6 +184,11 @@ export default function AdminEmployees() {
         warehouse_id:  form.warehouse_id  ? parseInt(form.warehouse_id)  : undefined,
         employee_code: form.employee_code.trim() || undefined,
       };
+
+      // super_admin must pass business_id explicitly
+      if (isSuperAdmin && form.business_id) {
+        payload.business_id = parseInt(form.business_id);
+      }
 
       if (editTarget) {
         await api.put(`/erp/employees/${editTarget.id}`, payload);
@@ -348,149 +389,157 @@ export default function AdminEmployees() {
 
         {/*  Add / Edit slide-in panel  */}
         {showPanel && (
-          <div style={{ width: 380, flexShrink: 0, background: '#fff', borderRadius: 14, border: '1.5px solid #fed7aa', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ width: 400, flexShrink: 0, background: '#fff', borderRadius: 14, border: '1.5px solid #fed7aa', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
             {/* Panel header */}
             <div style={{ padding: '14px 16px', borderBottom: '1px solid #f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff7ed' }}>
               <span style={{ fontSize: 14, fontWeight: 700, color: '#111827' }}>
                 {editTarget ? 'Edit Employee' : 'Add Employee'}
               </span>
-              <button
-                onClick={closePanel}
-                style={{ width: 28, height: 28, borderRadius: 7, border: 'none', cursor: 'pointer', background: '#f3f4f6', color: '#6b7280', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-              >
+              <button onClick={closePanel} style={{ width: 28, height: 28, borderRadius: 7, border: 'none', cursor: 'pointer', background: '#f3f4f6', color: '#6b7280', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <X size={14} />
               </button>
             </div>
 
             {/* Form */}
-            <form onSubmit={handleSubmit} style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 13, overflowY: 'auto', maxHeight: 640 }}>
+            <form onSubmit={handleSubmit} style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 13, overflowY: 'auto', maxHeight: 700 }}>
+
+              {/* ── Business — super_admin / admin only ── */}
+              {isSuperAdmin && (
+                <div>
+                  <label style={{ ...lbl, color: '#c9a96e', display: 'flex', alignItems: 'center', gap: 5 }}>
+                    <Building2 size={11} /> Business *
+                  </label>
+                  <select
+                    required={!editTarget}
+                    value={form.business_id}
+                    onChange={(e) => f({ business_id: e.target.value, store_id: '', warehouse_id: '' })}
+                    style={{ ...inp, cursor: 'pointer', borderColor: !form.business_id && !editTarget ? '#f59e0b' : '#e5e7eb' }}
+                  >
+                    <option value="">— Select Business —</option>
+                    {businesses.map((b) => (
+                      <option key={b.id} value={b.id}>{b.name}</option>
+                    ))}
+                  </select>
+                  {!form.business_id && !editTarget && businesses.length === 0 && (
+                    <p style={{ fontSize: 11, color: '#ef4444', marginTop: 3 }}>
+                      No businesses found. Create one in Super Admin → Businesses first.
+                    </p>
+                  )}
+                  {!form.business_id && !editTarget && businesses.length > 0 && (
+                    <p style={{ fontSize: 11, color: '#f59e0b', marginTop: 3 }}>
+                      Select a business — Stores &amp; Warehouses will update accordingly
+                    </p>
+                  )}
+                </div>
+              )}
 
               {/* Name */}
               <div>
-                <label style={{ fontSize: 11, fontWeight: 600, color: '#6b7280', display: 'block', marginBottom: 4 }}>Name *</label>
-                <input
-                  required
-                  value={form.name}
-                  onChange={(e) => f({ name: e.target.value })}
-                  placeholder="Full name"
-                  style={inp}
-                />
+                <label style={lbl}>Employee Name *</label>
+                <input required value={form.name} onChange={(e) => f({ name: e.target.value })} placeholder="Full name" style={inp} />
               </div>
 
               {/* Email */}
               <div>
-                <label style={{ fontSize: 11, fontWeight: 600, color: '#6b7280', display: 'block', marginBottom: 4 }}>Email *</label>
+                <label style={lbl}>Email *</label>
                 <input
-                  required
-                  type="email"
-                  value={form.email}
+                  required type="email" value={form.email}
                   onChange={(e) => f({ email: e.target.value })}
                   placeholder="employee@example.com"
                   disabled={!!editTarget}
                   style={{ ...inp, background: editTarget ? '#f9fafb' : '#fff', color: editTarget ? '#9ca3af' : '#111827' }}
                 />
+                {editTarget && <p style={{ fontSize: 11, color: '#9ca3af', marginTop: 3 }}>Email cannot be changed after creation</p>}
               </div>
 
               {/* Phone */}
               <div>
-                <label style={{ fontSize: 11, fontWeight: 600, color: '#6b7280', display: 'block', marginBottom: 4 }}>Phone</label>
-                <input
-                  type="tel"
-                  value={form.phone}
-                  onChange={(e) => f({ phone: e.target.value })}
-                  placeholder="Mobile number"
-                  style={inp}
-                />
+                <label style={lbl}>Phone *</label>
+                <input type="tel" value={form.phone} onChange={(e) => f({ phone: e.target.value })} placeholder="Mobile number" style={inp} />
               </div>
 
               {/* Role */}
               <div>
-                <label style={{ fontSize: 11, fontWeight: 600, color: '#6b7280', display: 'block', marginBottom: 4 }}>Role *</label>
-                <select
-                  required
-                  value={form.role}
-                  onChange={(e) => f({ role: e.target.value })}
-                  style={{ ...inp, cursor: 'pointer' }}
-                >
+                <label style={lbl}>Role *</label>
+                <select required value={form.role} onChange={(e) => f({ role: e.target.value })} style={{ ...inp, cursor: 'pointer' }}>
                   {ROLE_OPTIONS.map((r) => (
                     <option key={r} value={r}>{roleLabel(r)}</option>
                   ))}
                 </select>
               </div>
 
-              {/* Store */}
-              <div>
-                <label style={{ fontSize: 11, fontWeight: 600, color: '#6b7280', display: 'block', marginBottom: 4 }}>Store</label>
-                <select
-                  value={form.store_id}
-                  onChange={(e) => f({ store_id: e.target.value })}
-                  style={{ ...inp, cursor: 'pointer' }}
-                >
-                  <option value=""> No Store </option>
-                  {stores.map((s) => (
-                    <option key={s.id} value={s.id}>{s.name}</option>
-                  ))}
-                </select>
-              </div>
+              {/* Location section divider */}
+              <div style={{ borderTop: '1px solid #f3f4f6', paddingTop: 4 }}>
+                <p style={{ fontSize: 10, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 10px 0' }}>
+                  Location Assignment
+                </p>
 
-              {/* Warehouse */}
-              <div>
-                <label style={{ fontSize: 11, fontWeight: 600, color: '#6b7280', display: 'block', marginBottom: 4 }}>Warehouse</label>
-                <select
-                  value={form.warehouse_id}
-                  onChange={(e) => f({ warehouse_id: e.target.value })}
-                  style={{ ...inp, cursor: 'pointer' }}
-                >
-                  <option value=""> No Warehouse </option>
-                  {warehouses.map((w) => (
-                    <option key={w.id} value={w.id}>{w.name}</option>
-                  ))}
-                </select>
+                {/* Store */}
+                <div style={{ marginBottom: 13 }}>
+                  <label style={lbl}>Store</label>
+                  <select
+                    value={form.store_id}
+                    onChange={(e) => f({ store_id: e.target.value, warehouse_id: '' })}
+                    disabled={isSuperAdmin && !form.business_id}
+                    style={{ ...inp, cursor: isSuperAdmin && !form.business_id ? 'not-allowed' : 'pointer', opacity: isSuperAdmin && !form.business_id ? 0.5 : 1 }}
+                  >
+                    <option value="">No Store</option>
+                    {(isSuperAdmin ? filteredStores : stores).map((s) => (
+                      <option key={s.id} value={s.id}>{s.name}{s.store_code ? ` (${s.store_code})` : ''}</option>
+                    ))}
+                  </select>
+                  {isSuperAdmin && !form.business_id && (
+                    <p style={{ fontSize: 11, color: '#9ca3af', marginTop: 3 }}>Select a business first</p>
+                  )}
+                </div>
+
+                {/* Warehouse */}
+                <div>
+                  <label style={lbl}>Warehouse</label>
+                  <select
+                    value={form.warehouse_id}
+                    onChange={(e) => f({ warehouse_id: e.target.value, store_id: '' })}
+                    disabled={isSuperAdmin && !form.business_id}
+                    style={{ ...inp, cursor: isSuperAdmin && !form.business_id ? 'not-allowed' : 'pointer', opacity: isSuperAdmin && !form.business_id ? 0.5 : 1 }}
+                  >
+                    <option value="">No Warehouse</option>
+                    {(isSuperAdmin ? filteredWarehouses : warehouses).map((w) => (
+                      <option key={w.id} value={w.id}>{w.name}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               {/* Employee Code */}
               <div>
-                <label style={{ fontSize: 11, fontWeight: 600, color: '#6b7280', display: 'block', marginBottom: 4 }}>Employee Code</label>
-                <input
-                  value={form.employee_code}
-                  onChange={(e) => f({ employee_code: e.target.value })}
-                  placeholder="e.g. EMP-001"
-                  style={inp}
-                />
+                <label style={lbl}>Employee Code</label>
+                <input value={form.employee_code} onChange={(e) => f({ employee_code: e.target.value })} placeholder="e.g. EMP-001" style={inp} />
               </div>
 
-              {/* Password  only for new employees */}
+              {/* Password — new employees only */}
               {!editTarget && (
                 <div>
-                  <label style={{ fontSize: 11, fontWeight: 600, color: '#6b7280', display: 'block', marginBottom: 4 }}>
-                    Password <span style={{ fontWeight: 400, color: '#9ca3af' }}>(leave blank to auto-generate)</span>
+                  <label style={lbl}>
+                    Password{' '}
+                    <span style={{ fontWeight: 400, color: '#9ca3af', textTransform: 'none' }}>(leave blank to auto-generate)</span>
                   </label>
                   <input
-                    type="password"
-                    value={form.password}
+                    type="password" value={form.password}
                     onChange={(e) => f({ password: e.target.value })}
                     placeholder="Min 6 characters"
-                    autoComplete="new-password"
-                    style={inp}
+                    autoComplete="new-password" style={inp}
                   />
                 </div>
               )}
 
               {/* Actions */}
               <div style={{ display: 'flex', gap: 10, paddingTop: 4 }}>
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="btn-orange"
-                  style={{ flex: 1, padding: '10px 0', borderRadius: 10, fontSize: 13, fontWeight: 600 }}
-                >
-                  {saving ? 'Saving' : editTarget ? 'Update Employee' : 'Add Employee'}
+                <button type="submit" disabled={saving} className="btn-orange"
+                  style={{ flex: 1, padding: '10px 0', borderRadius: 10, fontSize: 13, fontWeight: 600 }}>
+                  {saving ? 'Saving…' : editTarget ? 'Update Employee' : 'Add Employee'}
                 </button>
-                <button
-                  type="button"
-                  onClick={closePanel}
-                  style={{ padding: '10px 18px', borderRadius: 10, fontSize: 13, border: '1.5px solid #e5e7eb', background: '#fff', cursor: 'pointer', color: '#374151', fontWeight: 500 }}
-                >
+                <button type="button" onClick={closePanel}
+                  style={{ padding: '10px 18px', borderRadius: 10, fontSize: 13, border: '1.5px solid #e5e7eb', background: '#fff', cursor: 'pointer', color: '#374151', fontWeight: 500 }}>
                   Cancel
                 </button>
               </div>

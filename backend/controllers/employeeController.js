@@ -136,8 +136,13 @@ const listEmployees = async (req, res) => {
 // Create a new employee (transactional)
 // ─────────────────────────────────────────────────────────────────────────────
 const createEmployee = async (req, res) => {
-  const businessId = getScopedBusinessId(req);
-  if (!businessId) return res.status(400).json({ message: 'Business context required' });
+  // super_admin can pass business_id explicitly in the request body
+  const isSuperAdmin = req.user?.role === 'super_admin';
+  const businessId = isSuperAdmin
+    ? (req.body.business_id ? parseInt(req.body.business_id) : getScopedBusinessId(req))
+    : getScopedBusinessId(req);
+
+  if (!businessId) return res.status(400).json({ message: 'Business context required. Please select a business.' });
 
   const creatorStoreId = getScopedStoreId(req);
   const creatorWarehouseId = getScopedWarehouseId(req);
