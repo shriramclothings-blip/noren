@@ -80,6 +80,7 @@ async function fetchLiveMetrics(businessId) {
     ordersRow, usersRow, productsRow, sessionsRow,
     posRow, expenseRow, inventoryRow, newUsersRow,
     topProductsRow, lowStockRow, recentOrdersRow,
+    utmLinksRow, utmClicksTodayRow,
   ] = await Promise.all([
     // Commerce orders
     pool.query(`SELECT
@@ -155,6 +156,13 @@ async function fetchLiveMetrics(businessId) {
     // Recent orders
     pool.query(`SELECT o.order_id, o.full_name, o.total, o.status, o.payment_status, o.created_at
       FROM src_orders o WHERE 1=1 ${oWhere} ORDER BY o.created_at DESC LIMIT 5`),
+
+    // UTM links summary
+    pool.query(`SELECT l.name, l.source, l.medium, l.campaign, l.total_clicks, l.unique_clicks, l.created_at
+      FROM src_utm_links l WHERE l.is_active = TRUE ORDER BY l.total_clicks DESC LIMIT 10`),
+
+    // UTM clicks today
+    pool.query(`SELECT COUNT(*) AS today FROM src_utm_clicks WHERE DATE(clicked_at) = CURRENT_DATE`),
   ]);
 
   const o  = ordersRow.rows[0]    || {};
@@ -211,6 +219,20 @@ async function fetchLiveMetrics(businessId) {
     top_products: topProductsRow.rows.map(r => ({ name: r.name, qty: parseInt(r.qty), rev: parseFloat(r.rev).toFixed(2) })),
     low_stock_items: lowStockRow.rows.map(r => ({ name: r.title, sku: r.sku, stock: r.current_stock, reorder: r.reorder_level })),
     recent_orders: recentOrdersRow.rows.map(r => ({ id: r.order_id, name: r.full_name, amount: r.total, status: r.status, payment: r.payment_status })),
+    utm: {
+      clicks_today: parseInt(utmClicksTodayRow?.rows?.[0]?.today || 0),
+      total_links: utmLinksRow.rows.length,
+      links: utmLinksRow.rows.map(l => ({
+        name: l.name,
+        source: l.source,
+        medium: l.medium,
+        campaign: l.campaign,
+        total_clicks: l.total_clicks,
+        unique_clicks: l.unique_clicks,
+      })),
+      top_source: utmLinksRow.rows.length > 0 ? utmLinksRow.rows[0].source : null,
+      total_clicks_all: utmLinksRow.rows.reduce((sum, l) => sum + (parseInt(l.total_clicks) || 0), 0),
+    },
   };
 }
 
@@ -265,6 +287,12 @@ TOP PRODUCTS THIS MONTH:
 ${metrics.top_products.map((p,i) => `${i+1}. ${p.name} — ${p.qty} sold — ₹${p.rev}`).join('\n')}
 
 ACTIVE SESSIONS: ${metrics.active_sessions} users online right now
+
+UTM TRACKING:
+- Total tracking links: ${metrics.utm.total_links}
+- Total clicks (all links): ${metrics.utm.total_clicks_all}
+- Clicks today: ${metrics.utm.clicks_today}
+${metrics.utm.links.length > 0 ? `- Top links by clicks:\n${metrics.utm.links.slice(0,5).map(l => `  • ${l.name} (${l.source}/${l.medium}) — ${l.total_clicks} clicks, ${l.unique_clicks} unique`).join('\n')}` : '- No UTM links created yet'}
 
 Give a sharp, professional spoken briefing. Start with "Good [morning/afternoon/evening], here's your NOREN business update." Cover the most important metrics, flag anything critical (low stock, pending orders, no sales today if applicable). Keep it under 200 words. Speak directly — no bullet points, no markdown, just natural flowing speech. End with one actionable suggestion.`;
 
