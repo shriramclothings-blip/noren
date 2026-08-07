@@ -42,9 +42,14 @@ async function callGemini(prompt) {
 
 // ── Fetch all live business metrics ──────────────────────────────────────────
 async function fetchLiveMetrics(businessId) {
-  const scope   = businessId ? `AND business_id = ${parseInt(businessId)}` : '';
-  const bScope  = businessId ? `WHERE business_id = ${parseInt(businessId)}` : '';
-  const nowStr  = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+  const bId    = businessId ? parseInt(businessId) : null;
+  // Safe parameterized scoping — avoids ambiguous column refs
+  const oWhere = bId ? `AND o.business_id = ${bId}` : '';
+  const sWhere = bId ? `AND s.business_id = ${bId}` : '';
+  const eWhere = bId ? `AND e.business_id = ${bId}` : '';
+  const iWhere = bId ? `AND i.business_id = ${bId}` : '';
+  const mWhere = bId ? `AND m.business_id = ${bId}` : '';
+  const nowStr = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 
   const [
     ordersRow, usersRow, productsRow, sessionsRow,
@@ -53,76 +58,78 @@ async function fetchLiveMetrics(businessId) {
   ] = await Promise.all([
     // Commerce orders
     pool.query(`SELECT
-      COUNT(*) FILTER (WHERE DATE(created_at)=CURRENT_DATE) AS today,
-      COUNT(*) FILTER (WHERE created_at>=DATE_TRUNC('week',NOW())) AS this_week,
-      COUNT(*) FILTER (WHERE created_at>=DATE_TRUNC('month',NOW())) AS this_month,
-      COUNT(*) FILTER (WHERE status='pending') AS pending,
-      COUNT(*) FILTER (WHERE status='delivered') AS delivered,
-      COALESCE(SUM(total) FILTER (WHERE DATE(created_at)=CURRENT_DATE AND payment_status='paid'),0) AS revenue_today,
-      COALESCE(SUM(total) FILTER (WHERE created_at>=DATE_TRUNC('month',NOW()) AND payment_status='paid'),0) AS revenue_month
-      FROM src_orders WHERE 1=1 ${scope}`),
+      COUNT(*) FILTER (WHERE DATE(o.created_at)=CURRENT_DATE) AS today,
+      COUNT(*) FILTER (WHERE o.created_at>=DATE_TRUNC('week',NOW())) AS this_week,
+      COUNT(*) FILTER (WHERE o.created_at>=DATE_TRUNC('month',NOW())) AS this_month,
+      COUNT(*) FILTER (WHERE o.status='pending') AS pending,
+      COUNT(*) FILTER (WHERE o.status='delivered') AS delivered,
+      COALESCE(SUM(o.total) FILTER (WHERE DATE(o.created_at)=CURRENT_DATE AND o.payment_status='paid'),0) AS revenue_today,
+      COALESCE(SUM(o.total) FILTER (WHERE o.created_at>=DATE_TRUNC('month',NOW()) AND o.payment_status='paid'),0) AS revenue_month
+      FROM src_orders o WHERE 1=1 ${oWhere}`),
 
-    // Users
+    // Users (no business_id on users table — global)
     pool.query(`SELECT
       COUNT(*) AS total,
-      COUNT(*) FILTER (WHERE DATE(created_at)=CURRENT_DATE) AS today,
-      COUNT(*) FILTER (WHERE created_at>=DATE_TRUNC('week',NOW())) AS this_week,
-      COUNT(*) FILTER (WHERE created_at>=DATE_TRUNC('month',NOW())) AS this_month,
-      COUNT(*) FILTER (WHERE role='user') AS customers,
-      COUNT(*) FILTER (WHERE is_banned=TRUE) AS banned
-      FROM src_users`),
+      COUNT(*) FILTER (WHERE DATE(u.created_at)=CURRENT_DATE) AS today,
+      COUNT(*) FILTER (WHERE u.created_at>=DATE_TRUNC('week',NOW())) AS this_week,
+      COUNT(*) FILTER (WHERE u.created_at>=DATE_TRUNC('month',NOW())) AS this_month,
+      COUNT(*) FILTER (WHERE u.role='user') AS customers,
+      COUNT(*) FILTER (WHERE u.is_banned=TRUE) AS banned
+      FROM src_users u`),
 
     // Products
     pool.query(`SELECT
       COUNT(*) AS total,
-      COUNT(*) FILTER (WHERE status='approved') AS approved,
-      COUNT(*) FILTER (WHERE status='pending') AS pending,
-      COUNT(*) FILTER (WHERE is_featured=TRUE) AS featured,
-      COUNT(*) FILTER (WHERE is_trending=TRUE) AS trending
-      FROM src_products WHERE deleted_at IS NULL`),
+      COUNT(*) FILTER (WHERE p.status='approved') AS approved,
+      COUNT(*) FILTER (WHERE p.status='pending') AS pending,
+      COUNT(*) FILTER (WHERE p.is_featured=TRUE) AS featured,
+      COUNT(*) FILTER (WHERE p.is_trending=TRUE) AS trending
+      FROM src_products p WHERE p.deleted_at IS NULL`),
 
     // Active login sessions
     pool.query(`SELECT COUNT(*) AS active FROM src_login_sessions WHERE is_active=TRUE`),
 
     // POS / ERP sales
     pool.query(`SELECT
-      COUNT(*) FILTER (WHERE DATE(created_at)=CURRENT_DATE AND status='completed') AS bills_today,
-      COALESCE(SUM(total) FILTER (WHERE DATE(created_at)=CURRENT_DATE AND status='completed'),0) AS pos_today,
-      COALESCE(SUM(total) FILTER (WHERE created_at>=DATE_TRUNC('month',NOW()) AND status='completed'),0) AS pos_month
-      FROM src_erp_sales WHERE 1=1 ${scope}`),
+      COUNT(*) FILTER (WHERE DATE(s.created_at)=CURRENT_DATE AND s.status='completed') AS bills_today,
+      COALESCE(SUM(s.total) FILTER (WHERE DATE(s.created_at)=CURRENT_DATE AND s.status='completed'),0) AS pos_today,
+      COALESCE(SUM(s.total) FILTER (WHERE s.created_at>=DATE_TRUNC('month',NOW()) AND s.status='completed'),0) AS pos_month
+      FROM src_erp_sales s WHERE 1=1 ${sWhere}`),
 
     // Expenses this month
-    pool.query(`SELECT COALESCE(SUM(amount),0) AS total FROM src_erp_expenses
-      WHERE expense_date>=DATE_TRUNC('month',CURRENT_DATE) ${scope}`),
+    pool.query(`SELECT COALESCE(SUM(e.amount),0) AS total FROM src_erp_expenses e
+      WHERE e.expense_date>=DATE_TRUNC('month',CURRENT_DATE) ${eWhere}`),
 
     // Inventory
     pool.query(`SELECT
       COUNT(*) AS total_items,
-      COUNT(*) FILTER (WHERE current_stock<=reorder_level) AS low_stock,
-      COUNT(*) FILTER (WHERE current_stock=0) AS out_of_stock,
-      COALESCE(SUM(current_stock*purchase_price),0) AS inventory_value
-      FROM src_erp_inventory_items WHERE status='active' ${scope}`),
+      COUNT(*) FILTER (WHERE i.current_stock<=i.reorder_level) AS low_stock,
+      COUNT(*) FILTER (WHERE i.current_stock=0) AS out_of_stock,
+      COALESCE(SUM(i.current_stock*i.purchase_price),0) AS inventory_value
+      FROM src_erp_inventory_items i WHERE i.status='active' ${iWhere}`),
 
     // New users today
-    pool.query(`SELECT name, email, created_at FROM src_users
-      WHERE DATE(created_at)=CURRENT_DATE ORDER BY created_at DESC LIMIT 5`),
+    pool.query(`SELECT u.name, u.email, u.created_at FROM src_users u
+      WHERE DATE(u.created_at)=CURRENT_DATE ORDER BY u.created_at DESC LIMIT 5`),
 
     // Top products this month
-    pool.query(`SELECT COALESCE(i.title,si.title) AS name, SUM(si.quantity) AS qty, SUM(si.line_total) AS rev
+    pool.query(`SELECT COALESCE(inv.title, si.title) AS name,
+      SUM(si.quantity) AS qty, SUM(si.line_total) AS rev
       FROM src_erp_sale_items si
       JOIN src_erp_sales s ON s.id=si.sale_id
-      LEFT JOIN src_erp_inventory_items i ON i.id=si.inventory_item_id
-      WHERE s.status='completed' AND s.created_at>=DATE_TRUNC('month',NOW()) ${scope}
-      GROUP BY COALESCE(i.title,si.title) ORDER BY rev DESC LIMIT 5`),
+      LEFT JOIN src_erp_inventory_items inv ON inv.id=si.inventory_item_id
+      WHERE s.status='completed' AND s.created_at>=DATE_TRUNC('month',NOW()) ${sWhere}
+      GROUP BY COALESCE(inv.title,si.title) ORDER BY rev DESC LIMIT 5`),
 
     // Low stock items
-    pool.query(`SELECT title, sku, current_stock, reorder_level FROM src_erp_inventory_items
-      WHERE current_stock<=reorder_level AND status='active' ${scope}
-      ORDER BY current_stock ASC LIMIT 8`),
+    pool.query(`SELECT i.title, i.sku, i.current_stock, i.reorder_level
+      FROM src_erp_inventory_items i
+      WHERE i.current_stock<=i.reorder_level AND i.status='active' ${iWhere}
+      ORDER BY i.current_stock ASC LIMIT 8`),
 
     // Recent orders
-    pool.query(`SELECT order_id, full_name, total, status, payment_status, created_at FROM src_orders
-      WHERE 1=1 ${scope} ORDER BY created_at DESC LIMIT 5`),
+    pool.query(`SELECT o.order_id, o.full_name, o.total, o.status, o.payment_status, o.created_at
+      FROM src_orders o WHERE 1=1 ${oWhere} ORDER BY o.created_at DESC LIMIT 5`),
   ]);
 
   const o  = ordersRow.rows[0]    || {};
