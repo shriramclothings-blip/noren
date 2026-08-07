@@ -67,7 +67,6 @@ const iconMap = {
   Cloud, Eye, Mail, Link2, Sparkles,
 };
 
-// Mobile bottom-nav quick links
 const MOBILE_TABS = [
   { key: 'dashboard', label: 'Home',     icon: 'LayoutDashboard' },
   { key: 'orders',    label: 'Orders',   icon: 'ShoppingCart'    },
@@ -76,20 +75,20 @@ const MOBILE_TABS = [
   { key: '__menu__',  label: 'Menu',     icon: '__menu__'        },
 ];
 
-// ─── Error boundary ───────────────────────────────────────────────────────────
+/* ─── Error boundary ─────────────────────────────────────────────────────── */
 class ModuleErrorBoundary extends Component {
   constructor(props) { super(props); this.state = { hasError: false, error: null }; }
-  static getDerivedStateFromError(error) { return { hasError: true, error }; }
-  componentDidCatch(err) { console.error('ERP Module Error:', err); }
+  static getDerivedStateFromError(e) { return { hasError: true, error: e }; }
+  componentDidCatch(e) { console.error('ERP Module Error:', e); }
   render() {
     if (this.state.hasError) return (
       <div style={{ background: '#fef2f2', border: '1.5px solid #fecaca', borderRadius: 14, padding: '32px 24px', textAlign: 'center' }}>
         <AlertTriangle size={32} color="#ef4444" style={{ margin: '0 auto 12px', display: 'block' }} />
         <div style={{ fontSize: 15, fontWeight: 700, color: '#991b1b', marginBottom: 8 }}>Module failed to load</div>
-        <div style={{ fontSize: 13, color: '#dc2626', marginBottom: 16 }}>{this.state.error?.message || 'An unexpected error occurred'}</div>
+        <div style={{ fontSize: 13, color: '#dc2626', marginBottom: 16 }}>{this.state.error?.message || 'Unexpected error'}</div>
         <button onClick={() => this.setState({ hasError: false, error: null })}
           style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 18px', borderRadius: 9, border: 'none', cursor: 'pointer', background: '#c9a96e', color: '#fff', fontSize: 13, fontWeight: 600 }}>
-          <RefreshCw size={14} /> Try again
+          <RefreshCw size={14} /> Retry
         </button>
       </div>
     );
@@ -99,16 +98,16 @@ class ModuleErrorBoundary extends Component {
 
 const ModuleLoader = () => (
   <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '8px 0' }}>
-    {[80, 40, 40, 40].map((h, i) => (
+    {[100, 48, 48, 48].map((h, i) => (
       <div key={i} className="skeleton" style={{ height: h, borderRadius: 12 }} />
     ))}
   </div>
 );
 
-// ─── renderSection (unchanged from original) ─────────────────────────────────
+/* ─── Section renderer ───────────────────────────────────────────────────── */
 function renderSection(section, user, navigate) {
-  const module = ERP_MODULE_MAP[section];
-  const key    = module?.componentKey || section;
+  const mod = ERP_MODULE_MAP[section];
+  const key = mod?.componentKey || section;
   switch (key) {
     case 'dashboard':         return <AdminOverview onOpenCloud={() => navigate('/admin/cloud')} />;
     case 'erp':               return <AdminErp />;
@@ -156,129 +155,98 @@ function renderSection(section, user, navigate) {
     case 'login-sessions':    return <AdminLoginSessions />;
     case 'utm-tracker':       return <AdminUTMTracker />;
     case 'ai-assistant':      return <AdminAIAssistant />;
-    default:                  return <AdminModuleWorkspace module={module} user={user} />;
+    default:                  return <AdminModuleWorkspace module={mod} user={user} />;
   }
 }
 
-// ─── Sidebar — defined OUTSIDE the main component so it never remounts ────────
-function Sidebar({
-  collapsed, onToggleCollapse,
-  filteredGroups, sidebarFilter, setSidebarFilter,
-  section, navigate, onClose,
-  user, handleLogout,
-  isMobileDrawer,          // true when rendered inside the mobile overlay
-}) {
-  const initials = user?.name?.[0]?.toUpperCase() ?? '?';
+/* ─── Sidebar (defined outside component — never remounts) ──────────────── */
+function Sidebar({ collapsed, onToggleCollapse, filteredGroups, sidebarFilter,
+  setSidebarFilter, section, navigate, onClose, user, handleLogout, isMobileDrawer }) {
 
   return (
     <aside style={{
-      width: collapsed ? 68 : 260,
-      minWidth: collapsed ? 68 : 260,
+      width: collapsed ? 64 : 256,
+      minWidth: collapsed ? 64 : 256,
       background: '#0f172a',
       display: 'flex',
       flexDirection: 'column',
       height: '100vh',
-      flexShrink: 0,
       overflow: 'hidden',
-      transition: 'width 0.2s ease, min-width 0.2s ease',
+      borderRight: '1px solid rgba(255,255,255,0.06)',
     }}>
 
-      {/* ── Logo row ─────────────────────────────────────── */}
+      {/* ── Brand row ─────────────────────────────────────────────────── */}
       <div style={{
-        padding: collapsed ? '14px 8px 12px' : '14px 14px 12px',
-        borderBottom: '1px solid rgba(255,255,255,0.07)',
+        height: 56,
+        display: 'flex',
+        alignItems: 'center',
+        padding: collapsed ? '0 12px' : '0 14px',
+        justifyContent: 'space-between',
+        borderBottom: '1px solid rgba(255,255,255,0.06)',
         flexShrink: 0,
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%' }}>
-            <img src="/logo.png" alt="NOREN"
-              style={{ width: 42, height: 42, borderRadius: 10, objectFit: 'cover', flexShrink: 0 }} />
-            {!collapsed && (
-              <div style={{ minWidth: 0 }}>
-                <div style={{ color: '#fff', fontWeight: 800, fontSize: 14, lineHeight: 1.2 }}>NOREN</div>
-                <div style={{ color: '#c9a96e', fontSize: 10, fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', marginTop: 2 }}>
-                  Integrated ERP Admin
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Desktop: collapse/expand toggle */}
-          {!isMobileDrawer && (
-            <button
-              onClick={onToggleCollapse}
-              title={collapsed ? 'Expand sidebar' : 'Minimize sidebar'}
-              aria-label={collapsed ? 'Expand sidebar' : 'Minimize sidebar'}
-              style={{
-                width: 34, height: 34, borderRadius: 10,
-                border: '1px solid rgba(255,255,255,0.08)',
-                background: 'rgba(255,255,255,0.08)', color: '#fff',
-                cursor: 'pointer', display: 'flex', alignItems: 'center',
-                justifyContent: 'center', flexShrink: 0,
-              }}
-            >
-              <ChevronDown size={14} style={{ transform: collapsed ? 'rotate(-90deg)' : 'rotate(90deg)' }} />
-            </button>
-          )}
-
-          {/* Mobile drawer: close button */}
-          {isMobileDrawer && (
-            <button onClick={onClose}
-              style={{
-                width: 34, height: 34, borderRadius: 10,
-                border: '1px solid rgba(255,255,255,0.08)',
-                background: 'rgba(255,255,255,0.08)', color: '#94a3b8',
-                cursor: 'pointer', display: 'flex', alignItems: 'center',
-                justifyContent: 'center', flexShrink: 0,
-              }}>
-              <X size={16} />
-            </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, overflow: 'hidden' }}>
+          <img src="/logo.png" alt="NOREN"
+            style={{ width: 30, height: 30, borderRadius: 7, objectFit: 'cover', flexShrink: 0 }} />
+          {!collapsed && (
+            <div style={{ lineHeight: 1, overflow: 'hidden' }}>
+              <div style={{ fontSize: 13, fontWeight: 800, color: '#f1f5f9', letterSpacing: '0.04em' }}>NOREN</div>
+              <div style={{ fontSize: 9, color: '#c9a96e', fontWeight: 700, letterSpacing: '0.16em', textTransform: 'uppercase', marginTop: 2 }}>ERP Admin</div>
+            </div>
           )}
         </div>
+        {isMobileDrawer ? (
+          <button onClick={onClose} style={btnReset({ color: '#64748b' })}><X size={15} /></button>
+        ) : (
+          <button onClick={onToggleCollapse} title={collapsed ? 'Expand' : 'Collapse'} style={btnReset({ color: '#475569' })}>
+            <ChevronDown size={14} style={{ transform: collapsed ? 'rotate(-90deg)' : 'rotate(90deg)', transition: 'transform 0.2s' }} />
+          </button>
+        )}
       </div>
 
-      {/* ── Search filter ────────────────────────────────── */}
+      {/* ── Search ────────────────────────────────────────────────────── */}
       {!collapsed && (
-        <div style={{ padding: '8px 10px 0', flexShrink: 0 }}>
+        <div style={{ padding: '8px 10px', borderBottom: '1px solid rgba(255,255,255,0.05)', flexShrink: 0 }}>
           <input
             value={sidebarFilter}
             onChange={e => setSidebarFilter(e.target.value)}
-            placeholder="Filter features..."
+            placeholder="Search modules…"
             style={{
-              width: '100%', borderRadius: 8,
-              border: '1px solid rgba(148,163,184,0.15)',
-              padding: '7px 10px',
+              width: '100%', boxSizing: 'border-box',
               background: 'rgba(255,255,255,0.05)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              borderRadius: 6, padding: '6px 10px',
               color: '#94a3b8', fontSize: 12, outline: 'none',
-              boxSizing: 'border-box',
             }}
           />
         </div>
       )}
 
-      {/* ── Nav groups ───────────────────────────────────── */}
+      {/* ── Nav ───────────────────────────────────────────────────────── */}
       <nav style={{
         flex: 1, overflowY: 'auto', overflowX: 'hidden',
-        padding: collapsed ? '8px 6px' : '6px 8px 12px',
-        display: 'flex', flexDirection: 'column', minHeight: 0,
+        padding: collapsed ? '6px 8px' : '4px 8px 8px',
       }}>
         {filteredGroups.length === 0 && (
-          <div style={{ color: '#64748b', fontSize: 12, padding: '12px 8px' }}>No results.</div>
+          <div style={{ padding: '12px 10px', fontSize: 12, color: '#475569' }}>No results</div>
         )}
-        {filteredGroups.map((group, gIdx) => (
+        {filteredGroups.map((group, gi) => (
           <div key={group.key}>
             {!collapsed && (
               <div style={{
-                padding: gIdx === 0 ? '6px 8px 4px' : '14px 8px 4px',
-                fontSize: 10, color: '#334155',
-                letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 800,
+                padding: gi === 0 ? '8px 8px 3px' : '12px 8px 3px',
+                fontSize: 9.5,
+                fontWeight: 700,
+                letterSpacing: '0.11em',
+                textTransform: 'uppercase',
+                color: '#334155',
               }}>
                 {group.label}
               </div>
             )}
             {group.items.map(({ key, label, icon }) => {
               const Icon = iconMap[icon] || LayoutDashboard;
-              const isActive = section === key;
+              const active = section === key;
               return (
                 <button
                   key={key}
@@ -286,29 +254,36 @@ function Sidebar({
                     navigate(key === 'dashboard' ? '/admin/dashboard' : `/admin/${key}`);
                     onClose();
                   }}
-                  title={label}
-                  aria-label={label}
+                  title={collapsed ? label : undefined}
                   style={{
-                    display: 'flex', alignItems: 'center',
-                    gap: collapsed ? 0 : 9,
-                    padding: collapsed ? '9px 0' : '8px 10px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    width: '100%',
+                    padding: collapsed ? '7px 0' : '6px 9px',
                     justifyContent: collapsed ? 'center' : 'flex-start',
-                    borderRadius: 8, border: 'none', cursor: 'pointer',
-                    fontSize: 13, fontWeight: isActive ? 700 : 500,
-                    textAlign: 'left', width: '100%',
-                    background: isActive ? 'rgba(249,115,22,0.18)' : 'transparent',
-                    color: isActive ? '#c9a96e' : '#94a3b8',
-                    transition: 'all 0.12s ease',
-                    whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                    flexShrink: 0,
+                    background: active ? 'rgba(201,169,110,0.14)' : 'transparent',
+                    color: active ? '#c9a96e' : '#64748b',
+                    border: 'none',
+                    borderRadius: 6,
+                    cursor: 'pointer',
+                    fontSize: 12.5,
+                    fontWeight: active ? 600 : 400,
+                    textAlign: 'left',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    lineHeight: '20px',
+                    transition: 'background 0.1s, color 0.1s',
                   }}
-                  onMouseEnter={e => { if (!isActive) { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.color = '#e2e8f0'; } }}
-                  onMouseLeave={e => { if (!isActive) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#94a3b8'; } }}
+                  onMouseEnter={e => {
+                    if (!active) { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.color = '#cbd5e1'; }
+                  }}
+                  onMouseLeave={e => {
+                    if (!active) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#64748b'; }
+                  }}
                 >
-                  <Icon size={15} style={{ flexShrink: 0 }} />
-                  {!collapsed && (
-                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</span>
-                  )}
+                  <Icon size={14} style={{ flexShrink: 0, opacity: active ? 1 : 0.75 }} />
+                  {!collapsed && <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</span>}
                 </button>
               );
             })}
@@ -316,45 +291,39 @@ function Sidebar({
         ))}
       </nav>
 
-      {/* ── User + Logout ─────────────────────────────────── */}
-      <div style={{ padding: '12px 10px 16px', borderTop: '1px solid rgba(255,255,255,0.07)', flexShrink: 0 }}>
+      {/* ── User footer ───────────────────────────────────────────────── */}
+      <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', padding: '10px 8px', flexShrink: 0 }}>
         {!collapsed && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', marginBottom: 4 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px 8px' }}>
             <div style={{
-              width: 34, height: 34, borderRadius: 10,
-              background: 'rgba(249,115,22,0.15)',
+              width: 28, height: 28, borderRadius: 8,
+              background: 'rgba(201,169,110,0.2)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: '#c9a96e', fontWeight: 700, fontSize: 13, flexShrink: 0,
+              color: '#c9a96e', fontWeight: 700, fontSize: 12, flexShrink: 0,
             }}>
-              {initials}
+              {user?.name?.[0]?.toUpperCase() ?? '?'}
             </div>
             <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {user?.name}
-              </div>
-              <div style={{ fontSize: 11, color: '#94a3b8', textTransform: 'capitalize' }}>
-                {String(user?.role || 'user').replace(/_/g, ' ')}
-              </div>
+              <div style={{ fontSize: 12, fontWeight: 600, color: '#e2e8f0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.name}</div>
+              <div style={{ fontSize: 10, color: '#475569', textTransform: 'capitalize' }}>{String(user?.role || '').replace(/_/g, ' ')}</div>
             </div>
           </div>
         )}
         <button
           onClick={handleLogout}
           style={{
-            display: 'flex', alignItems: 'center',
-            gap: collapsed ? 0 : 8,
+            display: 'flex', alignItems: 'center', gap: 7,
             justifyContent: collapsed ? 'center' : 'flex-start',
-            width: '100%',
-            padding: collapsed ? '10px 8px' : '9px 14px',
-            borderRadius: 10, border: 'none', cursor: 'pointer',
-            fontSize: 13, color: '#f87171', background: 'transparent',
-            transition: 'background 0.15s',
+            width: '100%', padding: collapsed ? '8px 0' : '7px 10px',
+            borderRadius: 6, border: 'none', cursor: 'pointer',
+            fontSize: 12, color: '#ef4444', background: 'transparent',
+            transition: 'background 0.12s',
           }}
           onMouseEnter={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.1)'; }}
           onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
           title="Sign Out"
         >
-          <LogOut size={15} />
+          <LogOut size={13} />
           {!collapsed && <span>Sign Out</span>}
         </button>
       </div>
@@ -362,15 +331,25 @@ function Sidebar({
   );
 }
 
-// ─── Main component ───────────────────────────────────────────────────────────
+/* tiny helper — reset button style base */
+function btnReset(extra = {}) {
+  return {
+    background: 'none', border: 'none', cursor: 'pointer',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    width: 28, height: 28, borderRadius: 6, padding: 0, flexShrink: 0,
+    ...extra,
+  };
+}
+
+/* ─── Main dashboard shell ───────────────────────────────────────────────── */
 export default function AdminDashboard() {
   const { user, logout } = useAuth();
   const navigate         = useNavigate();
   const location         = useLocation();
 
   const [section,       setSection]       = useState('dashboard');
-  const [sidebarOpen,   setSidebarOpen]   = useState(false);      // mobile drawer
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false); // desktop collapse
+  const [mobileOpen,    setMobileOpen]    = useState(false);
+  const [collapsed,     setCollapsed]     = useState(false);
   const [sidebarFilter, setSidebarFilter] = useState('');
   const [erpBootstrap,  setErpBootstrap]  = useState(null);
 
@@ -384,136 +363,115 @@ export default function AdminDashboard() {
       .filter(g => g.items.length > 0);
   }, [visibleGroups, sidebarFilter]);
 
-  const defaultSection = visibleItems.find(i => i.key === 'dashboard')?.key || visibleItems[0]?.key || 'dashboard';
-  const handleLogout   = () => { logout(); navigate('/'); };
+  const handleLogout = () => { logout(); navigate('/'); };
 
-  // URL → section sync
+  /* URL → section */
   useEffect(() => {
     if (!user) return;
-    const raw        = location.pathname.replace(/^\/admin\/?/, '');
-    const candidate  = raw.split('/')[0] || 'dashboard';
-    const normalized = ADMIN_ROUTE_ALIASES[candidate] || candidate;
-    if (!candidate) { setSection('dashboard'); return; }
-    const mod = ERP_MODULE_MAP[normalized];
+    const raw  = location.pathname.replace(/^\/admin\/?/, '');
+    const cand = raw.split('/')[0] || 'dashboard';
+    const norm = ADMIN_ROUTE_ALIASES[cand] || cand;
+    if (!cand) { setSection('dashboard'); return; }
+    const mod = ERP_MODULE_MAP[norm];
     if (!mod) { setSection('dashboard'); return; }
-    setSection(canAccessModule(user, mod) ? normalized : 'dashboard');
+    setSection(canAccessModule(user, mod) ? norm : 'dashboard');
   }, [location.pathname, user]);
 
+  /* ERP bootstrap */
   useEffect(() => {
     if (!user) return;
     api.get('/erp/bootstrap').then(r => setErpBootstrap(r.data)).catch(() => {});
   }, [user]);
 
-  // Lock body scroll when mobile drawer is open
+  /* Body scroll lock when mobile drawer is open */
   useEffect(() => {
-    document.body.style.overflow = sidebarOpen ? 'hidden' : '';
+    document.body.style.overflow = mobileOpen ? 'hidden' : '';
     return () => { document.body.style.overflow = ''; };
-  }, [sidebarOpen]);
+  }, [mobileOpen]);
 
+  const defaultSection = visibleItems.find(i => i.key === 'dashboard')?.key || visibleItems[0]?.key || 'dashboard';
   const activeNav = ERP_MODULE_MAP[section] || ERP_MODULE_MAP[defaultSection] || { label: 'Dashboard', description: 'Admin workspace' };
 
-  // Shared sidebar props
-  const sidebarProps = {
+  const sharedSidebarProps = {
     filteredGroups, sidebarFilter, setSidebarFilter,
     section, navigate,
-    onClose: () => setSidebarOpen(false),
+    onClose: () => setMobileOpen(false),
     user, handleLogout,
   };
 
   return (
-    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: '#f8fafc' }}>
+    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: '#f1f5f9' }}>
 
-      {/* ═══ DESKTOP SIDEBAR — sticky full height, always visible on lg+ ══════ */}
-      <div
-        className="hide-mobile"          /* hide below 1024px */
-        style={{ height: '100vh', position: 'sticky', top: 0, flexShrink: 0 }}
-      >
+      {/* ══ DESKTOP SIDEBAR ══════════════════════════════════════════════════ */}
+      <div className="hide-mobile" style={{ height: '100vh', flexShrink: 0 }}>
         <Sidebar
-          {...sidebarProps}
-          collapsed={sidebarCollapsed}
-          onToggleCollapse={() => setSidebarCollapsed(p => !p)}
+          {...sharedSidebarProps}
+          collapsed={collapsed}
+          onToggleCollapse={() => setCollapsed(p => !p)}
           isMobileDrawer={false}
         />
       </div>
 
-      {/* ═══ MOBILE DRAWER — slide-in overlay on small screens ════════════════ */}
-      {sidebarOpen && (
+      {/* ══ MOBILE DRAWER ════════════════════════════════════════════════════ */}
+      {mobileOpen && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex' }}>
-          {/* backdrop */}
-          <div
-            style={{ position: 'absolute', inset: 0, background: 'rgba(2,6,23,0.66)' }}
-            onClick={() => setSidebarOpen(false)}
-          />
-          {/* panel */}
-          <div style={{
-            position: 'relative', zIndex: 51, height: '100%',
-            animation: 'slideInLeft 0.22s cubic-bezier(0.16,1,0.3,1)',
-          }}>
-            <Sidebar
-              {...sidebarProps}
-              collapsed={false}
-              onToggleCollapse={() => {}}
-              isMobileDrawer={true}
-            />
+          <div style={{ position: 'absolute', inset: 0, background: 'rgba(2,6,23,0.7)' }}
+            onClick={() => setMobileOpen(false)} />
+          <div style={{ position: 'relative', zIndex: 51, animation: 'slideInLeft 0.2s ease' }}>
+            <Sidebar {...sharedSidebarProps} collapsed={false} onToggleCollapse={() => {}} isMobileDrawer={true} />
           </div>
         </div>
       )}
 
-      {/* ═══ MAIN CONTENT ══════════════════════════════════════════════════════ */}
+      {/* ══ CONTENT ══════════════════════════════════════════════════════════ */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
 
-        {/* ── Top header ────────────────────────────────────────────────────── */}
+        {/* ── Header ─────────────────────────────────────────────────────── */}
         <header style={{
-          background: '#fff',
-          borderBottom: '1px solid #e5e7eb',
+          height: 56,
+          background: '#ffffff',
+          borderBottom: '1px solid #e2e8f0',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
           padding: '0 20px',
-          minHeight: 68,
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          flexShrink: 0, position: 'sticky', top: 0, zIndex: 20,
+          flexShrink: 0,
+          position: 'sticky',
+          top: 0,
+          zIndex: 30,
+          gap: 12,
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
-            {/* Hamburger — only on mobile */}
+            {/* Hamburger — mobile only */}
             <button
               className="hide-desktop"
-              onClick={() => setSidebarOpen(true)}
-              style={{
-                width: 38, height: 38, display: 'flex', alignItems: 'center',
-                justifyContent: 'center', background: 'none',
-                border: '1px solid #e5e7eb', cursor: 'pointer',
-                borderRadius: 10, color: '#374151',
-              }}
+              onClick={() => setMobileOpen(true)}
+              style={{ width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #e2e8f0', borderRadius: 8, background: 'none', cursor: 'pointer', color: '#374151', flexShrink: 0 }}
             >
-              <Menu size={20} />
+              <Menu size={18} />
             </button>
-
             <div style={{ minWidth: 0 }}>
-              <h1 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: '#111827' }}>
-                {activeNav.label}
-              </h1>
-              <p style={{ margin: '4px 0 0', fontSize: 12, color: '#6b7280', maxWidth: 720 }}>
-                {activeNav.description || 'Integrated admin workspace inside the same website and authentication system.'}
+              <h1 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#0f172a', lineHeight: 1.2 }}>{activeNav.label}</h1>
+              <p style={{ margin: 0, fontSize: 11, color: '#94a3b8', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 600 }}>
+                {activeNav.description || 'Integrated admin workspace'}
               </p>
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ display: 'grid', justifyItems: 'end' }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: '#0f172a' }}>
-                {erpBootstrap?.tenant?.business_name || 'NOREN'}
-              </div>
-              <div style={{ fontSize: 11, color: '#64748b' }}>
-                {erpBootstrap?.tenant?.store_name || 'Main admin workspace'}
-              </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+            <div style={{ textAlign: 'right', lineHeight: 1.3 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#0f172a' }}>{erpBootstrap?.tenant?.business_name || 'NOREN'}</div>
+              <div style={{ fontSize: 10, color: '#94a3b8' }}>{erpBootstrap?.tenant?.store_name || 'Main workspace'}</div>
             </div>
-            <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#22c55e' }} />
+            <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#22c55e', boxShadow: '0 0 0 2px #dcfce7' }} />
           </div>
         </header>
 
-        {/* ── Page content ─────────────────────────────────────────────────── */}
+        {/* ── Main content ───────────────────────────────────────────────── */}
         <main style={{
-          flex: 1, overflowY: 'auto',
-          padding: '20px',
-          /* On mobile add bottom padding so content isn't under the bottom nav */
+          flex: 1,
+          overflowY: 'auto',
+          padding: '20px 22px',
           paddingBottom: 'max(20px, calc(64px + env(safe-area-inset-bottom, 0px)))',
         }}>
           <ModuleErrorBoundary key={section}>
@@ -524,45 +482,40 @@ export default function AdminDashboard() {
         </main>
       </div>
 
-      {/* ═══ MOBILE BOTTOM NAV BAR ═════════════════════════════════════════════ */}
+      {/* ══ MOBILE BOTTOM NAV ════════════════════════════════════════════════ */}
       <nav
-        className="hide-desktop"        /* only visible below 1024px */
+        className="hide-desktop"
         style={{
           position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 40,
           background: '#0f172a',
-          borderTop: '1px solid rgba(255,255,255,0.08)',
-          display: 'flex', alignItems: 'stretch',
+          borderTop: '1px solid rgba(255,255,255,0.07)',
+          display: 'flex',
           paddingBottom: 'env(safe-area-inset-bottom, 0px)',
         }}
       >
         {MOBILE_TABS.map(tab => {
-          const isMenuTab = tab.key === '__menu__';
-          const Icon      = isMenuTab ? Menu : (iconMap[tab.icon] || LayoutDashboard);
-          const isActive  = !isMenuTab && section === tab.key;
+          const isMenu   = tab.key === '__menu__';
+          const Icon     = isMenu ? Menu : (iconMap[tab.icon] || LayoutDashboard);
+          const isActive = !isMenu && section === tab.key;
           return (
             <button
               key={tab.key}
-              onClick={() => {
-                if (isMenuTab) { setSidebarOpen(true); }
-                else { navigate(tab.key === 'dashboard' ? '/admin/dashboard' : `/admin/${tab.key}`); }
-              }}
+              onClick={() => isMenu ? setMobileOpen(true) : navigate(tab.key === 'dashboard' ? '/admin/dashboard' : `/admin/${tab.key}`)}
               style={{
                 flex: 1, display: 'flex', flexDirection: 'column',
                 alignItems: 'center', justifyContent: 'center',
-                gap: 3, padding: '8px 4px 10px',
+                gap: 3, padding: '9px 4px 10px',
                 border: 'none', background: 'transparent', cursor: 'pointer',
-                color: isActive ? '#c9a96e' : '#64748b',
+                color: isActive ? '#c9a96e' : '#475569',
                 borderTop: isActive ? '2px solid #c9a96e' : '2px solid transparent',
-                transition: 'color 0.15s',
               }}
             >
-              <Icon size={20} />
-              <span style={{ fontSize: 10, fontWeight: isActive ? 700 : 500 }}>{tab.label}</span>
+              <Icon size={19} />
+              <span style={{ fontSize: 9.5, fontWeight: isActive ? 700 : 400 }}>{tab.label}</span>
             </button>
           );
         })}
       </nav>
-
     </div>
   );
 }
