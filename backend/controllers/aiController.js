@@ -3,38 +3,63 @@
 const { pool } = require('../config/db');
 const https    = require('https');
 
-const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
+const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent';
 
 // ── Helper: call Gemini API ───────────────────────────────────────────────────
 async function callGemini(prompt) {
   const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey || apiKey.startsWith('REPLACE')) throw new Error('Gemini API key not configured');
+  if (!apiKey || apiKey.startsWith('REPLACE')) throw new Error('Gemini API key not configured. Add GEMINI_API_KEY to Render environment variables.');
 
   const body = JSON.stringify({
-    contents: [{ parts: [{ text: prompt }] }],
-    generationConfig: { temperature: 0.7, maxOutputTokens: 1024 },
+    contents: [{ role: 'user', parts: [{ text: prompt }] }],
+    generationConfig: { temperature: 0.7, maxOutputTokens: 1024, topP: 0.9 },
   });
 
   return new Promise((resolve, reject) => {
-    const req = https.request(
-      `${GEMINI_URL}?key=${apiKey}`,
-      { method: 'POST', headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) } },
-      (res) => {
-        let data = '';
-        res.on('data', c => { data += c; });
-        res.on('end', () => {
-          try {
-            const json = JSON.parse(data);
-            const text = json.candidates?.[0]?.content?.parts?.[0]?.text || 'No response from AI.';
-            resolve(text.trim());
-          } catch {
-            reject(new Error('Invalid Gemini response'));
+    const url = `${GEMINI_URL}?key=${apiKey}`;
+    const options = {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(body),
+      },
+    };
+
+    const req = https.request(url, options, (res) => {
+      let data = '';
+      res.on('data', c => { data += c; });
+      res.on('end', () => {
+        try {
+          const json = JSON.parse(data);
+
+          // Log full response for debugging
+          if (res.statusCode !== 200) {
+            console.error('[Gemini] HTTP', res.statusCode, JSON.stringify(json).slice(0, 300));
+            const errMsg = json.error?.message || `Gemini HTTP ${res.statusCode}`;
+            return reject(new Error(errMsg));
           }
-        });
-      }
-    );
-    req.on('error', reject);
-    req.setTimeout(15000, () => { req.destroy(); reject(new Error('Gemini timeout')); });
+
+          const text = json?.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (!text) {
+            console.error('[Gemini] Empty response:', JSON.stringify(json).slice(0, 300));
+            return reject(new Error('Gemini returned empty response. The prompt may have been blocked.'));
+          }
+          resolve(text.trim());
+        } catch (e) {
+          console.error('[Gemini] Parse error:', data.slice(0, 200));
+          reject(new Error('Failed to parse Gemini response'));
+        }
+      });
+    });
+
+    req.on('error', (e) => {
+      console.error('[Gemini] Request error:', e.message);
+      reject(e);
+    });
+    req.setTimeout(20000, () => {
+      req.destroy();
+      reject(new Error('Gemini request timed out after 20s'));
+    });
     req.write(body);
     req.end();
   });
@@ -248,8 +273,7 @@ Give a sharp, professional spoken briefing. Start with "Good [morning/afternoon/
   } catch (err) {
     console.error('AI brief error:', err.message);
     res.status(500).json({ message: err.message });
-  }
-};
+  }};
 
 // ── POST /api/erp/ai/chat ─────────────────────────────────────────────────────
 // Answers any admin question with live business context
