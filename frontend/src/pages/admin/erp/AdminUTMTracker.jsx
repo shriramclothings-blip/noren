@@ -52,66 +52,88 @@ function ClicksDrawer({ link, onClose }) {
   const fmtDt = (d) => new Date(d).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 2000, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}
-      onClick={onClose}>
-      <div onClick={e => e.stopPropagation()}
-        style={{ width: '100%', maxWidth: 720, background: '#fff', borderRadius: '16px 16px 0 0', maxHeight: '85vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-
+    <div
+      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
+      onClick={onClose}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{ width: '100%', maxWidth: 780, background: '#fff', borderRadius: 16, display: 'flex', flexDirection: 'column', maxHeight: 'calc(100vh - 40px)', overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}
+      >
         {/* Header */}
-        <div style={{ padding: '16px 20px', borderBottom: '1px solid #f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ padding: '18px 24px', borderBottom: '1px solid #f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
           <div>
-            <p style={{ fontSize: 15, fontWeight: 700, color: '#111827', margin: 0 }}>{link.name}</p>
-            <p style={{ fontSize: 12, color: '#9ca3af', margin: '2px 0 0' }}>
-              {link.total_clicks} total · {link.unique_clicks} unique visitors
+            <p style={{ fontSize: 16, fontWeight: 700, color: '#111827', margin: 0 }}>{link.name}</p>
+            <p style={{ fontSize: 12, color: '#9ca3af', margin: '3px 0 0' }}>
+              <span style={{ color: '#111827', fontWeight: 600 }}>{link.total_clicks}</span> total clicks &nbsp;·&nbsp;
+              <span style={{ color: '#c9a96e', fontWeight: 600 }}>{link.unique_clicks}</span> unique visitors
             </p>
           </div>
-          <button onClick={onClose} style={{ width: 32, height: 32, borderRadius: '50%', border: 'none', background: '#f3f4f6', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <button onClick={onClose}
+            style={{ width: 32, height: 32, borderRadius: '50%', border: 'none', background: '#f3f4f6', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
             <X size={15} color="#374151" />
           </button>
         </div>
 
-        {/* Clicks list */}
+        {/* Body */}
         <div style={{ overflowY: 'auto', flex: 1 }}>
           {loading ? (
-            <div style={{ padding: 40, textAlign: 'center', color: '#9ca3af' }}>Loading...</div>
+            <div style={{ padding: 48, textAlign: 'center', color: '#9ca3af', fontSize: 13 }}>Loading clicks...</div>
           ) : clicks.length === 0 ? (
-            <div style={{ padding: 40, textAlign: 'center', color: '#9ca3af', fontSize: 14 }}>No clicks yet. Share the link to start tracking.</div>
+            <div style={{ padding: 64, textAlign: 'center' }}>
+              <BarChart2 size={40} color="#e5e7eb" style={{ margin: '0 auto 12px', display: 'block' }} />
+              <p style={{ fontSize: 14, fontWeight: 600, color: '#374151', margin: '0 0 4px' }}>No clicks yet</p>
+              <p style={{ fontSize: 13, color: '#9ca3af', margin: 0 }}>Share the link to start tracking visitors.</p>
+            </div>
           ) : (
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-              <thead>
+              <thead style={{ position: 'sticky', top: 0, zIndex: 1 }}>
                 <tr style={{ background: '#f9fafb' }}>
-                  {['Time', 'Location', 'Device', 'Browser / OS'].map(h => (
-                    <th key={h} style={{ padding: '10px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>{h}</th>
+                  {['Time', 'Location', 'Device & Model', 'Browser / OS'].map(h => (
+                    <th key={h} style={{ padding: '11px 20px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.07em', whiteSpace: 'nowrap', borderBottom: '1px solid #f3f4f6' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {clicks.map((c, i) => (
-                  <tr key={c.id} style={{ borderTop: '1px solid #f9fafb', background: i % 2 === 0 ? '#fff' : '#fafafa' }}>
-                    <td style={{ padding: '10px 16px', whiteSpace: 'nowrap', color: '#6b7280', fontSize: 12 }}>{fmtDt(c.clicked_at)}</td>
-                    <td style={{ padding: '10px 16px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <tr key={c.id} style={{ borderBottom: '1px solid #f9fafb', background: i % 2 === 0 ? '#fff' : '#fafafa' }}>
+                    <td style={{ padding: '12px 20px', whiteSpace: 'nowrap', color: '#374151', fontSize: 12 }}>{fmtDt(c.clicked_at)}</td>
+                    <td style={{ padding: '12px 20px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 3 }}>
                         <MapPin size={12} color="#c9a96e" />
-                        <span style={{ color: '#111827', fontSize: 12 }}>
-                          {[c.city, c.region, c.country].filter(Boolean).join(', ') || '—'}
+                        <span style={{ color: '#111827', fontWeight: 500, fontSize: 13 }}>
+                          {[c.city, c.region, c.country].filter(Boolean).join(', ') || <span style={{ color: '#d1d5db' }}>Unknown</span>}
                         </span>
                       </div>
-                      <div style={{ fontSize: 11, color: '#9ca3af', fontFamily: 'monospace', marginTop: 2 }}>{c.ip_address}</div>
+                      <div style={{ fontSize: 11, color: '#9ca3af', fontFamily: 'monospace', paddingLeft: 17 }}>{c.ip_address}</div>
                     </td>
-                    <td style={{ padding: '10px 16px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                    <td style={{ padding: '12px 20px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                         <DeviceIcon type={c.device_type} />
-                        <span style={{ color: '#374151', fontSize: 12 }}>{c.device_model || c.device_type}</span>
+                        <div>
+                          <div style={{ color: '#111827', fontWeight: 500, fontSize: 13 }}>{c.device_model || '—'}</div>
+                          <div style={{ color: '#9ca3af', fontSize: 11, textTransform: 'capitalize' }}>{c.device_type}</div>
+                        </div>
                       </div>
                     </td>
-                    <td style={{ padding: '10px 16px', color: '#374151', fontSize: 12 }}>
-                      {c.browser} / {c.os}
+                    <td style={{ padding: '12px 20px' }}>
+                      <div style={{ color: '#374151', fontSize: 13, fontWeight: 500 }}>{c.browser || '—'}</div>
+                      <div style={{ color: '#9ca3af', fontSize: 11 }}>{c.os || '—'}</div>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           )}
+        </div>
+
+        {/* Footer */}
+        <div style={{ padding: '12px 24px', borderTop: '1px solid #f3f4f6', background: '#fafafa', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span style={{ fontSize: 12, color: '#9ca3af' }}>Showing latest {clicks.length} clicks</span>
+          <button onClick={onClose}
+            style={{ padding: '7px 18px', borderRadius: 8, border: '1.5px solid #e5e7eb', background: '#fff', fontSize: 12, fontWeight: 600, color: '#374151', cursor: 'pointer' }}>
+            Close
+          </button>
         </div>
       </div>
     </div>
