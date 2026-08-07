@@ -87,6 +87,11 @@ router.post('/utm/links',          ...adminGuard,      utmCtrl.createLink);
 router.delete('/utm/links/:id',    ...adminGuard,      utmCtrl.deleteLink);
 router.get('/utm/links/:id/clicks',...adminGuard,      utmCtrl.getLinkClicks);
 
+// ── AI Assistant ──────────────────────────────────────────────────────────────
+const aiCtrl = require('../controllers/aiController');
+router.post('/ai/brief',  ...adminGuard, aiCtrl.getBrief);
+router.post('/ai/chat',   ...adminGuard, aiCtrl.chat);
+
 // ── Phase 2: System health + global analytics (super_admin) ───────────────────
 router.get('/system/health',          ...superAdminGuard, sysCtrl.getSystemHealth);
 router.get('/system/global-revenue',  ...superAdminGuard, sysCtrl.getGlobalRevenue);
