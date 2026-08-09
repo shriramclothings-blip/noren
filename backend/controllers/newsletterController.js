@@ -4,19 +4,22 @@ const { pool } = require('../config/db');
 const { sendMail } = require('../services/mailService');
 const { subscribeConfirm, offerEmail } = require('../services/emailTemplates');
 
-// Ensure the subscribers table exists
+// Ensure the subscribers table exists and has all required columns
 const ensureTable = async () => {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS src_newsletter_subscribers (
-      id          SERIAL PRIMARY KEY,
-      email       TEXT NOT NULL UNIQUE,
-      name        TEXT,
-      source      TEXT DEFAULT 'homepage',
-      is_active   BOOLEAN DEFAULT TRUE,
-      subscribed_at TIMESTAMPTZ DEFAULT NOW(),
+      id              SERIAL PRIMARY KEY,
+      email           TEXT NOT NULL UNIQUE,
+      name            TEXT,
+      is_active       BOOLEAN DEFAULT TRUE,
+      subscribed_at   TIMESTAMPTZ DEFAULT NOW(),
       unsubscribed_at TIMESTAMPTZ
     )
   `);
+  // Migrate: add columns that may not exist on older table versions
+  await pool.query(`ALTER TABLE src_newsletter_subscribers ADD COLUMN IF NOT EXISTS source TEXT DEFAULT 'homepage'`);
+  await pool.query(`ALTER TABLE src_newsletter_subscribers ADD COLUMN IF NOT EXISTS name TEXT`).catch(() => {});
+  await pool.query(`ALTER TABLE src_newsletter_subscribers ADD COLUMN IF NOT EXISTS unsubscribed_at TIMESTAMPTZ`).catch(() => {});
 };
 
 // POST /api/newsletter/subscribe
