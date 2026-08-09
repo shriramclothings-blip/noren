@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Users, Plus, Search, Eye, Edit2, Shield, ShieldOff, TrendingUp,
-  ChevronDown, X, Check, AlertTriangle, ExternalLink, Filter } from 'lucide-react';
+  ChevronDown, X, Check, AlertTriangle, ExternalLink, Filter, Trash2 } from 'lucide-react';
 import api from '../../../utils/api';
 import toast from 'react-hot-toast';
 
@@ -63,6 +63,22 @@ export default function AdminInfluencers() {
 
   const fmt = (n) => Number(n || 0).toLocaleString('en-IN');
   const fmtINR = (n) => '₹' + Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits:2, maximumFractionDigits:2 });
+
+  const handleDelete = async (inf) => {
+    const reason = window.prompt(
+      `Delete influencer "${inf.display_name || inf.name}"?\n\nThis will:\n• Disable their account and all links\n• Preserve all financial records\n• Cannot be undone easily\n\nEnter reason:`
+    );
+    if (!reason || !reason.trim()) return;
+    if (!window.confirm(`Are you sure you want to delete "${inf.display_name || inf.name}"? This action is irreversible.`)) return;
+    try {
+      await api.delete(`/influencer/admin/influencers/${inf.id}`, { data: { reason } });
+      toast.success('Influencer deleted');
+      fetchInfluencers();
+      fetchStats();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to delete influencer');
+    }
+  };
 
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:20 }}>
@@ -155,10 +171,17 @@ export default function AdminInfluencers() {
                     <td style={{ padding:'12px 16px', color:'#374151', fontWeight:600 }}>{fmt(inf.total_orders)}</td>
                     <td style={{ padding:'12px 16px', color:'#059669', fontWeight:700 }}>{fmtINR(inf.total_revenue)}</td>
                     <td style={{ padding:'12px 16px' }}>
-                      <button onClick={() => setSelected(inf)}
-                        style={{ display:'inline-flex', alignItems:'center', gap:4, padding:'6px 12px', borderRadius:7, border:'1.5px solid #e5e7eb', background:'#fff', fontSize:12, fontWeight:600, cursor:'pointer', color:'#374151' }}>
-                        <Eye size={12} /> View
-                      </button>
+                      <div style={{ display:'flex', gap:6 }}>
+                        <button onClick={() => setSelected(inf)}
+                          style={{ display:'inline-flex', alignItems:'center', gap:4, padding:'6px 12px', borderRadius:7, border:'1.5px solid #e5e7eb', background:'#fff', fontSize:12, fontWeight:600, cursor:'pointer', color:'#374151' }}>
+                          <Eye size={12} /> View
+                        </button>
+                        <button onClick={() => handleDelete(inf)}
+                          title="Delete influencer"
+                          style={{ width:30, height:30, borderRadius:7, border:'1.5px solid #fca5a5', background:'#fef2f2', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                          <Trash2 size={12} color="#ef4444" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -315,6 +338,7 @@ function InfluencerDetailModal({ influencer, onClose, onDone }) {
   const [form, setForm] = useState({});
   const [reason, setReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     api.get(`/influencer/admin/influencers/${influencer.id}`).then(r => { setDetail(r.data); setForm({ commission_type:r.data.commission_type, commission_rate:r.data.commission_rate, status:r.data.status, notes:r.data.notes||'', admin_notes:r.data.admin_notes||'' }); }).catch(() => {});
@@ -331,6 +355,21 @@ function InfluencerDetailModal({ influencer, onClose, onDone }) {
       onDone();
     } catch (err) { toast.error(err.response?.data?.message || 'Update failed'); }
     finally { setSubmitting(false); }
+  };
+
+  const handleDelete = async () => {
+    const deleteReason = window.prompt(
+      `Delete "${detail?.display_name || influencer.display_name}"?\n\nThis will disable their account & all links.\nFinancial records are preserved.\n\nEnter reason:`
+    );
+    if (!deleteReason || !deleteReason.trim()) return;
+    if (!window.confirm('This is irreversible. Confirm delete?')) return;
+    setDeleting(true);
+    try {
+      await api.delete(`/influencer/admin/influencers/${influencer.id}`, { data: { reason: deleteReason } });
+      toast.success('Influencer deleted');
+      onDone();
+    } catch (err) { toast.error(err.response?.data?.message || 'Failed to delete'); }
+    finally { setDeleting(false); }
   };
 
   const TABS = [{ k:'overview', l:'Overview' }, { k:'analytics', l:'Analytics' }, { k:'links', l:'Links' }, { k:'conversions', l:'Conversions' }];
@@ -353,6 +392,10 @@ function InfluencerDetailModal({ influencer, onClose, onDone }) {
           </div>
           <div style={{ display:'flex', gap:8, alignItems:'center' }}>
             <button onClick={() => setEditMode(e => !e)} style={{ ...btn('#1e293b','#94a3b8'), padding:'6px 12px', fontSize:12 }}><Edit2 size={12} /> {editMode ? 'Cancel Edit' : 'Edit'}</button>
+            <button onClick={handleDelete} disabled={deleting}
+              style={{ ...btn('#7f1d1d','#fca5a5'), padding:'6px 12px', fontSize:12, opacity:deleting?0.6:1 }}>
+              <Trash2 size={12} /> {deleting ? 'Deleting…' : 'Delete'}
+            </button>
             <button onClick={onClose} style={{ width:30, height:30, borderRadius:'50%', border:'none', background:'rgba(255,255,255,0.1)', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}><X size={14} color="#94a3b8" /></button>
           </div>
         </div>

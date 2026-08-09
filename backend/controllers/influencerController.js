@@ -155,7 +155,7 @@ const createInfluencer = async (req, res) => {
 const listInfluencers = async (req, res) => {
   const { page=1, limit=20, search, status, fraud_status, sort='newest' } = req.query;
   const offset = (page-1) * limit;
-  const conds = []; const vals = []; let idx = 1;
+  const conds = ['p.deleted_at IS NULL']; const vals = []; let idx = 1;
   if (search) {
     conds.push(`(u.name ILIKE $${idx} OR u.email ILIKE $${idx} OR p.username ILIKE $${idx} OR p.display_name ILIKE $${idx})`);
     vals.push(`%${search}%`); idx++;
@@ -1476,6 +1476,67 @@ const syncCampaignStatuses = async () => {
   } catch (err) { console.error('syncCampaignStatuses:', err.message); }
 };
 
+// ── Admin: Soft-delete influencer ─────────────────────────────────────────
+const deleteInfluencer = async (req, res) => {
+  const { reason } = req.body;
+  if (!reason || !reason.trim()) return res.status(400).json({ message: 'Reason is required to delete an influencer' });
+  const ip = getIP(req); const ua = req.headers['user-agent'] || ''; const reqId = genUID();
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    // Verify exists and not already deleted
+    const existing = await client.query(
+      'SELECT p.*, u.name, u.email FROM src_inf_profiles p JOIN src_users u ON u.id=p.user_id WHERE p.id=$1 AND p.deleted_at IS NULL',
+      [req.params.id]
+    );
+    if (!existing.rows.length) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ message: 'Influencer not found or already deleted' });
+    }
+    const inf = existing.rows[0];
+
+    // Block delete if there are pending payouts
+    const pendingPayouts = await client.query(
+      `SELECT id FROM src_inf_payouts WHERE influencer_id=$1 AND status IN ('pending','approved','processing')`,
+      [req.params.id]
+    );
+    if (pendingPayouts.rows.length > 0) {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ message: `Cannot delete: ${pendingPayouts.rows.length} pending/approved payout(s) exist. Resolve payouts first.` });
+    }
+
+    // Soft-delete the profile — preserves all conversions/commissions/payouts for financial records
+    await client.query(
+      `UPDATE src_inf_profiles SET deleted_at=NOW(), status='inactive', updated_at=NOW() WHERE id=$1`,
+      [req.params.id]
+    );
+
+    // Disable all active links for this influencer
+    await client.query(
+      `UPDATE src_inf_links SET is_active=FALSE, deleted_at=NOW(), updated_at=NOW() WHERE influencer_id=$1 AND deleted_at IS NULL`,
+      [req.params.id]
+    );
+
+    // Ban the user account so they can't log in
+    await client.query(
+      `UPDATE src_users SET is_banned=TRUE WHERE id=$1`,
+      [inf.user_id]
+    );
+
+    await client.query('COMMIT');
+
+    await infAudit(pool, req.user.id, req.user.role, 'INFLUENCER_DELETED', 'influencer', req.params.id,
+      ip, ua, { name: inf.name, email: inf.email, status: inf.status }, { deleted: true, reason }, reqId);
+
+    res.json({ message: `Influencer "${inf.display_name || inf.name}" has been deleted` });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('deleteInfluencer:', err.message);
+    res.status(500).json({ message: err.message });
+  } finally { client.release(); }
+};
+
 // ── Influencer self-update (bio, website only) ────────────────────────────
 const updateMyProfile = async (req, res) => {
   const inf = req.influencerProfile;
@@ -1497,7 +1558,7 @@ const updateMyProfile = async (req, res) => {
 
 module.exports = {
   // Admin
-  createInfluencer, listInfluencers, getInfluencer, updateInfluencer,
+  createInfluencer, listInfluencers, getInfluencer, updateInfluencer, deleteInfluencer,
   createCampaign, listCampaigns, getCampaign, updateCampaign,
   createLink, listLinks, toggleLink, deleteLink,
   listConversions, updateConversionStatus, reverseCommission,

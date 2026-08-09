@@ -1968,6 +1968,12 @@ const initDB = async () => {
       CREATE INDEX IF NOT EXISTS idx_orders_inf_session ON src_orders(inf_session_token);
     `).catch(() => {});
 
+    // Phase 3 migrations — add deleted_at to src_inf_profiles if missing
+    await client.query(`
+      ALTER TABLE src_inf_profiles ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP;
+      CREATE INDEX IF NOT EXISTS idx_inf_profiles_deleted ON src_inf_profiles(deleted_at);
+    `).catch(() => {});
+
     console.log('✅ Phase 3 — Influencer schema applied');
 
   } finally {
