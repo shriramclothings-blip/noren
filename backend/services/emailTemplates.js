@@ -85,17 +85,149 @@ module.exports = {
   `),
 
   // ─────────────────────────────────────────────────────────────
-  // SUBSCRIBE: Newsletter subscription confirmed
+  // SUBSCRIBE: Newsletter subscription confirmed — luxury brand welcome
   // ─────────────────────────────────────────────────────────────
-  subscribeConfirm: (email) => wrap(`
-    ${badge('You\u2019re In', '#c9a96e')}
-    ${h2('Welcome to NOREN Insiders')}
-    ${para('You\'ve successfully subscribed to the NOREN newsletter. Expect exclusive early access to new collections, private sale alerts, and curated style inspiration — delivered to your inbox.')}
-    ${infoBox([['Subscribed Email', email]])}
-    ${btn('Explore the Collection', SITE)}
-    ${divider()}
-    <p style="color:#b8a898;font-size:12px;margin:0">You can unsubscribe at any time by replying "UNSUBSCRIBE" to any NOREN newsletter.</p>
-  `, 'You received this because you subscribed at norenfashion.shop'),
+  subscribeConfirm: (email, name) => {
+    const firstName = name ? name.split(' ')[0] : null;
+    const greeting  = firstName ? `Hi ${firstName},` : 'Hello,';
+    const YEAR      = new Date().getFullYear();
+    return `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Welcome to NOREN</title></head>
+<body style="margin:0;padding:0;background:#f5f0e8;font-family:'Helvetica Neue',Arial,sans-serif;">
+
+<!-- Outer wrapper -->
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f0e8;padding:40px 16px;">
+<tr><td align="center">
+<table width="100%" style="max-width:560px;" cellpadding="0" cellspacing="0">
+
+  <!-- ── HEADER ── -->
+  <tr><td style="background:#1a1a18;padding:36px 48px;text-align:center;">
+    <div style="font-family:Georgia,serif;font-size:28px;font-weight:600;letter-spacing:0.38em;color:#faf9f7;text-transform:uppercase;line-height:1;">NOREN</div>
+    <div style="width:40px;height:1px;background:#c9a96e;margin:12px auto 8px;"></div>
+    <div style="font-size:9px;letter-spacing:0.32em;color:#5a5750;text-transform:uppercase;">Fashion House</div>
+  </td></tr>
+
+  <!-- ── HERO BAND ── -->
+  <tr><td style="background:#c9a96e;padding:3px 0;"></td></tr>
+
+  <!-- ── MAIN CONTENT ── -->
+  <tr><td style="background:#faf9f7;padding:48px 48px 36px;border:1px solid #e6e0d8;border-top:none;">
+
+    <!-- Badge -->
+    <p style="font-size:10px;font-weight:600;letter-spacing:0.22em;text-transform:uppercase;color:#c9a96e;margin:0 0 20px;">
+      You are now an Insider
+    </p>
+
+    <!-- Greeting -->
+    <h1 style="font-family:Georgia,serif;font-size:28px;font-weight:600;color:#1a1a18;margin:0 0 20px;line-height:1.25;letter-spacing:-0.01em;">
+      ${greeting}<br />
+      <span style="font-style:italic;color:#c9a96e;">Welcome to NOREN.</span>
+    </h1>
+
+    <!-- Warm message -->
+    <p style="font-size:15px;color:#5a5750;line-height:1.85;margin:0 0 24px;">
+      You just joined something quiet, intentional and beautiful. The NOREN inner circle is where our most devoted customers experience the brand first — before anyone else.
+    </p>
+    <p style="font-size:15px;color:#5a5750;line-height:1.85;margin:0 0 32px;">
+      We are so glad you are here.
+    </p>
+
+    <!-- What to expect box -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f0e8;border-left:3px solid #c9a96e;margin-bottom:32px;">
+      <tr><td style="padding:24px 28px;">
+        <p style="font-size:10px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:#9e9a94;margin:0 0 16px;">What awaits you</p>
+        <table cellpadding="0" cellspacing="0">
+          <tr>
+            <td style="padding:6px 0;vertical-align:top;">
+              <span style="display:inline-block;width:20px;color:#c9a96e;font-size:15px;">&#10022;</span>
+            </td>
+            <td style="padding:6px 0;font-size:14px;color:#2c2c29;line-height:1.6;">
+              <strong style="color:#1a1a18;">Early Access</strong> — New drops reach you before they go live
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:6px 0;vertical-align:top;">
+              <span style="display:inline-block;width:20px;color:#c9a96e;font-size:15px;">&#10022;</span>
+            </td>
+            <td style="padding:6px 0;font-size:14px;color:#2c2c29;line-height:1.6;">
+              <strong style="color:#1a1a18;">Exclusive Offers</strong> — Private sale access and subscriber-only codes
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:6px 0;vertical-align:top;">
+              <span style="display:inline-block;width:20px;color:#c9a96e;font-size:15px;">&#10022;</span>
+            </td>
+            <td style="padding:6px 0;font-size:14px;color:#2c2c29;line-height:1.6;">
+              <strong style="color:#1a1a18;">Style Stories</strong> — Editorial content crafted for people who appreciate fashion
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:6px 0;vertical-align:top;">
+              <span style="display:inline-block;width:20px;color:#c9a96e;font-size:15px;">&#10022;</span>
+            </td>
+            <td style="padding:6px 0;font-size:14px;color:#2c2c29;line-height:1.6;">
+              <strong style="color:#1a1a18;">No Noise</strong> — We email only when something is worth your time
+            </td>
+          </tr>
+        </table>
+      </td></tr>
+    </table>
+
+    <!-- Personal note -->
+    <p style="font-size:14px;color:#5a5750;line-height:1.85;margin:0 0 36px;font-style:italic;border-top:1px solid #e6e0d8;padding-top:28px;">
+      &ldquo;Every piece at NOREN is designed to make you feel something — confidence, grace, presence. Thank you for letting us into your inbox. We will treat it with the same care we put into every stitch.&rdquo;
+    </p>
+    <p style="font-size:13px;color:#9e9a94;margin:0 0 36px;">
+      &mdash; The NOREN Team
+    </p>
+
+    <!-- CTA Button -->
+    <table cellpadding="0" cellspacing="0" style="margin-bottom:32px;">
+      <tr>
+        <td style="background:#1a1a18;padding:15px 40px;">
+          <a href="${SITE}" style="font-size:11px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:#faf9f7;text-decoration:none;white-space:nowrap;">
+            Explore the Collection &rarr;
+          </a>
+        </td>
+      </tr>
+    </table>
+
+    <!-- Subscribed email note -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f0e8;border-radius:2px;margin-bottom:8px;">
+      <tr><td style="padding:14px 18px;">
+        <p style="font-size:11px;color:#9e9a94;letter-spacing:0.1em;text-transform:uppercase;margin:0 0 4px;">Subscribed as</p>
+        <p style="font-size:13px;color:#1a1a18;font-weight:500;margin:0;">${email}</p>
+      </td></tr>
+    </table>
+
+  </td></tr>
+
+  <!-- ── DIVIDER ── -->
+  <tr><td style="background:#c9a96e;padding:1px 0;"></td></tr>
+
+  <!-- ── FOOTER ── -->
+  <tr><td style="background:#1a1a18;padding:28px 48px;text-align:center;">
+    <p style="font-family:Georgia,serif;font-size:13px;color:#c9a96e;letter-spacing:0.18em;margin:0 0 12px;font-style:italic;">Timeless By Design.</p>
+    <p style="font-size:11px;color:#3d3d39;letter-spacing:0.06em;margin:0 0 8px;">&copy; ${YEAR} NOREN. All Rights Reserved.</p>
+    <p style="font-size:11px;color:#3d3d39;margin:0 0 16px;">
+      Platform by <span style="color:#5a5750;">Dinesh Global Enterprise Private Limited</span>
+    </p>
+    <p style="font-size:10px;color:#2c2c29;margin:0;line-height:1.7;">
+      You received this because you subscribed at norenfashion.shop<br />
+      To unsubscribe, reply with &ldquo;UNSUBSCRIBE&rdquo; or email
+      <a href="mailto:supportnoren1@gmail.com" style="color:#5a5750;text-decoration:none;">supportnoren1@gmail.com</a>
+    </p>
+  </td></tr>
+
+</table>
+</td></tr>
+</table>
+
+</body>
+</html>`;
+  },
 
   // ─────────────────────────────────────────────────────────────
   // EMPLOYEE: Welcome email with credentials

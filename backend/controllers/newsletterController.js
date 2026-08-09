@@ -47,8 +47,8 @@ const subscribe = async (req, res) => {
     // Send confirmation email (non-blocking)
     sendMail(
       email.toLowerCase().trim(),
-      'You\'re subscribed to NOREN – Welcome to the Inner Circle',
-      subscribeConfirm(email.toLowerCase().trim())
+      'Welcome to NOREN \u2014 You\u2019re officially an Insider \u2728',
+      subscribeConfirm(email.toLowerCase().trim(), name || null)
     ).catch(() => {});
 
     res.json({ message: 'Successfully subscribed!', subscribed: true });
