@@ -1,9 +1,8 @@
 import { useState } from 'react';
-import { User, Instagram, Youtube, Facebook, Globe, Edit2, Check, X } from 'lucide-react';
+import { User, Globe, Edit2, Check, X } from 'lucide-react';
 import api from '../../../utils/api';
 import toast from 'react-hot-toast';
 
-const PLATFORM_ICONS = { instagram: Instagram, youtube: Youtube, facebook: Facebook };
 const inp = (e={}) => ({ width:'100%', padding:'9px 12px', fontSize:13, border:'1.5px solid #e5e7eb', borderRadius:8, outline:'none', fontFamily:'inherit', color:'#111827', background:'#fff', boxSizing:'border-box', ...e });
 
 export default function InfluencerProfile({ profile, onUpdate }) {
@@ -130,7 +129,7 @@ export default function InfluencerProfile({ profile, onUpdate }) {
               <div style={{ fontSize:12, fontWeight:700, color:'#374151', marginBottom:8, textTransform:'uppercase', letterSpacing:'0.06em' }}>Social Profiles</div>
               <div style={{ display:'flex', flexWrap:'wrap', gap:8 }}>
                 {profile.social_profiles.filter(Boolean).map((sp,i) => {
-                  const Icon = PLATFORM_ICONS[sp.platform] || Globe;
+                  const Icon = Globe;
                   return (
                     <a key={i} href={sp.url || '#'} target="_blank" rel="noopener noreferrer"
                       style={{ display:'inline-flex', alignItems:'center', gap:7, padding:'7px 14px', borderRadius:20, background:'#f3f4f6', fontSize:12, fontWeight:600, color:'#374151', textDecoration:'none', transition:'background 0.15s' }}
