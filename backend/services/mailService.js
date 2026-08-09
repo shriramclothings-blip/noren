@@ -1,39 +1,34 @@
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 
-let _transporter = null;
+let _client = null;
 
-const getTransporter = () => {
-  if (_transporter) return _transporter;
-
-  _transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS, // Gmail App Password (16-char, no spaces)
-    },
-  });
-
-  return _transporter;
+const getClient = () => {
+  if (_client) return _client;
+  _client = new Resend(process.env.RESEND_API_KEY);
+  return _client;
 };
 
 /**
- * Send an HTML email via Gmail + Nodemailer.
+ * Send an HTML email via Resend (HTTPS API — works on Render free tier).
  * Returns true on success, false on failure.
- * Silently skips if EMAIL_USER / EMAIL_PASS are not configured.
+ * Silently skips if RESEND_API_KEY is not configured.
  */
 const sendMail = async (to, subject, html) => {
-  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-    console.log(`[Mail skipped – EMAIL_USER/EMAIL_PASS not configured] To: ${to} | Subject: ${subject}`);
+  if (!process.env.RESEND_API_KEY) {
+    console.log(`[Mail skipped – RESEND_API_KEY not configured] To: ${to} | Subject: ${subject}`);
     return false;
   }
 
   try {
-    const from = process.env.EMAIL_FROM || `NOREN <${process.env.EMAIL_USER}>`;
-    const transporter = getTransporter();
+    const from = process.env.EMAIL_FROM || 'NOREN <onboarding@resend.dev>';
+    const { data, error } = await getClient().emails.send({ from, to, subject, html });
 
-    const info = await transporter.sendMail({ from, to, subject, html });
+    if (error) {
+      console.error(`[Mail error] To: ${to} | Subject: ${subject} | ${error.message}`);
+      return false;
+    }
 
-    console.log(`[Mail sent] id: ${info.messageId} | To: ${to} | Subject: ${subject}`);
+    console.log(`[Mail sent] id: ${data?.id} | To: ${to} | Subject: ${subject}`);
     return true;
   } catch (err) {
     console.error(`[Mail error] To: ${to} | Subject: ${subject} | ${err.message}`);
@@ -45,18 +40,11 @@ const sendMail = async (to, subject, html) => {
  * Test the mail configuration on server startup.
  */
 const testMailConfig = async () => {
-  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-    console.warn('[Mail] EMAIL_USER/EMAIL_PASS not configured – email notifications disabled.');
+  if (!process.env.RESEND_API_KEY) {
+    console.warn('[Mail] RESEND_API_KEY not configured – email notifications disabled.');
     return;
   }
-
-  try {
-    const transporter = getTransporter();
-    await transporter.verify();
-    console.log('[Mail] Gmail transporter verified ✓');
-  } catch (err) {
-    console.error('[Mail] Gmail transporter verification failed:', err.message);
-  }
+  console.log('[Mail] Resend client initialised ✓');
 };
 
 module.exports = { sendMail, testMailConfig };
