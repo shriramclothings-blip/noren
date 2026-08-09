@@ -213,28 +213,23 @@ const forgotPassword = async (req, res) => {
     const otp = generateOTP();
     const expires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
-    // Store OTP in password resets table (reuse token column for OTP)
+    // Delete any existing reset record for this email, then insert fresh
+    await pool.query('DELETE FROM src_password_resets WHERE email=$1', [email]).catch(() => {});
     await pool.query(
-      `INSERT INTO src_password_resets (email, token, expires_at, used)
-       VALUES ($1,$2,$3,FALSE)
-       ON CONFLICT (email) DO UPDATE SET token=$2, expires_at=$3, used=FALSE`,
+      'INSERT INTO src_password_resets (email, token, expires_at, used) VALUES ($1,$2,$3,FALSE)',
       [email, otp, expires]
-    ).catch(async () => {
-      // If no unique constraint on email, just insert
-      await pool.query(
-        'UPDATE src_password_resets SET token=$1, expires_at=$2, used=FALSE WHERE email=$3',
-        [otp, expires, email]
-      );
-      const check = await pool.query('SELECT id FROM src_password_resets WHERE email=$1', [email]);
-      if (!check.rows.length) {
-        await pool.query('INSERT INTO src_password_resets (email, token, expires_at) VALUES ($1,$2,$3)', [email, otp, expires]);
-      }
-    });
+    );
 
+    // Send OTP email — non-blocking, never crash the response
     const { forgotPasswordOTP } = require('../services/emailTemplates');
-    await sendMail(email, 'Your NOREN Password Reset OTP', forgotPasswordOTP(result.rows[0].name, otp));
+    sendMail(email, 'Your NOREN Password Reset OTP', forgotPasswordOTP(result.rows[0].name, otp))
+      .catch(e => console.error('[OTP mail error]', e.message));
+
     res.json({ message: 'If this email exists, an OTP has been sent.' });
-  } catch (err) { res.status(500).json({ message: err.message }); }
+  } catch (err) {
+    console.error('forgotPassword error:', err.message);
+    res.status(500).json({ message: err.message });
+  }
 };
 
 const resetPassword = async (req, res) => {
@@ -243,19 +238,23 @@ const resetPassword = async (req, res) => {
   if ((!otp && !req.body.token) || !password) return res.status(400).json({ message: 'OTP/token and password required' });
   if (password.length < 6) return res.status(400).json({ message: 'Password must be at least 6 characters' });
   try {
-    const tokenOrOtp = otp || req.body.token;
-    const query = email
+    const tokenOrOtp = (otp || req.body.token).trim();
+    const emailClean = email?.trim().toLowerCase();
+    const query = emailClean
       ? 'SELECT * FROM src_password_resets WHERE email=$1 AND token=$2 AND used=FALSE AND expires_at > NOW()'
       : 'SELECT * FROM src_password_resets WHERE token=$1 AND used=FALSE AND expires_at > NOW()';
-    const params = email ? [email, tokenOrOtp] : [tokenOrOtp];
+    const params = emailClean ? [emailClean, tokenOrOtp] : [tokenOrOtp];
     const result = await pool.query(query, params);
-    if (!result.rows.length) return res.status(400).json({ message: 'Invalid or expired OTP' });
+    if (!result.rows.length) return res.status(400).json({ message: 'Invalid or expired OTP. Please request a new one.' });
     const resetEmail = result.rows[0].email;
     const hash = await bcrypt.hash(password, 12);
     await pool.query('UPDATE src_users SET password=$1 WHERE email=$2', [hash, resetEmail]);
     await pool.query('UPDATE src_password_resets SET used=TRUE WHERE email=$1', [resetEmail]);
     res.json({ message: 'Password reset successfully. You can now login.' });
-  } catch (err) { res.status(500).json({ message: err.message }); }
+  } catch (err) {
+    console.error('resetPassword error:', err.message);
+    res.status(500).json({ message: err.message });
+  }
 };
 
 const googleLogin = async (req, res) => {
@@ -428,11 +427,14 @@ const verifyOTP = async (req, res) => {
   try {
     const result = await pool.query(
       'SELECT id FROM src_password_resets WHERE email=$1 AND token=$2 AND used=FALSE AND expires_at > NOW()',
-      [email, otp]
+      [email.trim().toLowerCase(), otp.trim()]
     );
     if (!result.rows.length) return res.status(400).json({ valid: false, message: 'Invalid or expired OTP' });
     res.json({ valid: true, message: 'OTP verified' });
-  } catch (err) { res.status(500).json({ message: err.message }); }
+  } catch (err) {
+    console.error('verifyOTP error:', err.message);
+    res.status(500).json({ message: err.message });
+  }
 };
 
 module.exports = { register, login, getMe, updateProfile, changePassword, forgotPassword, resetPassword, verifyOTP, sendOrderEmail, googleLogin, logout };
