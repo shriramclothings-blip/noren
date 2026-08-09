@@ -37,7 +37,8 @@ router.post  ('/admin/influencers',     auth, requirePermission('influencer.crea
 router.get   ('/admin/influencers',     auth, requirePermission('influencer.view'),   ctrl.listInfluencers);
 router.get   ('/admin/influencers/:id', auth, requirePermission('influencer.view'),   ctrl.getInfluencer);
 router.put   ('/admin/influencers/:id', auth, requirePermission('influencer.update'), upload.single('profile_photo'), ctrl.updateInfluencer);
-router.delete('/admin/influencers/:id', auth, requirePermission('influencer.disable'), ctrl.deleteInfluencer);
+router.delete('/admin/influencers/:id',       auth, requirePermission('influencer.disable'),  ctrl.deleteInfluencer);
+router.delete('/admin/influencers/:id/hard',  auth, requireRole('super_admin'),                ctrl.hardDeleteInfluencer);
 router.get   ('/admin/influencers/:id/analytics', auth, requirePermission('influencer.view'), ctrl.getInfluencerAnalytics);
 router.put   ('/admin/influencers/:id/fraud-status', auth, requireAnyPermission('influencer.disable','security.view'), ctrl.updateFraudStatus);
 

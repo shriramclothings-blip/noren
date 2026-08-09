@@ -338,7 +338,9 @@ function InfluencerDetailModal({ influencer, onClose, onDone }) {
   const [form, setForm] = useState({});
   const [reason, setReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [deleting, setDeleting] = useState(false);
+  const [deleting, setDeleting]       = useState(false);
+  const [hardDeleting, setHardDeleting] = useState(false);
+  const [showHardDelete, setShowHardDelete] = useState(false);
 
   useEffect(() => {
     api.get(`/influencer/admin/influencers/${influencer.id}`).then(r => { setDetail(r.data); setForm({ commission_type:r.data.commission_type, commission_rate:r.data.commission_rate, status:r.data.status, notes:r.data.notes||'', admin_notes:r.data.admin_notes||'' }); }).catch(() => {});
@@ -394,7 +396,11 @@ function InfluencerDetailModal({ influencer, onClose, onDone }) {
             <button onClick={() => setEditMode(e => !e)} style={{ ...btn('#1e293b','#94a3b8'), padding:'6px 12px', fontSize:12 }}><Edit2 size={12} /> {editMode ? 'Cancel Edit' : 'Edit'}</button>
             <button onClick={handleDelete} disabled={deleting}
               style={{ ...btn('#7f1d1d','#fca5a5'), padding:'6px 12px', fontSize:12, opacity:deleting?0.6:1 }}>
-              <Trash2 size={12} /> {deleting ? 'Deleting…' : 'Delete'}
+              <Trash2 size={12} /> {deleting ? 'Deleting…' : 'Soft Delete'}
+            </button>
+            <button onClick={() => setShowHardDelete(true)}
+              style={{ ...btn('#450a0a','#fca5a5'), padding:'6px 12px', fontSize:12, border:'1.5px solid #fca5a5' }}>
+              <Trash2 size={12} /> Hard Delete
             </button>
             <button onClick={onClose} style={{ width:30, height:30, borderRadius:'50%', border:'none', background:'rgba(255,255,255,0.1)', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}><X size={14} color="#94a3b8" /></button>
           </div>
@@ -504,6 +510,113 @@ function InfluencerDetailModal({ influencer, onClose, onDone }) {
           {tab === 'links' && <InfluencerLinksTab influencerId={influencer.id} />}
           {tab === 'conversions' && <InfluencerConversionsTab influencerId={influencer.id} />}
         </div>
+      </div>
+    </div>
+
+    {/* Hard Delete confirmation modal */}
+    {showHardDelete && (
+      <HardDeleteModal
+        influencer={detail || influencer}
+        onClose={() => setShowHardDelete(false)}
+        onDone={() => { setShowHardDelete(false); onDone(); }}
+      />
+    )}
+  );
+}
+
+function HardDeleteModal({ influencer, onClose, onDone }) {
+  const [reason, setReason]         = useState('');
+  const [confirmName, setConfirmName] = useState('');
+  const [deleting, setDeleting]     = useState(false);
+  const name = influencer?.display_name || influencer?.name || '';
+
+  const handleHardDelete = async (e) => {
+    e.preventDefault();
+    if (!reason.trim())       return toast.error('Reason is required');
+    if (!confirmName.trim())  return toast.error('Please type the influencer name to confirm');
+    setDeleting(true);
+    try {
+      await api.delete(`/influencer/admin/influencers/${influencer.id}/hard`, {
+        data: { reason, confirm_name: confirmName }
+      });
+      toast.success(`"${name}" permanently deleted`);
+      onDone();
+    } catch (err) { toast.error(err.response?.data?.message || 'Hard delete failed'); }
+    finally { setDeleting(false); }
+  };
+
+  return (
+    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.75)', zIndex:3000, display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}
+      onClick={onClose}>
+      <div onClick={e => e.stopPropagation()}
+        style={{ width:'100%', maxWidth:480, background:'#fff', borderRadius:16, overflow:'hidden', boxShadow:'0 25px 80px rgba(0,0,0,0.4)', border:'2px solid #fca5a5' }}>
+
+        {/* Header */}
+        <div style={{ background:'#450a0a', padding:'16px 20px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+          <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+            <div style={{ width:32, height:32, borderRadius:8, background:'rgba(252,165,165,0.2)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+              <Trash2 size={16} color="#fca5a5" />
+            </div>
+            <div>
+              <div style={{ fontSize:14, fontWeight:800, color:'#fef2f2' }}>Permanent Delete</div>
+              <div style={{ fontSize:11, color:'#fca5a5' }}>This action cannot be undone</div>
+            </div>
+          </div>
+          <button onClick={onClose} style={{ width:28, height:28, borderRadius:'50%', border:'none', background:'rgba(255,255,255,0.1)', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>
+            <X size={13} color="#fca5a5" />
+          </button>
+        </div>
+
+        {/* Warning */}
+        <div style={{ background:'#fef2f2', padding:'14px 20px', borderBottom:'1px solid #fecaca' }}>
+          <div style={{ fontSize:13, color:'#b91c1c', fontWeight:600, marginBottom:6 }}>⚠ The following will be permanently deleted:</div>
+          <ul style={{ margin:0, paddingLeft:18, fontSize:12, color:'#991b1b', lineHeight:1.9 }}>
+            <li>Influencer profile and user account</li>
+            <li>All tracking links and click data</li>
+            <li>All sessions and funnel events</li>
+            <li>All commissions, adjustments and payouts</li>
+            <li>All daily analytics stats</li>
+            <li>Fraud events and social profiles</li>
+          </ul>
+          <div style={{ marginTop:8, fontSize:12, color:'#15803d', fontWeight:600 }}>✓ Order records are preserved (attribution columns nullified)</div>
+        </div>
+
+        {/* Form */}
+        <form onSubmit={handleHardDelete} style={{ padding:'18px 20px', display:'flex', flexDirection:'column', gap:14 }}>
+          <div>
+            <label style={{ fontSize:11, fontWeight:700, color:'#b91c1c', display:'block', marginBottom:4 }}>Reason for permanent deletion *</label>
+            <textarea value={reason} onChange={e => setReason(e.target.value)} rows={2} required
+              placeholder="e.g. Fraudulent account — duplicate of existing influencer"
+              style={{ width:'100%', padding:'8px 12px', fontSize:13, border:'1.5px solid #fca5a5', borderRadius:8, outline:'none', resize:'vertical', boxSizing:'border-box', fontFamily:'inherit' }} />
+          </div>
+          <div>
+            <label style={{ fontSize:11, fontWeight:700, color:'#b91c1c', display:'block', marginBottom:4 }}>
+              Type <strong>"{name}"</strong> to confirm *
+            </label>
+            <input value={confirmName} onChange={e => setConfirmName(e.target.value)} required
+              placeholder={`Type: ${name}`}
+              style={{ width:'100%', padding:'9px 12px', fontSize:13, border:'1.5px solid #fca5a5', borderRadius:8, outline:'none', boxSizing:'border-box', fontFamily:'inherit' }} />
+            {confirmName.trim() && confirmName.trim().toLowerCase() !== name.trim().toLowerCase() && (
+              <div style={{ fontSize:11, color:'#b91c1c', marginTop:4 }}>✗ Name doesn't match</div>
+            )}
+            {confirmName.trim() && confirmName.trim().toLowerCase() === name.trim().toLowerCase() && (
+              <div style={{ fontSize:11, color:'#15803d', marginTop:4 }}>✓ Name confirmed</div>
+            )}
+          </div>
+          <div style={{ display:'flex', gap:10, paddingTop:4 }}>
+            <button type="submit"
+              disabled={deleting || confirmName.trim().toLowerCase() !== name.trim().toLowerCase() || !reason.trim()}
+              style={{ flex:1, padding:'10px 0', borderRadius:9, border:'none', background:'#b91c1c', color:'#fff', fontSize:13, fontWeight:700, cursor:'pointer',
+                opacity:(deleting || confirmName.trim().toLowerCase() !== name.trim().toLowerCase() || !reason.trim()) ? 0.4 : 1,
+                transition:'opacity 0.15s' }}>
+              {deleting ? 'Deleting permanently…' : '🗑 Permanently Delete'}
+            </button>
+            <button type="button" onClick={onClose}
+              style={{ padding:'10px 18px', borderRadius:9, border:'none', background:'#f3f4f6', color:'#374151', fontSize:13, fontWeight:600, cursor:'pointer' }}>
+              Cancel
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );

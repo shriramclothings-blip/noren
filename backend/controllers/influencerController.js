@@ -1537,7 +1537,73 @@ const deleteInfluencer = async (req, res) => {
   } finally { client.release(); }
 };
 
-// ── Influencer self-update (bio, website only) ────────────────────────────
+// ── Admin: Hard-delete influencer (super_admin only) ──────────────────────
+const hardDeleteInfluencer = async (req, res) => {
+  const { reason, confirm_name } = req.body;
+  if (!reason || !reason.trim())        return res.status(400).json({ message: 'Reason is required' });
+  if (!confirm_name)                    return res.status(400).json({ message: 'confirm_name is required' });
+
+  const ip = getIP(req); const ua = req.headers['user-agent'] || ''; const reqId = genUID();
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    const existing = await client.query(
+      `SELECT p.*, u.name, u.email, u.id as user_id
+       FROM src_inf_profiles p JOIN src_users u ON u.id=p.user_id WHERE p.id=$1`,
+      [req.params.id]
+    );
+    if (!existing.rows.length) { await client.query('ROLLBACK'); return res.status(404).json({ message: 'Influencer not found' }); }
+    const inf = existing.rows[0];
+
+    // Confirm name matches to prevent accidental deletion
+    const nameToMatch = (inf.display_name || inf.name || '').trim().toLowerCase();
+    if (confirm_name.trim().toLowerCase() !== nameToMatch) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ message: `Name confirmation does not match. Expected: "${inf.display_name || inf.name}"` });
+    }
+
+    // Audit log before deleting everything
+    await infAudit(client, req.user.id, req.user.role, 'INFLUENCER_HARD_DELETED', 'influencer', req.params.id,
+      ip, ua,
+      { name: inf.name, email: inf.email, user_id: inf.user_id },
+      { permanently_deleted: true, reason },
+      reqId
+    );
+
+    // Delete in safe dependency order
+    await client.query('DELETE FROM src_inf_payout_items      WHERE payout_id  IN (SELECT id FROM src_inf_payouts      WHERE influencer_id=$1)', [req.params.id]);
+    await client.query('DELETE FROM src_inf_payouts           WHERE influencer_id=$1', [req.params.id]);
+    await client.query('DELETE FROM src_inf_commission_adjustments WHERE influencer_id=$1', [req.params.id]);
+    await client.query('DELETE FROM src_inf_conversions       WHERE influencer_id=$1', [req.params.id]);
+    await client.query('DELETE FROM src_inf_events            WHERE influencer_id=$1', [req.params.id]);
+    await client.query('DELETE FROM src_inf_sessions          WHERE influencer_id=$1', [req.params.id]);
+    await client.query('DELETE FROM src_inf_clicks            WHERE influencer_id=$1', [req.params.id]);
+    await client.query('DELETE FROM src_inf_daily_stats       WHERE influencer_id=$1', [req.params.id]);
+    await client.query('DELETE FROM src_inf_fraud_events      WHERE influencer_id=$1', [req.params.id]);
+    await client.query('DELETE FROM src_inf_campaign_influencers WHERE influencer_id=$1', [req.params.id]);
+    await client.query('DELETE FROM src_inf_links             WHERE influencer_id=$1', [req.params.id]);
+    await client.query('DELETE FROM src_inf_social_profiles   WHERE influencer_id=$1', [req.params.id]);
+    await client.query('DELETE FROM src_inf_profiles          WHERE id=$1',            [req.params.id]);
+
+    // Nullify attribution columns on orders (don't delete orders)
+    await client.query(
+      `UPDATE src_orders SET inf_influencer_id=NULL, inf_link_id=NULL, inf_campaign_id=NULL, inf_session_token=NULL
+       WHERE inf_influencer_id=$1`,
+      [req.params.id]
+    );
+
+    // Delete the user account
+    await client.query('DELETE FROM src_users WHERE id=$1', [inf.user_id]);
+
+    await client.query('COMMIT');
+    res.json({ message: `Influencer "${inf.display_name || inf.name}" permanently deleted` });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('hardDeleteInfluencer:', err.message);
+    res.status(500).json({ message: err.message });
+  } finally { client.release(); }
+};
 const updateMyProfile = async (req, res) => {
   const inf = req.influencerProfile;
   const { bio, website_url, display_name } = req.body;
@@ -1558,7 +1624,7 @@ const updateMyProfile = async (req, res) => {
 
 module.exports = {
   // Admin
-  createInfluencer, listInfluencers, getInfluencer, updateInfluencer, deleteInfluencer,
+  createInfluencer, listInfluencers, getInfluencer, updateInfluencer, deleteInfluencer, hardDeleteInfluencer,
   createCampaign, listCampaigns, getCampaign, updateCampaign,
   createLink, listLinks, toggleLink, deleteLink,
   listConversions, updateConversionStatus, reverseCommission,
