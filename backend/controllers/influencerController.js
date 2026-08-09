@@ -1476,25 +1476,6 @@ const syncCampaignStatuses = async () => {
   } catch (err) { console.error('syncCampaignStatuses:', err.message); }
 };
 
-module.exports = {
-  // Admin
-  createInfluencer, listInfluencers, getInfluencer, updateInfluencer,
-  createCampaign, listCampaigns, getCampaign, updateCampaign,
-  createLink, listLinks, toggleLink, deleteLink,
-  listConversions, updateConversionStatus, reverseCommission,
-  createPayout, listPayouts, updatePayoutStatus,
-  getAdminDashboardStats, getInfluencerAnalytics, getLinkAnalytics, getTopPerformers,
-  listFraudEvents, reviewFraudEvent, updateFraudStatus,
-  listAuditLogs, exportReport,
-  // Public tracking
-  trackRedirect, trackEvent,
-  // Influencer self-service
-  resolveInfluencerProfile, getMyDashboard, getMyLinks, getMyConversions,
-  getMyPayouts, getMyProfile, getMyNotifications, getMyLinkClicks, updateMyProfile,
-  // Internal
-  attributeConversion, aggregateDailyStats, syncCampaignStatuses,
-};
-
 // ── Influencer self-update (bio, website only) ────────────────────────────
 const updateMyProfile = async (req, res) => {
   const inf = req.influencerProfile;
@@ -1512,4 +1493,23 @@ const updateMyProfile = async (req, res) => {
       null, null, null, { bio, website_url, display_name }, null);
     res.json({ message: 'Profile updated' });
   } catch (err) { res.status(500).json({ message: err.message }); }
+};
+
+module.exports = {
+  // Admin
+  createInfluencer, listInfluencers, getInfluencer, updateInfluencer,
+  createCampaign, listCampaigns, getCampaign, updateCampaign,
+  createLink, listLinks, toggleLink, deleteLink,
+  listConversions, updateConversionStatus, reverseCommission,
+  createPayout, listPayouts, updatePayoutStatus,
+  getAdminDashboardStats, getInfluencerAnalytics, getLinkAnalytics, getTopPerformers,
+  listFraudEvents, reviewFraudEvent, updateFraudStatus,
+  listAuditLogs, exportReport,
+  // Public tracking
+  trackRedirect, trackEvent,
+  // Influencer self-service
+  resolveInfluencerProfile, getMyDashboard, getMyLinks, getMyConversions,
+  getMyPayouts, getMyProfile, getMyNotifications, getMyLinkClicks, updateMyProfile,
+  // Internal
+  attributeConversion, aggregateDailyStats, syncCampaignStatuses,
 };
