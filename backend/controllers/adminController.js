@@ -782,6 +782,22 @@ const updateOrderStatus = async (req, res) => {
       [order.user_id, `Your order #${order.order_id} status updated to: ${status.toUpperCase()}`]
     );
     await log(pool, req.user.id, `order_${status}`, 'order', req.params.id, order.order_id);
+
+    // Send order status email (non-blocking)
+    const { sendMail } = require('../services/mailService');
+    const { orderStatusUpdate } = require('../services/emailTemplates');
+    pool.query('SELECT name, email FROM src_users WHERE id=$1', [order.user_id]).then(userRes => {
+      if (userRes.rows.length) {
+        const trackingId = order.tracking_id || null;
+        const awb = order.awb_number || null;
+        sendMail(
+          userRes.rows[0].email,
+          `Order #${order.order_id} – ${status.charAt(0).toUpperCase() + status.slice(1)} | NOREN`,
+          orderStatusUpdate(userRes.rows[0].name, order.order_id, status, trackingId, awb)
+        ).catch(() => {});
+      }
+    }).catch(() => {});
+
     res.json(order);
   } catch (err) {
     res.status(500).json({ message: err.message });

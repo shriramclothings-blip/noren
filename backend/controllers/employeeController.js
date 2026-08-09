@@ -250,6 +250,36 @@ const createEmployee = async (req, res) => {
     });
 
     await client.query('COMMIT');
+
+    // ── Send welcome + offer letter emails ───────────────────────────────
+    const { sendMail } = require('../services/mailService');
+    const { employeeWelcome, employeeOfferLetter } = require('../services/emailTemplates');
+
+    // Fetch business name for personalisation
+    let businessName = '';
+    try {
+      const bizRes = await pool.query('SELECT name FROM src_businesses WHERE id=$1', [businessId]);
+      businessName = bizRes.rows[0]?.name || '';
+    } catch (_) {}
+
+    const today = new Date().toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' });
+
+    // Welcome email with credentials (immediate)
+    sendMail(
+      email.trim().toLowerCase(),
+      `Welcome to NOREN – Your Account Credentials`,
+      employeeWelcome(name.trim(), email.trim().toLowerCase(), rawPassword, role, businessName)
+    ).catch(e => console.error('employee welcome email:', e.message));
+
+    // Offer letter (sent 2s later to avoid hitting rate limits back-to-back)
+    setTimeout(() => {
+      sendMail(
+        email.trim().toLowerCase(),
+        `NOREN – Offer Letter & Appointment Confirmation`,
+        employeeOfferLetter(name.trim(), role, businessName, today)
+      ).catch(e => console.error('employee offer letter email:', e.message));
+    }, 2000);
+
     return res.status(201).json(newUser);
   } catch (err) {
     await client.query('ROLLBACK');

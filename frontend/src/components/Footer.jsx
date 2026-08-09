@@ -105,8 +105,12 @@ export default function Footer() {
     if (!email.trim() || !/\S+@\S+\.\S+/.test(email)) return toast.error('Enter a valid email address');
     setSubscribing(true);
     try {
-      await api.post('/homepage/newsletter', { email });
-      toast.success('Welcome to NOREN. You are now subscribed.');
+      const res = await api.post('/newsletter/subscribe', { email, source: 'footer' });
+      if (res.data?.already) {
+        toast('You\'re already subscribed to NOREN!', { icon: '✨' });
+      } else {
+        toast.success('Welcome to NOREN Insiders! Check your email for a confirmation.');
+      }
       setEmail('');
     } catch (err) {
       toast.error(err.response?.data?.message || 'Subscription failed. Try again.');

@@ -69,23 +69,8 @@ router.delete('/admin/reels/:id',      ...guard, hp.deleteReel);
 router.get('/admin/settings',          ...guard, hp.getSettings);
 router.put('/admin/settings',          ...guard, hp.updateSettings);
 
-// Newsletter
-router.post('/newsletter', async (req, res) => {
-  const { email } = req.body;
-  if (!email || !/\S+@\S+\.\S+/.test(email)) return res.status(400).json({ message: 'Valid email required' });
-  const businessId = req.tenant?.business_id || null;
-  try {
-    const { pool } = require('../config/db');
-    await pool.query(
-      `INSERT INTO src_homepage_settings (business_id, key, value, updated_at)
-       VALUES ($1, $2, $3, NOW())
-       ON CONFLICT (business_id, key) DO UPDATE
-         SET value = src_homepage_settings.value || ',' || EXCLUDED.value,
-             updated_at = NOW()`,
-      [businessId, `newsletter_${email.replace(/[^a-z0-9]/gi,'_')}`, email]
-    );
-    res.json({ message: 'Subscribed successfully' });
-  } catch { res.json({ message: 'Subscribed successfully' }); }
-});
+// Newsletter — delegate to dedicated newsletter controller
+const { subscribe: newsletterSubscribe } = require('../controllers/newsletterController');
+router.post('/newsletter', newsletterSubscribe);
 
 module.exports = router;

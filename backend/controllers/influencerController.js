@@ -143,6 +143,15 @@ const createInfluencer = async (req, res) => {
 
     await infAudit(pool, req.user.id, req.user.role, 'INFLUENCER_CREATED', 'influencer', profile.id, ip, ua, null, { user_id: user.id, email, name }, reqId);
 
+    // ── Send welcome email with credentials ──────────────────────────────
+    const { sendMail } = require('../services/mailService');
+    const { influencerWelcome } = require('../services/emailTemplates');
+    sendMail(
+      email,
+      'Welcome to NOREN Influencer Program',
+      influencerWelcome(name, email, password, commission_type, commission_rate)
+    ).catch(() => {});
+
     res.status(201).json({ message: 'Influencer created', user, profile });
   } catch (err) {
     await client.query('ROLLBACK');
@@ -770,6 +779,22 @@ const attributeConversion = async (orderId, orderTotal, sessionToken, ipAddress)
       [`New commission ₹${commission_amount.toFixed(2)} earned from order #${orderId}`, sess.influencer_id]
     ).catch(() => {});
 
+    // Send commission email
+    const { sendMail } = require('../services/mailService');
+    const { influencerCommission } = require('../services/emailTemplates');
+    pool.query(
+      `SELECT u.email, u.name FROM src_users u JOIN src_inf_profiles p ON p.user_id=u.id WHERE p.id=$1`,
+      [sess.influencer_id]
+    ).then(infUser => {
+      if (infUser.rows.length) {
+        sendMail(
+          infUser.rows[0].email,
+          `New Commission Earned – ₹${commission_amount.toFixed(2)} | NOREN`,
+          influencerCommission(infUser.rows[0].name, commission_amount, eligible_total, orderId, 'pending')
+        ).catch(() => {});
+      }
+    }).catch(() => {});
+
     return convRes.rows[0];
   } catch (err) {
     await client.query('ROLLBACK');
@@ -841,6 +866,22 @@ const updateConversionStatus = async (req, res) => {
          SELECT user_id, $1, 'commission' FROM src_inf_profiles WHERE id=$2`,
         [`Your commission for order has been ${status}`, before.influencer_id]
       ).catch(() => {});
+
+      // Send email notification
+      const { sendMail } = require('../services/mailService');
+      const { influencerCommissionUpdate } = require('../services/emailTemplates');
+      const infUser = await pool.query(
+        `SELECT u.email, u.name FROM src_users u JOIN src_inf_profiles p ON p.user_id=u.id WHERE p.id=$1`,
+        [before.influencer_id]
+      ).catch(() => ({ rows: [] }));
+      if (infUser.rows.length) {
+        const orderRef = before.order_id || 'N/A';
+        sendMail(
+          infUser.rows[0].email,
+          `NOREN Commission ${status.charAt(0).toUpperCase() + status.slice(1)} – Order #${orderRef}`,
+          influencerCommissionUpdate(infUser.rows[0].name, before.commission_amount, orderRef, before.status, status)
+        ).catch(() => {});
+      }
     }
     res.json({ message: 'Conversion status updated' });
   } catch (err) {
@@ -1012,6 +1053,21 @@ const updatePayoutStatus = async (req, res) => {
          SELECT user_id, $1, 'payout' FROM src_inf_profiles WHERE id=$2`,
         [`Your payout of ₹${parseFloat(before.final_amount).toFixed(2)} has been ${msgMap[status]}`, before.influencer_id]
       ).catch(() => {});
+
+      // Send payout email
+      const { sendMail } = require('../services/mailService');
+      const { influencerPayout } = require('../services/emailTemplates');
+      const infUser = await pool.query(
+        `SELECT u.email, u.name FROM src_users u JOIN src_inf_profiles p ON p.user_id=u.id WHERE p.id=$1`,
+        [before.influencer_id]
+      ).catch(() => ({ rows: [] }));
+      if (infUser.rows.length) {
+        sendMail(
+          infUser.rows[0].email,
+          `NOREN Payout ${status.charAt(0).toUpperCase() + status.slice(1)} – ₹${parseFloat(before.final_amount).toFixed(2)}`,
+          influencerPayout(infUser.rows[0].name, before.final_amount, status, before.conversion_count, before.payout_uid, transaction_ref || null)
+        ).catch(() => {});
+      }
     }
 
     res.json({ message: `Payout ${status}` });

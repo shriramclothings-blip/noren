@@ -100,6 +100,7 @@ app.use('/api/erp/payroll', require('./routes/payroll'));
 app.use('/api/homepage', require('./routes/homepage'));
 app.use('/api/contact', require('./routes/contact'));
 app.use('/api/notifications', require('./routes/notifications'));
+app.use('/api/newsletter',    require('./routes/newsletter'));
 
 // ── Sitemap in-memory cache (one DB query per 24 hours) ──────────────────
 const SITEMAP_CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours

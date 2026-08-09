@@ -1,28 +1,10 @@
+'use strict';
+
 const { pool } = require('../config/db');
 const { sendMail } = require('../services/mailService');
+const { offerEmail, productEmail } = require('../services/emailTemplates');
 
 // ── helpers ──────────────────────────────────────────────────────────────────
-const NOREN_HEADER = `
-  <div style="background:#1a1a18;padding:28px 40px;text-align:center">
-    <div style="font-family:Georgia,serif;font-weight:600;font-size:26px;letter-spacing:0.35em;color:#faf9f7;text-transform:uppercase">NOREN</div>
-    <div style="font-size:8px;letter-spacing:0.28em;color:#5a5750;margin-top:4px;text-transform:uppercase">Fashion House</div>
-  </div>`;
-
-const NOREN_FOOTER = `
-  <div style="padding:18px 40px;text-align:center;border-top:1px solid #e6e0d8;margin-top:8px">
-    <p style="color:#b8a898;font-size:11px;letter-spacing:0.06em;margin:0">© ${new Date().getFullYear()} NOREN. Timeless By Design.</p>
-    <p style="color:#d1cdc8;font-size:10px;margin:6px 0 0">You are receiving this email because you have an account at www.norenfastion.shop</p>
-  </div>`;
-
-const buildHtml = (subject, badgeLabel, badgeColor, bodyHtml) => `
-  <div style="font-family:'Inter',Arial,sans-serif;max-width:560px;margin:auto;background:#faf9f7;padding:0">
-    ${NOREN_HEADER}
-    <div style="padding:36px 40px 28px;border:1px solid #e6e0d8;border-top:none">
-      <p style="font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:${badgeColor};margin:0 0 12px">${badgeLabel}</p>
-      ${bodyHtml}
-    </div>
-    ${NOREN_FOOTER}
-  </div>`;
 
 // ── ensure table exists ───────────────────────────────────────────────────────
 const ensureTable = async () => {
@@ -63,34 +45,10 @@ const searchUsers = async (req, res) => {
 // ── POST /api/erp/email/send ──────────────────────────────────────────────────
 const sendCampaign = async (req, res) => {
   await ensureTable();
-  const { subject, message, type = 'custom', target = 'all', user_id, custom_html } = req.body;
+  const { subject, message, type = 'custom', target = 'all', user_id, ctaText, ctaUrl } = req.body;
 
   if (!subject?.trim()) return res.status(400).json({ message: 'Subject is required' });
-  if (!message?.trim() && !custom_html?.trim()) return res.status(400).json({ message: 'Message or custom HTML is required' });
-
-  // Badge style per type
-  const badges = {
-    new_launch:  { label: 'New Launch',   color: '#c9a96e' },
-    deal:        { label: 'Special Deal', color: '#16a34a' },
-    offer:       { label: 'Exclusive Offer', color: '#dc2626' },
-    update:      { label: 'Update',       color: '#2563eb' },
-    custom:      { label: 'From NOREN',   color: '#5a5750' },
-  };
-  const badge = badges[type] || badges.custom;
-
-  // Build body
-  const bodyHtml = custom_html?.trim()
-    ? custom_html
-    : `<h2 style="font-family:Georgia,serif;font-size:22px;font-weight:600;color:#1a1a18;margin:0 0 16px">${subject}</h2>
-       <div style="color:#5a5750;line-height:1.9;font-size:14px;white-space:pre-wrap">${message}</div>
-       <div style="margin-top:28px;padding-top:20px;border-top:1px solid #e6e0d8">
-         <a href="${process.env.FRONTEND_URL || 'https://www.norenfastion.shop'}" 
-            style="display:inline-block;background:#1a1a18;color:#faf9f7;padding:13px 32px;text-decoration:none;font-size:11px;font-weight:600;letter-spacing:0.16em;text-transform:uppercase">
-           Visit NOREN
-         </a>
-       </div>`;
-
-  const html = buildHtml(subject, badge.label, badge.color, bodyHtml);
+  if (!message?.trim()) return res.status(400).json({ message: 'Message is required' });
 
   try {
     let recipients = [];
@@ -100,6 +58,12 @@ const sendCampaign = async (req, res) => {
       const r = await pool.query('SELECT id, name, email FROM src_users WHERE id=$1 AND is_banned=FALSE', [user_id]);
       if (!r.rows.length) return res.status(404).json({ message: 'User not found' });
       recipients = r.rows;
+    } else if (target === 'subscribers') {
+      // Send to newsletter subscribers only
+      const r = await pool.query(
+        `SELECT NULL as id, name, email FROM src_newsletter_subscribers WHERE is_active=TRUE AND email IS NOT NULL AND email != '' ORDER BY subscribed_at`
+      ).catch(() => pool.query(`SELECT id, name, email FROM src_users WHERE is_banned=FALSE AND email IS NOT NULL AND email != '' ORDER BY id`));
+      recipients = r.rows;
     } else {
       // all active users with email
       const r = await pool.query(
@@ -108,32 +72,21 @@ const sendCampaign = async (req, res) => {
       recipients = r.rows;
     }
 
-    // Send in batches of 10 (non-blocking per user, but sequential batches)
+    // Send in batches of 10
     let successCount = 0;
     for (let i = 0; i < recipients.length; i += 10) {
       const batch = recipients.slice(i, i + 10);
       const results = await Promise.allSettled(
-        batch.map(async (u) => {
-          // Personalise greeting if possible
-          const personalBody = custom_html?.trim()
-            ? custom_html
-            : `<p style="font-size:13px;color:#9e9a94;margin:0 0 16px">Hi ${u.name || 'there'},</p>
-               <h2 style="font-family:Georgia,serif;font-size:22px;font-weight:600;color:#1a1a18;margin:0 0 16px">${subject}</h2>
-               <div style="color:#5a5750;line-height:1.9;font-size:14px;white-space:pre-wrap">${message}</div>
-               <div style="margin-top:28px;padding-top:20px;border-top:1px solid #e6e0d8">
-                 <a href="${process.env.FRONTEND_URL || 'https://www.norenfastion.shop'}"
-                    style="display:inline-block;background:#1a1a18;color:#faf9f7;padding:13px 32px;text-decoration:none;font-size:11px;font-weight:600;letter-spacing:0.16em;text-transform:uppercase">
-                   Visit NOREN
-                 </a>
-               </div>`;
-          const personalHtml = buildHtml(subject, badge.label, badge.color, personalBody);
-          const ok = await sendMail(u.email, subject, personalHtml);
-          return ok;
-        })
+        batch.map(u => sendMail(
+          u.email,
+          subject,
+          offerEmail(u.name || null, subject, message, ctaText || 'Shop Now', ctaUrl || process.env.FRONTEND_URL, type)
+        ))
       );
-      // Count only confirmed successes
       successCount += results.filter(r => r.status === 'fulfilled' && r.value === true).length;
     }
+
+    const html = offerEmail(null, subject, message, ctaText || 'Shop Now', ctaUrl || process.env.FRONTEND_URL, type);
 
     // Log campaign
     await pool.query(
@@ -174,4 +127,55 @@ const deleteLog = async (req, res) => {
   } catch (err) { res.status(500).json({ message: err.message }); }
 };
 
-module.exports = { searchUsers, sendCampaign, getLogs, deleteLog };
+// ── POST /api/erp/email/send-product ─────────────────────────────────────────
+// Email a product (with image + details) to all customers or a specific one
+const sendProductEmail = async (req, res) => {
+  const { product_id, user_id, target = 'all', message } = req.body;
+  if (!product_id) return res.status(400).json({ message: 'product_id is required' });
+
+  try {
+    // Fetch full product details
+    const prodRes = await pool.query(
+      `SELECT p.*, c.name as category_name,
+         (SELECT image_url FROM src_product_images WHERE product_id=p.id AND is_primary=TRUE LIMIT 1) as primary_image
+       FROM src_products p
+       LEFT JOIN src_categories c ON c.id=p.category_id
+       WHERE p.id=$1 AND p.deleted_at IS NULL`,
+      [product_id]
+    );
+    if (!prodRes.rows.length) return res.status(404).json({ message: 'Product not found' });
+    const product = prodRes.rows[0];
+
+    let recipients = [];
+    if (target === 'specific') {
+      if (!user_id) return res.status(400).json({ message: 'user_id required for specific target' });
+      const r = await pool.query('SELECT id, name, email FROM src_users WHERE id=$1 AND is_banned=FALSE', [user_id]);
+      if (!r.rows.length) return res.status(404).json({ message: 'User not found' });
+      recipients = r.rows;
+    } else {
+      const r = await pool.query(
+        `SELECT id, name, email FROM src_users WHERE is_banned=FALSE AND email IS NOT NULL AND email != '' ORDER BY id`
+      );
+      recipients = r.rows;
+    }
+
+    let successCount = 0;
+    for (let i = 0; i < recipients.length; i += 10) {
+      const batch = recipients.slice(i, i + 10);
+      const results = await Promise.allSettled(
+        batch.map(u => sendMail(
+          u.email,
+          `${product.title} – Shop Now at NOREN`,
+          productEmail(u.name || 'Valued Customer', product, message || null)
+        ))
+      );
+      successCount += results.filter(r => r.status === 'fulfilled' && r.value === true).length;
+    }
+
+    res.json({ message: `Product email sent to ${successCount} recipient${successCount !== 1 ? 's' : ''}`, sent_count: successCount });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+module.exports = { searchUsers, sendCampaign, sendProductEmail, getLogs, deleteLog };
