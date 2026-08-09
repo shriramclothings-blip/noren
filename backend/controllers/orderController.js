@@ -3,6 +3,15 @@ const crypto = require('crypto');
 const { pool } = require('../config/db');
 const { sendOrderEmail } = require('./authController');
 const { sendPushToUser, notifyAdminNewOrder, notifyAdminPaymentFailed } = require('./notificationController');
+const { attributeConversion } = require('./influencerController');
+
+function getIP(req) {
+  const cf = req.headers['cf-connecting-ip'];
+  const fwd = req.headers['x-forwarded-for'];
+  let ip = cf || (fwd ? fwd.split(',')[0].trim() : null) || req.headers['x-real-ip'] || req.socket?.remoteAddress || '';
+  if (ip.startsWith('::ffff:')) ip = ip.slice(7);
+  return ip.slice(0, 60);
+}
 
 // Lazy init so the whole API doesn't crash on boot if env vars are missing.
 // If Razorpay keys are not configured, only payment endpoints will return an error.
@@ -26,18 +35,22 @@ const createPaytmInitiate = async (req, res) => {
     await client.query('BEGIN');
     const orderId = generateOrderId();
 
+    // Capture influencer session token from request headers or body
+    const infSessionToken = req.headers['x-inf-session'] || req.body.inf_session_token || null;
+
     const orderResult = await client.query(
       `INSERT INTO src_orders (order_id, user_id, subtotal, discount_amount, total, coupon_code,
         free_delivery_applied, delivery_charge,
         payment_method, payment_status,
-        full_name, mobile, email, address, city, state, pincode, landmark, notes, status)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)
+        full_name, mobile, email, address, city, state, pincode, landmark, notes, status,
+        inf_session_token)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21)
        RETURNING *`,
       [orderId, req.user.id, subtotal, discount_amount, total, coupon_code || null,
        !!free_delivery_applied, Number(delivery_charge) || 0,
        'paytm', 'pending',
        full_name, mobile, email, address, city, state, pincode, landmark || null, notes || null,
-       'pending']
+       'pending', infSessionToken]
     );
     const order = orderResult.rows[0];
 
@@ -158,6 +171,11 @@ const placeOrder = async (req, res) => {
 
     await client.query('COMMIT');
 
+    // ── Influencer attribution (non-blocking, safe) ───────────────────────
+    const infSession = req.headers['x-inf-session'] || req.body.inf_session_token;
+    const ipForAttr  = getIP(req);
+    attributeConversion(order.id, total, infSession, ipForAttr).catch(() => {});
+
     // Send order confirmation email (non-blocking)
     const userRes = await pool.query('SELECT name, email FROM src_users WHERE id=$1', [req.user.id]);
     if (userRes.rows.length) {
@@ -253,6 +271,9 @@ const paytmCallback = async (req, res) => {
         await client.query(`INSERT INTO src_notifications (user_id, message, type) VALUES ($1,$2,'order')`, [order.user_id, `Order #${order.order_id} placed successfully! Total: ₹${order.total}`]);
 
         await client.query('COMMIT');
+
+        // ── Influencer attribution (Paytm success) ─────────────────────
+        attributeConversion(order.id, order.total, order.inf_session_token, null).catch(() => {});
 
         // Send order confirmation email (non-blocking)
         const userRes = await pool.query('SELECT name, email FROM src_users WHERE id=$1', [order.user_id]);

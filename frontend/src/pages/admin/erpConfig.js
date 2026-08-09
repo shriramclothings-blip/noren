@@ -83,6 +83,19 @@ export const ERP_NAV_GROUPS = [
       { key: 'role-management',label: 'Role Management',icon: 'KeyRound',    componentKey: 'role-management',roles: ['super_admin'], description: 'Define permissions and role access across all modules.' },
     ],
   },
+  {
+    key: 'influencer-management',
+    label: 'Influencer & Affiliate',
+    items: [
+      { key: 'influencers',           label: 'Influencers',       icon: 'UsersRound',  componentKey: 'influencers',           permissions: ['influencer.view'],  description: 'Manage influencer accounts, profiles, commissions and status.' },
+      { key: 'inf-campaigns',         label: 'Campaigns',         icon: 'Megaphone',   componentKey: 'inf-campaigns',         permissions: ['campaign.view'],    description: 'Create and manage influencer marketing campaigns.' },
+      { key: 'inf-links',             label: 'Tracking Links',    icon: 'Link2',       componentKey: 'inf-links',             permissions: ['tracking.view'],    description: 'UTM / referral tracking links assigned to influencers.' },
+      { key: 'inf-conversions',       label: 'Conversions',       icon: 'ShoppingCart',componentKey: 'inf-conversions',       permissions: ['commission.view'],  description: 'All attributed orders and commission records.' },
+      { key: 'inf-payouts',           label: 'Payouts',           icon: 'Wallet',      componentKey: 'inf-payouts',           permissions: ['payout.view'],      description: 'Create, approve and track influencer payouts.' },
+      { key: 'inf-fraud',             label: 'Fraud & Security',  icon: 'ShieldCheck', componentKey: 'inf-fraud',             permissions: ['security.view'],    description: 'Fraud event monitoring and influencer risk management.' },
+      { key: 'inf-audit',             label: 'Influencer Audit',  icon: 'FileClock',   componentKey: 'inf-audit',             permissions: ['influencer.view'],  description: 'Immutable audit trail for all influencer management actions.' },
+    ],
+  },
 ];
 
 export const ADMIN_ROUTE_ALIASES = {
@@ -90,6 +103,13 @@ export const ADMIN_ROUTE_ALIASES = {
   orders: 'orders',
   'sales-orders': 'sales',
   users: 'user-management',
+  // Influencer module aliases
+  'influencer-campaigns': 'inf-campaigns',
+  'influencer-links':     'inf-links',
+  'influencer-conversions':'inf-conversions',
+  'influencer-payouts':   'inf-payouts',
+  'influencer-fraud':     'inf-fraud',
+  'influencer-audit':     'inf-audit',
 };
 
 export const ERP_MODULE_MAP = Object.fromEntries(

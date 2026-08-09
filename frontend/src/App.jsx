@@ -36,7 +36,8 @@ const CookiesPolicy     = lazy(() => import('./pages/legal/OtherPolicies').then(
 const DisclaimerPolicy  = lazy(() => import('./pages/legal/MorePolicies').then(m => ({ default: m.DisclaimerPolicy })));
 const LegalNotice       = lazy(() => import('./pages/legal/MorePolicies').then(m => ({ default: m.LegalNotice })));
 const ReturnPolicy      = lazy(() => import('./pages/legal/MorePolicies').then(m => ({ default: m.ReturnPolicy })));
-const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
+const AdminDashboard     = lazy(() => import('./pages/admin/AdminDashboard'));
+const InfluencerDashboard = lazy(() => import('./pages/influencer/InfluencerDashboard'));
 
 function Loader() {
   return (
@@ -71,6 +72,13 @@ export default function App() {
             <Route path="/admin/*" element={
               <ProtectedRoute roles={['admin','super_admin','business_owner','store_admin','store_manager','cashier','warehouse_manager','accountant']}>
                 <AdminDashboard />
+              </ProtectedRoute>
+            } />
+
+            {/* Influencer portal — no navbar/footer */}
+            <Route path="/influencer/*" element={
+              <ProtectedRoute roles={['influencer']}>
+                <InfluencerDashboard />
               </ProtectedRoute>
             } />
 

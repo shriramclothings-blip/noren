@@ -89,6 +89,11 @@ app.use('/api/erp/expenses', require('./routes/expenses'));
 // ── UTM tracking — public redirect ───────────────────────────────────────────
 const utmCtrl = require('./controllers/utmController');
 app.get('/t/:slug', utmCtrl.trackRedirect);
+
+// ── Influencer Management System ──────────────────────────────────────────────
+const infCtrl = require('./controllers/influencerController');
+app.get('/inf/r/:refCode', infCtrl.trackRedirect);  // Influencer redirect shortlink
+app.use('/api/influencer', require('./routes/influencer'));
 app.use('/api/erp/roles', require('./routes/roles'));
 app.use('/api/erp/sales', require('./routes/salesOrders'));
 app.use('/api/erp/payroll', require('./routes/payroll'));
@@ -647,7 +652,13 @@ httpServer.listen(PORT, '0.0.0.0', () => console.log(`🚀 NOREN API running on 
     syncTracking();
   });
 
-  // ── Cron: Send scheduled campaigns every minute ──
+  // ── Cron: Influencer daily stats aggregation (2 AM daily) ──
+  const { aggregateDailyStats, syncCampaignStatuses } = require('./controllers/influencerController');
+  cron.schedule('0 2 * * *', () => {
+    console.log('📊 Aggregating influencer daily stats...');
+    aggregateDailyStats();
+    syncCampaignStatuses();
+  });
   const { sendCampaign } = require('./controllers/notificationController');
   cron.schedule('* * * * *', async () => {
     try {

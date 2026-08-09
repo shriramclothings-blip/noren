@@ -9,7 +9,7 @@ import {
   MapPinned, Menu, MessageCircle, MessageSquare, Package, Phone,
   ReceiptText, ScanLine, Settings, ShieldCheck, ShoppingCart, Sparkles,
   Star, Store, Tag, Truck, Undo2, UsersRound, Video, Wallet, Warehouse,
-  AlertTriangle, ChevronDown, RefreshCw, Link2, X,
+  AlertTriangle, ChevronDown, RefreshCw, Link2, X, Megaphone,
 } from 'lucide-react';
 import api from '../../utils/api';
 import AdminOverview from './AdminOverview';
@@ -31,6 +31,13 @@ import AdminOrders from './AdminOrders';
 import AdminLoginSessions from './AdminLoginSessions';
 const AdminUTMTracker          = lazy(() => import('./erp/AdminUTMTracker'));
 const AdminAIAssistant         = lazy(() => import('./erp/AdminAIAssistant'));
+const AdminInfluencers         = lazy(() => import('./erp/AdminInfluencers'));
+const AdminInfluencerCampaigns = lazy(() => import('./erp/AdminInfluencerCampaigns'));
+const AdminInfluencerLinks     = lazy(() => import('./erp/AdminInfluencerLinks'));
+const AdminInfluencerPayouts   = lazy(() => import('./erp/AdminInfluencerPayouts'));
+const AdminInfluencerConversions = lazy(() => import('./erp/AdminInfluencerConversions'));
+const AdminInfluencerFraud     = lazy(() => import('./erp/AdminInfluencerFraud'));
+const AdminInfluencerAudit     = lazy(() => import('./erp/AdminInfluencerAudit'));
 const AdminPos                 = lazy(() => import('./erp/AdminPos'));
 const AdminInventory           = lazy(() => import('./erp/AdminInventory'));
 const AdminWarehouse           = lazy(() => import('./erp/AdminWarehouse'));
@@ -66,7 +73,7 @@ const iconMap = {
   BriefcaseBusiness, CalendarClock, DollarSign, Wallet, Bell, Settings,
   Building2, Store, ShieldCheck, KeyRound, FileClock, Crown, Layout,
   MapPinned, MessageSquare, MessageCircle, Video, Phone, Star, Tag,
-  Cloud, Eye, Mail, Link2, Sparkles,
+  Cloud, Eye, Mail, Link2, Sparkles, Megaphone,
 };
 
 const MOBILE_TABS = [
@@ -158,6 +165,13 @@ function renderSection(section, user, navigate) {
     case 'login-sessions':    return <AdminLoginSessions />;
     case 'utm-tracker':       return <AdminUTMTracker />;
     case 'ai-assistant':      return <AdminAIAssistant />;
+    case 'influencers':       return <AdminInfluencers />;
+    case 'inf-campaigns':     return <AdminInfluencerCampaigns />;
+    case 'inf-links':         return <AdminInfluencerLinks />;
+    case 'inf-conversions':   return <AdminInfluencerConversions />;
+    case 'inf-payouts':       return <AdminInfluencerPayouts />;
+    case 'inf-fraud':         return <AdminInfluencerFraud />;
+    case 'inf-audit':         return <AdminInfluencerAudit />;
     default:                  return <AdminModuleWorkspace module={mod} user={user} />;
   }
 }

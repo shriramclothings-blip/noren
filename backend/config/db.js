@@ -1557,6 +1557,419 @@ const initDB = async () => {
     `).catch(() => {});
 
     console.log('G�� Phase 2 schema extensions applied');
+
+    // ═══════════════════════════════════════════════════════════════════════
+    //  PHASE 3 — Influencer & Affiliate Management System Schema
+    // ═══════════════════════════════════════════════════════════════════════
+
+    // 3a. Add 'influencer' to the users role CHECK constraint
+    await client.query(`ALTER TABLE src_users DROP CONSTRAINT IF EXISTS src_users_role_check`).catch(() => {});
+    await client.query(`
+      ALTER TABLE src_users ADD CONSTRAINT src_users_role_check
+        CHECK (role IN (
+          'user','seller','admin','super_admin',
+          'business_owner','store_admin','store_manager',
+          'cashier','warehouse_manager','accountant','employee',
+          'influencer'
+        ))
+    `).catch(() => {});
+
+    // 3b. Influencer profiles (extended info beyond src_users)
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS src_inf_profiles (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER UNIQUE NOT NULL REFERENCES src_users(id) ON DELETE CASCADE,
+        display_name VARCHAR(100),
+        username VARCHAR(80) UNIQUE,
+        category VARCHAR(120),
+        niche VARCHAR(200),
+        location VARCHAR(200),
+        bio TEXT,
+        website_url TEXT,
+        profile_photo TEXT,
+        commission_type VARCHAR(20) DEFAULT 'percentage' CHECK (commission_type IN ('percentage','fixed')),
+        commission_rate DECIMAL(10,4) DEFAULT 0,
+        status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active','inactive','suspended','pending')),
+        fraud_status VARCHAR(20) DEFAULT 'normal' CHECK (fraud_status IN ('normal','review','suspicious','blocked')),
+        agreement_status VARCHAR(20) DEFAULT 'pending' CHECK (agreement_status IN ('pending','signed','expired','terminated')),
+        contract_start_date DATE,
+        contract_end_date DATE,
+        notes TEXT,
+        admin_notes TEXT,
+        payment_method VARCHAR(50),
+        payment_details JSONB DEFAULT '{}'::jsonb,
+        tax_info JSONB DEFAULT '{}'::jsonb,
+        total_clicks BIGINT DEFAULT 0,
+        total_unique_visitors BIGINT DEFAULT 0,
+        total_orders INTEGER DEFAULT 0,
+        total_revenue DECIMAL(14,4) DEFAULT 0,
+        total_commission DECIMAL(14,4) DEFAULT 0,
+        created_by INTEGER REFERENCES src_users(id) ON DELETE SET NULL,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_inf_profiles_user ON src_inf_profiles(user_id);
+      CREATE INDEX IF NOT EXISTS idx_inf_profiles_status ON src_inf_profiles(status);
+    `);
+
+    // 3c. Social media handles
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS src_inf_social_profiles (
+        id SERIAL PRIMARY KEY,
+        influencer_id INTEGER NOT NULL REFERENCES src_inf_profiles(id) ON DELETE CASCADE,
+        platform VARCHAR(50) NOT NULL,
+        handle VARCHAR(200),
+        url TEXT,
+        followers_count INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT NOW(),
+        UNIQUE(influencer_id, platform)
+      );
+    `);
+
+    // 3d. Campaigns
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS src_inf_campaigns (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(200) NOT NULL,
+        slug VARCHAR(220) UNIQUE NOT NULL,
+        description TEXT,
+        status VARCHAR(20) DEFAULT 'draft' CHECK (status IN ('draft','scheduled','active','paused','completed','archived')),
+        start_date DATE,
+        end_date DATE,
+        budget DECIMAL(14,2),
+        commission_type VARCHAR(20) DEFAULT 'percentage' CHECK (commission_type IN ('percentage','fixed')),
+        commission_rate DECIMAL(10,4) DEFAULT 0,
+        target_product_ids INTEGER[] DEFAULT ARRAY[]::INTEGER[],
+        target_category_ids INTEGER[] DEFAULT ARRAY[]::INTEGER[],
+        terms TEXT,
+        notes TEXT,
+        created_by INTEGER REFERENCES src_users(id) ON DELETE SET NULL,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_inf_campaigns_status ON src_inf_campaigns(status);
+    `);
+
+    // 3e. Campaign <-> Influencer assignments
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS src_inf_campaign_influencers (
+        id SERIAL PRIMARY KEY,
+        campaign_id INTEGER NOT NULL REFERENCES src_inf_campaigns(id) ON DELETE CASCADE,
+        influencer_id INTEGER NOT NULL REFERENCES src_inf_profiles(id) ON DELETE CASCADE,
+        commission_type VARCHAR(20),
+        commission_rate DECIMAL(10,4),
+        status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active','paused','removed')),
+        assigned_by INTEGER REFERENCES src_users(id) ON DELETE SET NULL,
+        assigned_at TIMESTAMP DEFAULT NOW(),
+        UNIQUE(campaign_id, influencer_id)
+      );
+      CREATE INDEX IF NOT EXISTS idx_inf_ci_campaign ON src_inf_campaign_influencers(campaign_id);
+      CREATE INDEX IF NOT EXISTS idx_inf_ci_influencer ON src_inf_campaign_influencers(influencer_id);
+    `);
+
+    // 3f. Tracking/UTM links (influencer-specific)
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS src_inf_links (
+        id SERIAL PRIMARY KEY,
+        influencer_id INTEGER NOT NULL REFERENCES src_inf_profiles(id) ON DELETE CASCADE,
+        campaign_id INTEGER REFERENCES src_inf_campaigns(id) ON DELETE SET NULL,
+        name VARCHAR(200) NOT NULL,
+        slug VARCHAR(32) UNIQUE NOT NULL,
+        destination TEXT NOT NULL,
+        utm_source VARCHAR(100),
+        utm_medium VARCHAR(100),
+        utm_campaign VARCHAR(200),
+        utm_content VARCHAR(200),
+        utm_term VARCHAR(200),
+        ref_code VARCHAR(32) UNIQUE NOT NULL,
+        is_active BOOLEAN DEFAULT TRUE,
+        deleted_at TIMESTAMP,
+        total_clicks BIGINT DEFAULT 0,
+        unique_clicks BIGINT DEFAULT 0,
+        total_orders INTEGER DEFAULT 0,
+        total_revenue DECIMAL(14,4) DEFAULT 0,
+        created_by INTEGER REFERENCES src_users(id) ON DELETE SET NULL,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_inf_links_influencer ON src_inf_links(influencer_id);
+      CREATE INDEX IF NOT EXISTS idx_inf_links_campaign ON src_inf_links(campaign_id);
+      CREATE INDEX IF NOT EXISTS idx_inf_links_slug ON src_inf_links(slug);
+      CREATE INDEX IF NOT EXISTS idx_inf_links_ref ON src_inf_links(ref_code);
+    `);
+
+    // 3g. Click/visit tracking events
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS src_inf_clicks (
+        id BIGSERIAL PRIMARY KEY,
+        link_id INTEGER NOT NULL REFERENCES src_inf_links(id) ON DELETE CASCADE,
+        influencer_id INTEGER NOT NULL REFERENCES src_inf_profiles(id) ON DELETE CASCADE,
+        campaign_id INTEGER REFERENCES src_inf_campaigns(id) ON DELETE SET NULL,
+        session_token VARCHAR(64),
+        ip_address VARCHAR(60),
+        is_unique BOOLEAN DEFAULT FALSE,
+        landing_page TEXT,
+        referer TEXT,
+        device_type VARCHAR(30),
+        device_model VARCHAR(120),
+        browser VARCHAR(60),
+        os VARCHAR(60),
+        city VARCHAR(100),
+        region VARCHAR(100),
+        country VARCHAR(100),
+        user_agent TEXT,
+        clicked_at TIMESTAMP DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_inf_clicks_link ON src_inf_clicks(link_id, clicked_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_inf_clicks_influencer ON src_inf_clicks(influencer_id, clicked_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_inf_clicks_session ON src_inf_clicks(session_token);
+      CREATE INDEX IF NOT EXISTS idx_inf_clicks_date ON src_inf_clicks(clicked_at DESC);
+    `);
+
+    // 3h. Tracking sessions (attribution window)
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS src_inf_sessions (
+        id SERIAL PRIMARY KEY,
+        session_token VARCHAR(64) UNIQUE NOT NULL,
+        link_id INTEGER REFERENCES src_inf_links(id) ON DELETE SET NULL,
+        influencer_id INTEGER REFERENCES src_inf_profiles(id) ON DELETE SET NULL,
+        campaign_id INTEGER REFERENCES src_inf_campaigns(id) ON DELETE SET NULL,
+        ip_address VARCHAR(60),
+        user_id INTEGER REFERENCES src_users(id) ON DELETE SET NULL,
+        attribution_model VARCHAR(30) DEFAULT 'last_click',
+        attribution_window_days INTEGER DEFAULT 30,
+        expires_at TIMESTAMP NOT NULL,
+        converted BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_inf_sessions_token ON src_inf_sessions(session_token);
+      CREATE INDEX IF NOT EXISTS idx_inf_sessions_ip ON src_inf_sessions(ip_address, expires_at);
+      CREATE INDEX IF NOT EXISTS idx_inf_sessions_expires ON src_inf_sessions(expires_at);
+    `);
+
+    // 3i. Tracking funnel events
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS src_inf_events (
+        id BIGSERIAL PRIMARY KEY,
+        session_token VARCHAR(64),
+        link_id INTEGER REFERENCES src_inf_links(id) ON DELETE SET NULL,
+        influencer_id INTEGER REFERENCES src_inf_profiles(id) ON DELETE SET NULL,
+        campaign_id INTEGER REFERENCES src_inf_campaigns(id) ON DELETE SET NULL,
+        user_id INTEGER REFERENCES src_users(id) ON DELETE SET NULL,
+        event_type VARCHAR(50) NOT NULL CHECK (event_type IN ('landing','product_view','add_to_cart','checkout_start','order_placed','payment_success','order_completed')),
+        product_id INTEGER REFERENCES src_products(id) ON DELETE SET NULL,
+        order_id INTEGER REFERENCES src_orders(id) ON DELETE SET NULL,
+        value DECIMAL(14,4),
+        metadata JSONB DEFAULT '{}'::jsonb,
+        ip_address VARCHAR(60),
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_inf_events_session ON src_inf_events(session_token, created_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_inf_events_influencer ON src_inf_events(influencer_id, created_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_inf_events_type ON src_inf_events(event_type, created_at DESC);
+    `);
+
+    // 3j. Conversions (order attributions)
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS src_inf_conversions (
+        id SERIAL PRIMARY KEY,
+        conversion_uid VARCHAR(64) UNIQUE NOT NULL,
+        order_id INTEGER UNIQUE NOT NULL REFERENCES src_orders(id) ON DELETE CASCADE,
+        influencer_id INTEGER NOT NULL REFERENCES src_inf_profiles(id) ON DELETE CASCADE,
+        campaign_id INTEGER REFERENCES src_inf_campaigns(id) ON DELETE SET NULL,
+        link_id INTEGER REFERENCES src_inf_links(id) ON DELETE SET NULL,
+        session_token VARCHAR(64),
+        attribution_model VARCHAR(30) DEFAULT 'last_click',
+        attribution_snapshot JSONB NOT NULL DEFAULT '{}'::jsonb,
+        order_total DECIMAL(14,4) NOT NULL,
+        eligible_total DECIMAL(14,4) NOT NULL,
+        commission_type VARCHAR(20) NOT NULL,
+        commission_rate DECIMAL(10,4) NOT NULL,
+        commission_amount DECIMAL(14,4) NOT NULL,
+        status VARCHAR(30) DEFAULT 'pending' CHECK (status IN ('pending','under_review','approved','rejected','cancelled','reversed','paid')),
+        admin_note TEXT,
+        reviewed_by INTEGER REFERENCES src_users(id) ON DELETE SET NULL,
+        reviewed_at TIMESTAMP,
+        idempotency_key VARCHAR(128) UNIQUE,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_inf_conversions_influencer ON src_inf_conversions(influencer_id, created_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_inf_conversions_order ON src_inf_conversions(order_id);
+      CREATE INDEX IF NOT EXISTS idx_inf_conversions_status ON src_inf_conversions(status);
+    `);
+
+    // 3k. Commission adjustments (refunds, manual overrides)
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS src_inf_commission_adjustments (
+        id SERIAL PRIMARY KEY,
+        conversion_id INTEGER NOT NULL REFERENCES src_inf_conversions(id) ON DELETE CASCADE,
+        influencer_id INTEGER NOT NULL REFERENCES src_inf_profiles(id) ON DELETE CASCADE,
+        adjustment_type VARCHAR(50) NOT NULL CHECK (adjustment_type IN ('refund_reversal','manual_increase','manual_decrease','admin_override','cancellation')),
+        amount DECIMAL(14,4) NOT NULL,
+        reason TEXT NOT NULL,
+        created_by INTEGER REFERENCES src_users(id) ON DELETE SET NULL,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_inf_adj_conversion ON src_inf_commission_adjustments(conversion_id);
+      CREATE INDEX IF NOT EXISTS idx_inf_adj_influencer ON src_inf_commission_adjustments(influencer_id);
+    `);
+
+    // 3l. Payouts
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS src_inf_payouts (
+        id SERIAL PRIMARY KEY,
+        payout_uid VARCHAR(64) UNIQUE NOT NULL,
+        influencer_id INTEGER NOT NULL REFERENCES src_inf_profiles(id) ON DELETE CASCADE,
+        period_start DATE,
+        period_end DATE,
+        conversion_count INTEGER DEFAULT 0,
+        gross_commission DECIMAL(14,4) DEFAULT 0,
+        adjustments DECIMAL(14,4) DEFAULT 0,
+        final_amount DECIMAL(14,4) NOT NULL,
+        payment_method VARCHAR(80),
+        transaction_ref VARCHAR(200),
+        status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending','approved','processing','paid','failed','cancelled')),
+        admin_notes TEXT,
+        created_by INTEGER REFERENCES src_users(id) ON DELETE SET NULL,
+        approved_by INTEGER REFERENCES src_users(id) ON DELETE SET NULL,
+        approved_at TIMESTAMP,
+        paid_at TIMESTAMP,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_inf_payouts_influencer ON src_inf_payouts(influencer_id, created_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_inf_payouts_status ON src_inf_payouts(status);
+    `);
+
+    // 3m. Payout items (conversions included in a payout)
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS src_inf_payout_items (
+        id SERIAL PRIMARY KEY,
+        payout_id INTEGER NOT NULL REFERENCES src_inf_payouts(id) ON DELETE CASCADE,
+        conversion_id INTEGER NOT NULL REFERENCES src_inf_conversions(id) ON DELETE CASCADE,
+        commission_amount DECIMAL(14,4) NOT NULL,
+        UNIQUE(payout_id, conversion_id)
+      );
+    `);
+
+    // 3n. Daily analytics aggregation (for fast dashboard queries)
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS src_inf_daily_stats (
+        id SERIAL PRIMARY KEY,
+        influencer_id INTEGER NOT NULL REFERENCES src_inf_profiles(id) ON DELETE CASCADE,
+        campaign_id INTEGER REFERENCES src_inf_campaigns(id) ON DELETE SET NULL,
+        link_id INTEGER REFERENCES src_inf_links(id) ON DELETE SET NULL,
+        stat_date DATE NOT NULL,
+        clicks BIGINT DEFAULT 0,
+        unique_visitors BIGINT DEFAULT 0,
+        orders INTEGER DEFAULT 0,
+        revenue DECIMAL(14,4) DEFAULT 0,
+        commission DECIMAL(14,4) DEFAULT 0,
+        UNIQUE(influencer_id, campaign_id, link_id, stat_date)
+      );
+      CREATE INDEX IF NOT EXISTS idx_inf_daily_influencer_date ON src_inf_daily_stats(influencer_id, stat_date DESC);
+    `);
+
+    // 3o. Fraud events
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS src_inf_fraud_events (
+        id SERIAL PRIMARY KEY,
+        influencer_id INTEGER REFERENCES src_inf_profiles(id) ON DELETE SET NULL,
+        link_id INTEGER REFERENCES src_inf_links(id) ON DELETE SET NULL,
+        event_type VARCHAR(100) NOT NULL,
+        severity VARCHAR(20) DEFAULT 'low' CHECK (severity IN ('low','medium','high','critical')),
+        description TEXT,
+        metadata JSONB DEFAULT '{}'::jsonb,
+        is_reviewed BOOLEAN DEFAULT FALSE,
+        reviewed_by INTEGER REFERENCES src_users(id) ON DELETE SET NULL,
+        reviewed_at TIMESTAMP,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_inf_fraud_influencer ON src_inf_fraud_events(influencer_id, created_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_inf_fraud_reviewed ON src_inf_fraud_events(is_reviewed);
+    `);
+
+    // 3p. Influencer audit log (immutable)
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS src_inf_audit_logs (
+        id BIGSERIAL PRIMARY KEY,
+        actor_id INTEGER REFERENCES src_users(id) ON DELETE SET NULL,
+        actor_role VARCHAR(30),
+        action VARCHAR(100) NOT NULL,
+        resource_type VARCHAR(60),
+        resource_id VARCHAR(60),
+        ip_address VARCHAR(60),
+        user_agent TEXT,
+        before_value JSONB,
+        after_value JSONB,
+        result VARCHAR(20) DEFAULT 'success',
+        request_id VARCHAR(64),
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_inf_audit_actor ON src_inf_audit_logs(actor_id, created_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_inf_audit_resource ON src_inf_audit_logs(resource_type, resource_id);
+      CREATE INDEX IF NOT EXISTS idx_inf_audit_date ON src_inf_audit_logs(created_at DESC);
+    `);
+
+    // 3q. Influencer permissions seed
+    await client.query(`
+      INSERT INTO src_permissions (name, description, group_name) VALUES
+        ('influencer.view',    'View influencer accounts',        'Influencer'),
+        ('influencer.create',  'Create influencer accounts',      'Influencer'),
+        ('influencer.update',  'Update influencer accounts',      'Influencer'),
+        ('influencer.disable', 'Disable influencer accounts',     'Influencer'),
+        ('campaign.view',      'View campaigns',                  'Influencer'),
+        ('campaign.create',    'Create campaigns',                'Influencer'),
+        ('campaign.update',    'Update campaigns',                'Influencer'),
+        ('tracking.view',      'View tracking links/analytics',   'Influencer'),
+        ('commission.view',    'View commission records',         'Influencer'),
+        ('commission.update',  'Modify commission records',       'Influencer'),
+        ('payout.view',        'View payout records',             'Influencer'),
+        ('payout.approve',     'Approve payouts',                 'Influencer'),
+        ('payout.mark_paid',   'Mark payouts as paid',            'Influencer'),
+        ('security.view',      'View security/fraud events',      'Influencer'),
+        ('reports.export',     'Export influencer reports',       'Influencer')
+      ON CONFLICT (name) DO NOTHING;
+    `);
+
+    // Assign all influencer permissions to super_admin and admin
+    await client.query(`
+      INSERT INTO src_role_permissions (role, permission_id)
+        SELECT 'super_admin', p.id FROM src_permissions p
+        WHERE p.group_name = 'Influencer'
+      ON CONFLICT DO NOTHING;
+
+      INSERT INTO src_role_permissions (role, permission_id)
+        SELECT 'admin', p.id FROM src_permissions p
+        WHERE p.group_name = 'Influencer'
+      ON CONFLICT DO NOTHING;
+    `);
+
+    // Add attribution_window_days config to settings if missing
+    await client.query(`
+      INSERT INTO src_settings (key, value) VALUES ('influencer_attribution_window_days', '30')
+      ON CONFLICT (key) DO NOTHING;
+
+      INSERT INTO src_settings (key, value) VALUES ('influencer_attribution_model', 'last_click')
+      ON CONFLICT (key) DO NOTHING;
+
+      INSERT INTO src_settings (key, value) VALUES ('influencer_commission_hold_days', '7')
+      ON CONFLICT (key) DO NOTHING;
+    `);
+
+    // Add influencer attribution columns to src_orders
+    await client.query(`
+      ALTER TABLE src_orders ADD COLUMN IF NOT EXISTS inf_session_token VARCHAR(64);
+      ALTER TABLE src_orders ADD COLUMN IF NOT EXISTS inf_link_id INTEGER REFERENCES src_inf_links(id) ON DELETE SET NULL;
+      ALTER TABLE src_orders ADD COLUMN IF NOT EXISTS inf_influencer_id INTEGER REFERENCES src_inf_profiles(id) ON DELETE SET NULL;
+      ALTER TABLE src_orders ADD COLUMN IF NOT EXISTS inf_campaign_id INTEGER REFERENCES src_inf_campaigns(id) ON DELETE SET NULL;
+      CREATE INDEX IF NOT EXISTS idx_orders_inf_session ON src_orders(inf_session_token);
+    `).catch(() => {});
+
+    console.log('✅ Phase 3 — Influencer schema applied');
+
   } finally {
     client.release();
   }

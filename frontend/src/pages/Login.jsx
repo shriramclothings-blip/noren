@@ -25,7 +25,11 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
 
   const redirectAfterLogin = (user) => {
-    navigate(state?.from || (ADMIN_ROLES.includes(user.role) ? '/admin/dashboard' : '/'));
+    if (user.role === 'influencer') {
+      navigate('/influencer/dashboard');
+    } else {
+      navigate(state?.from || (ADMIN_ROLES.includes(user.role) ? '/admin/dashboard' : '/'));
+    }
   };
 
   const handleGoogleSuccess = (data) => {
