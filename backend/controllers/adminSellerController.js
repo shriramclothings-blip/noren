@@ -5,6 +5,12 @@
 
 const { pool } = require('../config/db');
 const { sendMail } = require('../services/mailService');
+const {
+  sellerKYCApproved, sellerKYCRejected,
+  sellerAccountApproved, sellerAccountSuspended,
+  sellerProductApproved, sellerProductRejected,
+  sellerPayoutInitiated, sellerPayoutPaid,
+} = require('../services/sellerEmailTemplates');
 
 const sellerAudit = async (actorId, actorRole, sellerId, action, resourceType, resourceId, before, after, ip) => {
   try {
@@ -129,14 +135,17 @@ const updateSellerStatus = async (req, res) => {
     await sellerAudit(req.user.id, req.user.role, id, `seller_status_${status}`, 'seller_profile', id, { status: seller.status }, { status }, req.ip);
 
     // Email notification to seller
-    const subject = status === 'active' ? 'Your NOREN Seller Account is Approved!' :
-                    status === 'rejected' ? 'NOREN Seller Application Update' :
+    const subject = status === 'active'    ? 'Your NOREN Seller Account is Approved!' :
+                    status === 'rejected'  ? 'NOREN Seller Application Update' :
                     status === 'suspended' ? 'Your NOREN Seller Account has been Suspended' :
                     'NOREN Seller Account Update';
-    const body = status === 'active'
-      ? `<p>Congratulations <b>${seller.name}</b>! Your seller account on NOREN has been approved. You can now log in to your seller portal and start listing products.</p>`
-      : `<p>Hi <b>${seller.name}</b>, your seller account status has been updated to <b>${status}</b>${reason ? `: <i>${reason}</i>` : '.'}.</p>`;
-    sendMail(seller.email, subject, body).catch(() => {});
+
+    let html;
+    if (status === 'active')    html = sellerAccountApproved(seller.name, seller.brand_name);
+    else if (status === 'suspended' || status === 'banned') html = sellerAccountSuspended(seller.name, reason);
+    else html = `<p>Hi <b>${seller.name}</b>, your seller account status has been updated to <b>${status}</b>${reason ? `: ${reason}` : '.'}.</p>`;
+
+    sendMail(seller.email, subject, html).catch(() => {});
 
     res.json({ message: `Seller status updated to ${status}` });
   } catch (err) {
@@ -167,10 +176,10 @@ const reviewKYC = async (req, res) => {
     await sellerAudit(req.user.id, req.user.role, id, `kyc_${action}d`, 'seller_profile', id, null, { kyc_status: newKyc }, req.ip);
 
     const subject = action === 'approve' ? 'KYC Approved – Your NOREN Seller Account is Active!' : 'KYC Review Update – NOREN Seller';
-    const body = action === 'approve'
-      ? `<p>Hi <b>${seller.name}</b>, your KYC documents have been verified and your NOREN seller account is now active. Start listing your products!</p>`
-      : `<p>Hi <b>${seller.name}</b>, your KYC documents could not be verified${reason ? `: <i>${reason}</i>` : '.'}. Please resubmit with correct documents.</p>`;
-    sendMail(seller.email, subject, body).catch(() => {});
+    const html = action === 'approve'
+      ? sellerKYCApproved(seller.name, seller.brand_name)
+      : sellerKYCRejected(seller.name, reason);
+    sendMail(seller.email, subject, html).catch(() => {});
 
     res.json({ message: `KYC ${action}d` });
   } catch (err) {
@@ -312,10 +321,10 @@ const reviewSellerProduct = async (req, res) => {
     await sellerAudit(req.user.id, req.user.role, prod.seller_id, `product_${newStatus}`, 'seller_product', id, { status: prod.status }, { status: newStatus }, req.ip);
 
     const subject = action === 'approve' ? `Your Product is Live – ${prod.title}` : `Product Review Update – ${prod.title}`;
-    const body = action === 'approve'
-      ? `<p>Hi <b>${prod.seller_name}</b>! Your product "<b>${prod.title}</b>" has been approved and is now live on the NOREN marketplace.</p>`
-      : `<p>Hi <b>${prod.seller_name}</b>, your product "<b>${prod.title}</b>" was not approved${message ? `: <i>${message}</i>` : '.'}. Please update and resubmit.</p>`;
-    sendMail(prod.email, subject, body).catch(() => {});
+    const html = action === 'approve'
+      ? sellerProductApproved(prod.seller_name, prod.title, prod.platform_product_id || existingPlatformProd)
+      : sellerProductRejected(prod.seller_name, prod.title, message);
+    sendMail(prod.email, subject, html).catch(() => {});
 
     res.json({ message: `Product ${newStatus}` });
   } catch (err) {
@@ -376,6 +385,13 @@ const createAdminPayout = async (req, res) => {
       [seller_id, net_amount, payment_method||'', transaction_ref||'', period_start||null, period_end||null, admin_notes||'', req.user.id]
     );
     await sellerAudit(req.user.id, req.user.role, seller_id, 'payout_created', 'seller_payout', payout.rows[0].id, null, { net_amount }, req.ip);
+
+    // Email seller about new payout
+    sendMail(sellerRes.rows[0].email,
+      `Payout Initiated – ₹${Number(net_amount).toLocaleString('en-IN')} | NOREN`,
+      sellerPayoutInitiated(sellerRes.rows[0].name, payout.rows[0])
+    ).catch(() => {});
+
     res.status(201).json(payout.rows[0]);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -405,6 +421,24 @@ const updatePayoutStatus = async (req, res) => {
       await pool.query(`UPDATE src_seller_profiles SET total_payout=total_payout+$1 WHERE id=$2`, [prev.rows[0].net_amount, prev.rows[0].seller_id]);
     }
     await sellerAudit(req.user.id, req.user.role, prev.rows[0].seller_id, `payout_${status}`, 'seller_payout', id, null, { status }, req.ip);
+
+    // Email seller when payout is paid
+    if (status === 'paid') {
+      try {
+        const sellerInfo = await pool.query(
+          `SELECT u.email, u.name FROM src_seller_profiles sp JOIN src_users u ON u.id=sp.user_id WHERE sp.id=$1`,
+          [prev.rows[0].seller_id]
+        );
+        if (sellerInfo.rows.length) {
+          const updatedPayout = { ...prev.rows[0], paid_at: new Date(), transaction_ref: transaction_ref || prev.rows[0].transaction_ref };
+          sendMail(sellerInfo.rows[0].email,
+            `Payout Successful – ₹${Number(prev.rows[0].net_amount).toLocaleString('en-IN')} Sent | NOREN`,
+            sellerPayoutPaid(sellerInfo.rows[0].name, updatedPayout)
+          ).catch(() => {});
+        }
+      } catch {}
+    }
+
     res.json({ message: `Payout ${status}` });
   } catch (err) {
     res.status(500).json({ message: err.message });

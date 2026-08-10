@@ -4,6 +4,37 @@ const { pool } = require('../config/db');
 const { sendOrderEmail } = require('./authController');
 const { sendPushToUser, notifyAdminNewOrder, notifyAdminPaymentFailed } = require('./notificationController');
 const { attributeConversion } = require('./influencerController');
+const { sendMail } = require('../services/mailService');
+const { sellerNewOrder } = require('../services/sellerEmailTemplates');
+
+// ── Notify all sellers who have items in this order ──────────────────────────
+const notifySellersOfOrder = async (orderId, orderRef) => {
+  try {
+    const items = await pool.query(
+      `SELECT soi.*, sp.user_id AS seller_user_id, u.email AS seller_email, u.name AS seller_name
+       FROM src_seller_order_items soi
+       JOIN src_seller_profiles sp ON sp.id = soi.seller_id
+       JOIN src_users u ON u.id = sp.user_id
+       WHERE soi.order_id = $1`,
+      [orderId]
+    );
+    for (const item of items.rows) {
+      sendMail(
+        item.seller_email,
+        `New Order Received – #${orderRef} | NOREN`,
+        sellerNewOrder(item.seller_name, {
+          order_id:    orderRef,
+          title:       item.title,
+          size:        item.size,
+          quantity:    item.quantity,
+          line_total:  item.line_total,
+          seller_payout: item.seller_payout,
+          order_date:  new Date(),
+        })
+      ).catch(() => {});
+    }
+  } catch {}
+};
 
 function getIP(req) {
   const cf = req.headers['cf-connecting-ip'];
@@ -182,6 +213,9 @@ const placeOrder = async (req, res) => {
       sendOrderEmail(userRes.rows[0].email, userRes.rows[0].name, orderId, total, items).catch(() => {});
     }
 
+    // Notify sellers of new order
+    notifySellersOfOrder(order.id, orderId).catch(() => {});
+
     // Send push to customer
     sendPushToUser(req.user.id, {
       title: 'Order confirmed',
@@ -280,6 +314,9 @@ const paytmCallback = async (req, res) => {
         if (userRes.rows.length) {
           sendOrderEmail(userRes.rows[0].email, userRes.rows[0].name, order.order_id, order.total, itemsRes.rows).catch(() => {});
         }
+
+        // Notify sellers of new Paytm-paid order
+        notifySellersOfOrder(order.id, order.order_id).catch(() => {});
 
         // Send push notification to customer
         sendPushToUser(order.user_id, {

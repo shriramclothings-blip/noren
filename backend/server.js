@@ -656,7 +656,79 @@ httpServer.listen(PORT, '0.0.0.0', () => console.log(`🚀 NOREN API running on 
     syncTracking();
   });
 
-  // ── Cron: Influencer daily stats aggregation (2 AM daily) ──
+  // ── Cron: Seller monthly performance summary (1st of every month at 8 AM) ──
+  cron.schedule('0 8 1 * *', async () => {
+    console.log('📊 Sending seller monthly summaries...');
+    try {
+      const { sendMail } = require('./services/mailService');
+      const { sellerMonthlySummary } = require('./services/sellerEmailTemplates');
+      const now = new Date();
+      const prevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const monthName = prevMonth.toLocaleString('en-IN', { month: 'long', year: 'numeric' });
+      const monthStart = prevMonth.toISOString().split('T')[0];
+      const monthEnd   = new Date(now.getFullYear(), now.getMonth(), 0).toISOString().split('T')[0];
+
+      const sellers = await pool.query(
+        `SELECT sp.id, sp.brand_name, u.name, u.email,
+                COUNT(DISTINCT soi.order_id)        AS orders,
+                COALESCE(SUM(soi.line_total),0)     AS revenue,
+                COALESCE(SUM(soi.commission_amount),0) AS commission,
+                COALESCE(SUM(soi.seller_payout),0)  AS payout,
+                (SELECT COUNT(*) FROM src_seller_products WHERE seller_id=sp.id AND deleted_at IS NULL) AS products,
+                (SELECT COUNT(*) FROM src_seller_products WHERE seller_id=sp.id AND status='approved' AND deleted_at IS NULL) AS approved_products
+         FROM src_seller_profiles sp
+         JOIN src_users u ON u.id=sp.user_id
+         LEFT JOIN src_seller_order_items soi ON soi.seller_id=sp.id
+           AND soi.created_at >= $1 AND soi.created_at <= $2
+           AND soi.status NOT IN ('cancelled','refunded')
+         WHERE sp.status='active'
+         GROUP BY sp.id, sp.brand_name, u.name, u.email`,
+        [monthStart, monthEnd]
+      );
+
+      for (const s of sellers.rows) {
+        sendMail(s.email, `Your NOREN Seller Report – ${monthName}`,
+          sellerMonthlySummary(s.name, {
+            orders: s.orders, revenue: s.revenue, commission: s.commission,
+            payout: s.payout, products: s.products, approved_products: s.approved_products,
+          }, monthName)
+        ).catch(() => {});
+      }
+      console.log(`✅ Sent monthly summaries to ${sellers.rows.length} sellers`);
+    } catch (e) { console.error('Seller monthly summary error:', e.message); }
+  });
+
+  // ── Cron: Seller low stock alert (daily at 9 AM) ─────────────────────────
+  cron.schedule('0 9 * * *', async () => {
+    try {
+      const { sendMail } = require('./services/mailService');
+      const { sellerLowStock } = require('./services/sellerEmailTemplates');
+
+      const lowStockSellers = await pool.query(
+        `SELECT sp.id AS seller_id, u.name, u.email,
+                json_agg(json_build_object('title', spp.title, 'stock', v.total_stock)) AS products
+         FROM src_seller_profiles sp
+         JOIN src_users u ON u.id=sp.user_id
+         JOIN src_seller_products spp ON spp.seller_id=sp.id AND spp.status='approved' AND spp.deleted_at IS NULL
+         JOIN (
+           SELECT product_id, SUM(stock) AS total_stock
+           FROM src_seller_product_variants
+           GROUP BY product_id
+           HAVING SUM(stock) <= 5
+         ) v ON v.product_id=spp.id
+         WHERE sp.status='active'
+         GROUP BY sp.id, u.name, u.email`
+      );
+
+      for (const s of lowStockSellers.rows) {
+        if (s.products?.length) {
+          sendMail(s.email, '⚠️ Low Stock Alert – NOREN Seller',
+            sellerLowStock(s.name, s.products)
+          ).catch(() => {});
+        }
+      }
+    } catch (e) { console.error('Low stock cron error:', e.message); }
+  });
   const { aggregateDailyStats, syncCampaignStatuses } = require('./controllers/influencerController');
   cron.schedule('0 2 * * *', () => {
     console.log('📊 Aggregating influencer daily stats...');

@@ -5,6 +5,9 @@
 
 const { pool } = require('../config/db');
 const { sendMail } = require('../services/mailService');
+const {
+  sellerWelcome, sellerKYCSubmitted, sellerProductSubmitted,
+} = require('../services/sellerEmailTemplates');
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 const sellerAudit = async (actorId, actorRole, sellerId, action, resourceType, resourceId, before, after, ip) => {
@@ -38,6 +41,11 @@ const registerSeller = async (req, res) => {
       [userId, brand_name || '', business_type || 'individual', pickup_address || '', pickup_city || '', pickup_state || '', pickup_pincode || '', description || '']
     );
     await sellerAudit(userId, 'seller', result.rows[0].id, 'seller_registered', 'seller_profile', result.rows[0].id, null, { brand_name }, req.ip);
+
+    // Welcome email to seller
+    sendMail(req.user.email, 'Welcome to NOREN Seller Portal – Account Created',
+      sellerWelcome(req.user.name, req.user.email)
+    ).catch(() => {});
 
     // Notify admin
     sendMail(process.env.ADMIN_EMAIL || 'supportnoren1@gmail.com', 'New Seller Registered – NOREN',
@@ -124,6 +132,10 @@ const submitKYC = async (req, res) => {
       docValues
     );
     await sellerAudit(req.user.id, 'seller', profile.rows[0].id, 'kyc_submitted', 'seller_profile', profile.rows[0].id, null, null, req.ip);
+
+    sendMail(req.user.email, 'KYC Documents Submitted – NOREN Seller',
+      sellerKYCSubmitted(req.user.name)
+    ).catch(() => {});
 
     sendMail(process.env.ADMIN_EMAIL || 'supportnoren1@gmail.com', 'KYC Submitted – Seller Review Required',
       `<p>Seller <b>${req.user.email}</b> has submitted KYC documents for review. Please review in Admin Panel → Seller Management → KYC.</p>`
@@ -339,6 +351,10 @@ const submitProductForReview = async (req, res) => {
 
     await pool.query(`UPDATE src_seller_products SET status='pending_review', submitted_at=NOW(), updated_at=NOW() WHERE id=$1`, [id]);
     await sellerAudit(req.user.id, 'seller', sp.rows[0].id, 'product_submitted', 'seller_product', id, null, null, req.ip);
+
+    sendMail(req.user.email, 'Product Submitted for Review – NOREN Seller',
+      sellerProductSubmitted(req.user.name, prod.rows[0].title)
+    ).catch(() => {});
 
     sendMail(process.env.ADMIN_EMAIL || 'supportnoren1@gmail.com', 'New Seller Product Pending Review – NOREN',
       `<p>Seller product "<b>${prod.rows[0].title}</b>" has been submitted for review. Review in Admin Panel → Seller Products.</p>`
