@@ -113,7 +113,7 @@ const createShipment = async (order) => {
     shipment_length: '20',
     shipping_mode: 'Surface',
     address_type: 'home',
-    pickup_location: PICKUP_LOCATION,
+    pickup_location: { name: PICKUP_LOCATION },  // must match exact warehouse name in Delhivery account
   };
 
   // Only attach GST if it's a valid 15-char GSTIN — invalid values crash Delhivery's API
