@@ -1976,6 +1976,226 @@ const initDB = async () => {
 
     console.log('✅ Phase 3 — Influencer schema applied');
 
+    // ═══════════════════════════════════════════════════════════════════════
+    //  PHASE 4 — Seller Marketplace Schema
+    // ═══════════════════════════════════════════════════════════════════════
+
+    // 4a. Seller profiles (extended info beyond src_users)
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS src_seller_profiles (
+        id                   SERIAL PRIMARY KEY,
+        user_id              INTEGER UNIQUE NOT NULL REFERENCES src_users(id) ON DELETE CASCADE,
+        brand_name           VARCHAR(200),
+        business_type        VARCHAR(50) DEFAULT 'individual' CHECK (business_type IN ('individual','sole_proprietor','partnership','pvt_ltd','llp','other')),
+        gst_number           VARCHAR(50),
+        pan_number           VARCHAR(20),
+        bank_account_name    VARCHAR(200),
+        bank_account_number  VARCHAR(50),
+        bank_ifsc            VARCHAR(20),
+        bank_name            VARCHAR(150),
+        pickup_address       TEXT,
+        pickup_city          VARCHAR(100),
+        pickup_state         VARCHAR(100),
+        pickup_pincode       VARCHAR(10),
+        website_url          TEXT,
+        description          TEXT,
+        logo_url             TEXT,
+        -- KYC docs (Cloudinary URLs)
+        doc_gst_url          TEXT,
+        doc_pan_url          TEXT,
+        doc_bank_url         TEXT,
+        doc_address_url      TEXT,
+        -- Verification status
+        kyc_status           VARCHAR(20) DEFAULT 'pending' CHECK (kyc_status IN ('pending','submitted','approved','rejected')),
+        kyc_rejection_reason TEXT,
+        kyc_submitted_at     TIMESTAMP,
+        kyc_reviewed_at      TIMESTAMP,
+        kyc_reviewed_by      INTEGER REFERENCES src_users(id) ON DELETE SET NULL,
+        -- Account status
+        status               VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending','active','suspended','rejected','banned')),
+        suspension_reason    TEXT,
+        admin_notes          TEXT,
+        -- Commission
+        commission_rate      DECIMAL(5,2) DEFAULT 10.00,
+        -- Stats (denormalised for speed)
+        total_products       INTEGER DEFAULT 0,
+        total_orders         INTEGER DEFAULT 0,
+        total_revenue        DECIMAL(14,2) DEFAULT 0,
+        total_commission     DECIMAL(14,2) DEFAULT 0,
+        total_payout         DECIMAL(14,2) DEFAULT 0,
+        created_at           TIMESTAMP DEFAULT NOW(),
+        updated_at           TIMESTAMP DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_seller_profiles_user   ON src_seller_profiles(user_id);
+      CREATE INDEX IF NOT EXISTS idx_seller_profiles_status ON src_seller_profiles(status);
+      CREATE INDEX IF NOT EXISTS idx_seller_profiles_kyc    ON src_seller_profiles(kyc_status);
+    `);
+
+    // 4b. Seller product listings (separate from platform products until approved)
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS src_seller_products (
+        id                  SERIAL PRIMARY KEY,
+        seller_id           INTEGER NOT NULL REFERENCES src_seller_profiles(id) ON DELETE CASCADE,
+        -- Once approved, linked to the master product
+        platform_product_id INTEGER REFERENCES src_products(id) ON DELETE SET NULL,
+        title               VARCHAR(200) NOT NULL,
+        description         TEXT,
+        category_id         INTEGER REFERENCES src_categories(id) ON DELETE SET NULL,
+        gender              VARCHAR(10) DEFAULT 'men',
+        price               DECIMAL(10,2) NOT NULL,
+        discount_percent    DECIMAL(5,2) DEFAULT 0,
+        brand               VARCHAR(100),
+        fabric              VARCHAR(100),
+        care_instructions   TEXT,
+        return_policy       TEXT,
+        shipping_days       INTEGER DEFAULT 5,
+        -- Admin approval
+        status              VARCHAR(20) DEFAULT 'draft' CHECK (status IN ('draft','pending_review','approved','rejected','suspended')),
+        admin_message       TEXT,
+        reviewed_by         INTEGER REFERENCES src_users(id) ON DELETE SET NULL,
+        reviewed_at         TIMESTAMP,
+        submitted_at        TIMESTAMP,
+        -- Display flags (set by admin after approval)
+        is_featured         BOOLEAN DEFAULT FALSE,
+        is_trending         BOOLEAN DEFAULT FALSE,
+        -- Soft delete
+        deleted_at          TIMESTAMP,
+        created_at          TIMESTAMP DEFAULT NOW(),
+        updated_at          TIMESTAMP DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_seller_products_seller  ON src_seller_products(seller_id);
+      CREATE INDEX IF NOT EXISTS idx_seller_products_status  ON src_seller_products(status);
+      CREATE INDEX IF NOT EXISTS idx_seller_products_created ON src_seller_products(created_at DESC);
+    `);
+
+    // 4c. Seller product images
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS src_seller_product_images (
+        id          SERIAL PRIMARY KEY,
+        product_id  INTEGER NOT NULL REFERENCES src_seller_products(id) ON DELETE CASCADE,
+        image_url   TEXT NOT NULL,
+        is_primary  BOOLEAN DEFAULT FALSE,
+        sort_order  INTEGER DEFAULT 0
+      );
+      CREATE INDEX IF NOT EXISTS idx_seller_product_images ON src_seller_product_images(product_id);
+    `);
+
+    // 4d. Seller product variants (size/stock)
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS src_seller_product_variants (
+        id          SERIAL PRIMARY KEY,
+        product_id  INTEGER NOT NULL REFERENCES src_seller_products(id) ON DELETE CASCADE,
+        size        VARCHAR(10) NOT NULL CHECK (size IN ('XS','S','M','L','XL','XXL','Free')),
+        stock       INTEGER DEFAULT 0,
+        extra_price DECIMAL(10,2) DEFAULT 0
+      );
+      CREATE INDEX IF NOT EXISTS idx_seller_product_variants ON src_seller_product_variants(product_id);
+    `);
+
+    // 4e. Seller order items (order line items linked back to seller)
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS src_seller_order_items (
+        id                 SERIAL PRIMARY KEY,
+        order_id           INTEGER NOT NULL REFERENCES src_orders(id) ON DELETE CASCADE,
+        order_item_id      INTEGER REFERENCES src_order_items(id) ON DELETE SET NULL,
+        seller_id          INTEGER NOT NULL REFERENCES src_seller_profiles(id) ON DELETE CASCADE,
+        seller_product_id  INTEGER REFERENCES src_seller_products(id) ON DELETE SET NULL,
+        title              VARCHAR(200),
+        size               VARCHAR(10),
+        quantity           INTEGER NOT NULL,
+        unit_price         DECIMAL(10,2) NOT NULL,
+        line_total         DECIMAL(10,2) NOT NULL,
+        commission_rate    DECIMAL(5,2) DEFAULT 10.00,
+        commission_amount  DECIMAL(10,2) DEFAULT 0,
+        seller_payout      DECIMAL(10,2) DEFAULT 0,
+        status             VARCHAR(30) DEFAULT 'pending' CHECK (status IN ('pending','confirmed','shipped','delivered','cancelled','refunded')),
+        created_at         TIMESTAMP DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_seller_order_items_seller ON src_seller_order_items(seller_id, created_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_seller_order_items_order  ON src_seller_order_items(order_id);
+    `);
+
+    // 4f. Seller payouts
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS src_seller_payouts (
+        id                SERIAL PRIMARY KEY,
+        seller_id         INTEGER NOT NULL REFERENCES src_seller_profiles(id) ON DELETE CASCADE,
+        period_start      DATE,
+        period_end        DATE,
+        gross_amount      DECIMAL(14,2) DEFAULT 0,
+        commission_amount DECIMAL(14,2) DEFAULT 0,
+        net_amount        DECIMAL(14,2) NOT NULL,
+        transaction_ref   VARCHAR(200),
+        payment_method    VARCHAR(80),
+        status            VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending','approved','processing','paid','failed','cancelled')),
+        admin_notes       TEXT,
+        created_by        INTEGER REFERENCES src_users(id) ON DELETE SET NULL,
+        approved_by       INTEGER REFERENCES src_users(id) ON DELETE SET NULL,
+        approved_at       TIMESTAMP,
+        paid_at           TIMESTAMP,
+        created_at        TIMESTAMP DEFAULT NOW(),
+        updated_at        TIMESTAMP DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_seller_payouts_seller ON src_seller_payouts(seller_id, created_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_seller_payouts_status ON src_seller_payouts(status);
+    `);
+
+    // 4g. Seller audit log
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS src_seller_audit_logs (
+        id            BIGSERIAL PRIMARY KEY,
+        actor_id      INTEGER REFERENCES src_users(id) ON DELETE SET NULL,
+        actor_role    VARCHAR(30),
+        seller_id     INTEGER REFERENCES src_seller_profiles(id) ON DELETE SET NULL,
+        action        VARCHAR(100) NOT NULL,
+        resource_type VARCHAR(60),
+        resource_id   VARCHAR(60),
+        before_value  JSONB,
+        after_value   JSONB,
+        ip_address    VARCHAR(60),
+        result        VARCHAR(20) DEFAULT 'success',
+        created_at    TIMESTAMP DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_seller_audit_actor  ON src_seller_audit_logs(actor_id, created_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_seller_audit_seller ON src_seller_audit_logs(seller_id, created_at DESC);
+    `);
+
+    // 4h. Seed seller permissions
+    await client.query(`
+      INSERT INTO src_permissions (name, description, group_name) VALUES
+        ('seller.view',         'View seller accounts',              'Seller'),
+        ('seller.update',       'Update seller profiles',            'Seller'),
+        ('seller.approve',      'Approve / reject sellers',          'Seller'),
+        ('seller.ban',          'Ban / suspend sellers',             'Seller'),
+        ('seller.products',     'Manage seller product listings',    'Seller'),
+        ('seller.payouts',      'Manage seller payouts',             'Seller'),
+        ('seller.audit',        'View seller audit logs',            'Seller')
+      ON CONFLICT (name) DO NOTHING;
+    `);
+
+    await client.query(`
+      INSERT INTO src_role_permissions (role, permission_id)
+        SELECT 'super_admin', p.id FROM src_permissions p WHERE p.group_name = 'Seller'
+      ON CONFLICT DO NOTHING;
+      INSERT INTO src_role_permissions (role, permission_id)
+        SELECT 'admin', p.id FROM src_permissions p WHERE p.group_name = 'Seller'
+      ON CONFLICT DO NOTHING;
+    `);
+
+    // 4i. Update role CHECK to keep 'seller' in the list (belt-and-suspenders)
+    await client.query(`ALTER TABLE src_users DROP CONSTRAINT IF EXISTS src_users_role_check`).catch(() => {});
+    await client.query(`
+      ALTER TABLE src_users ADD CONSTRAINT src_users_role_check
+        CHECK (role IN (
+          'user','seller','admin','super_admin',
+          'business_owner','store_admin','store_manager',
+          'cashier','warehouse_manager','accountant','employee',
+          'influencer'
+        ))
+    `).catch(() => {});
+
+    console.log('✅ Phase 4 — Seller Marketplace schema applied');
+
   } finally {
     client.release();
   }

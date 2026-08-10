@@ -516,10 +516,10 @@ const trackRedirect = async (req, res) => {
       [refCode]
     );
     if (!linkRes.rows.length || !linkRes.rows[0].is_active) {
-      return res.redirect('https://www.norenfashion.shop/');
+      return res.redirect('https://www.norenfastion.shop/');
     }
     const link = linkRes.rows[0];
-    if (link.fraud_status === 'blocked') return res.redirect('https://www.norenfashion.shop/');
+    if (link.fraud_status === 'blocked') return res.redirect('https://www.norenfastion.shop/');
 
     // Redirect immediately
     res.redirect(302, link.destination);
@@ -608,7 +608,7 @@ const trackRedirect = async (req, res) => {
 
   } catch (err) {
     console.error('inf trackRedirect:', err.message);
-    res.redirect('https://www.norenfashion.shop/');
+    res.redirect('https://www.norenfastion.shop/');
   }
 };
 

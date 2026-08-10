@@ -9,7 +9,7 @@ import {
   MapPinned, Menu, MessageCircle, MessageSquare, Package, Phone,
   ReceiptText, ScanLine, Settings, ShieldCheck, ShoppingCart, Sparkles,
   Star, Store, Tag, Truck, Undo2, UsersRound, Video, Wallet, Warehouse,
-  AlertTriangle, ChevronDown, RefreshCw, Link2, X, Megaphone,
+  AlertTriangle, ChevronDown, RefreshCw, Link2, X, Megaphone, Store,
 } from 'lucide-react';
 import api from '../../utils/api';
 import AdminOverview from './AdminOverview';
@@ -65,6 +65,12 @@ const AdminConversationMonitor = lazy(() => import('./erp/AdminConversationMonit
 const AdminVideoCalls          = lazy(() => import('./erp/AdminVideoCalls'));
 const AdminVoiceCalls          = lazy(() => import('./erp/AdminVoiceCalls'));
 const AdminEmailCenter         = lazy(() => import('./erp/AdminEmailCenter'));
+const AdminSellerOverview      = lazy(() => import('./erp/seller/AdminSellerOverview'));
+const AdminSellerAccounts      = lazy(() => import('./erp/seller/AdminSellerAccounts'));
+const AdminSellerKYC           = lazy(() => import('./erp/seller/AdminSellerKYC'));
+const AdminSellerProducts      = lazy(() => import('./erp/seller/AdminSellerProducts'));
+const AdminSellerPayouts       = lazy(() => import('./erp/seller/AdminSellerPayouts'));
+const AdminSellerAudit         = lazy(() => import('./erp/seller/AdminSellerAudit'));
 import { ADMIN_ROUTE_ALIASES, ERP_MODULE_MAP, getVisibleNavGroups, canAccessModule } from './erpConfig';
 
 const iconMap = {
@@ -172,6 +178,13 @@ function renderSection(section, user, navigate) {
     case 'inf-payouts':       return <AdminInfluencerPayouts />;
     case 'inf-fraud':         return <AdminInfluencerFraud />;
     case 'inf-audit':         return <AdminInfluencerAudit />;
+    // Seller Marketplace
+    case 'seller-overview':   return <AdminSellerOverview />;
+    case 'seller-accounts':   return <AdminSellerAccounts />;
+    case 'seller-kyc':        return <AdminSellerKYC />;
+    case 'seller-products':   return <AdminSellerProducts />;
+    case 'seller-payouts':    return <AdminSellerPayouts />;
+    case 'seller-audit':      return <AdminSellerAudit />;
     default:                  return <AdminModuleWorkspace module={mod} user={user} />;
   }
 }

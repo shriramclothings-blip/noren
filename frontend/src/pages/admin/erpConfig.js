@@ -84,6 +84,18 @@ export const ERP_NAV_GROUPS = [
     ],
   },
   {
+    key: 'seller-marketplace',
+    label: 'Seller Marketplace',
+    items: [
+      { key: 'seller-overview',  label: 'Seller Overview',   icon: 'Store',       componentKey: 'seller-overview',  roles: ['admin','super_admin'], description: 'Marketplace KPIs — active sellers, pending KYC, product approvals, and GMV.' },
+      { key: 'seller-accounts',  label: 'Seller Accounts',   icon: 'UsersRound',  componentKey: 'seller-accounts',  roles: ['admin','super_admin'], description: 'All seller accounts with verification status, actions and detail view.' },
+      { key: 'seller-kyc',       label: 'KYC Review',        icon: 'ShieldCheck', componentKey: 'seller-kyc',       roles: ['admin','super_admin'], description: 'Review and approve or reject seller KYC document submissions.' },
+      { key: 'seller-products',  label: 'Product Approvals', icon: 'Package',     componentKey: 'seller-products',  roles: ['admin','super_admin'], description: 'Review, approve or reject product listings submitted by sellers.' },
+      { key: 'seller-payouts',   label: 'Seller Payouts',    icon: 'Wallet',      componentKey: 'seller-payouts',   roles: ['admin','super_admin'], description: 'Create, track and mark seller commission payouts.' },
+      { key: 'seller-audit',     label: 'Seller Audit',      icon: 'FileClock',   componentKey: 'seller-audit',     roles: ['admin','super_admin'], description: 'Immutable audit trail for all seller management actions.' },
+    ],
+  },
+  {
     key: 'influencer-management',
     label: 'Influencer & Affiliate',
     items: [

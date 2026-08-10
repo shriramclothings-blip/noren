@@ -159,7 +159,7 @@ export default function AdminInfluencerLinks() {
 }
 
 function CreateLinkModal({ influencers, campaigns, onClose, onDone }) {
-  const [form, setForm] = useState({ influencer_id:'', campaign_id:'', name:'', destination:'https://www.norenfashion.shop/', utm_source:'instagram', utm_medium:'influencer', utm_campaign:'', utm_content:'', utm_term:'' });
+  const [form, setForm] = useState({ influencer_id:'', campaign_id:'', name:'', destination:'https://www.norenfastion.shop/', utm_source:'instagram', utm_medium:'influencer', utm_campaign:'', utm_content:'', utm_term:'' });
   const [sub, setSub] = useState(false);
   const set = (k,v) => setForm(f=>({...f,[k]:v}));
 

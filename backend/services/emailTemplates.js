@@ -215,7 +215,7 @@ module.exports = {
       Platform by <span style="color:#5a5750;">Dinesh Global Enterprise Private Limited</span>
     </p>
     <p style="font-size:10px;color:#2c2c29;margin:0;line-height:1.7;">
-      You received this because you subscribed at norenfashion.shop<br />
+      You received this because you subscribed at norenfastion.shop<br />
       To unsubscribe, reply with &ldquo;UNSUBSCRIBE&rdquo; or email
       <a href="mailto:supportnoren1@gmail.com" style="color:#5a5750;text-decoration:none;">supportnoren1@gmail.com</a>
     </p>
