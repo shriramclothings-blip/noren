@@ -379,45 +379,44 @@ function InfluencerDetailModal({ influencer, onClose, onDone }) {
   const fmt = n => Number(n||0).toLocaleString('en-IN');
 
   return (
-    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.55)', zIndex:2000, display:'flex', alignItems:'center', justifyContent:'center', padding:16 }} onClick={onClose}>
-      <div onClick={e => e.stopPropagation()} style={{ width:'100%', maxWidth:900, background:'#fff', borderRadius:16, maxHeight:'92vh', overflow:'hidden', display:'flex', flexDirection:'column', boxShadow:'0 20px 60px rgba(0,0,0,0.2)' }}>
-        {/* Header */}
-        <div style={{ padding:'16px 24px', borderBottom:'1px solid #f3f4f6', display:'flex', justifyContent:'space-between', alignItems:'center', flexShrink:0, background:'#0f172a' }}>
-          <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-            <div style={{ width:40, height:40, borderRadius:10, background:'rgba(201,169,110,0.2)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:16, fontWeight:800, color:'#c9a96e' }}>
-              {(detail?.display_name || influencer.display_name || '?')[0]?.toUpperCase()}
+    <>
+      <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.55)', zIndex:2000, display:'flex', alignItems:'center', justifyContent:'center', padding:16 }} onClick={onClose}>
+        <div onClick={e => e.stopPropagation()} style={{ width:'100%', maxWidth:900, background:'#fff', borderRadius:16, maxHeight:'92vh', overflow:'hidden', display:'flex', flexDirection:'column', boxShadow:'0 20px 60px rgba(0,0,0,0.2)' }}>
+          {/* Header */}
+          <div style={{ padding:'16px 24px', borderBottom:'1px solid #f3f4f6', display:'flex', justifyContent:'space-between', alignItems:'center', flexShrink:0, background:'#0f172a' }}>
+            <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+              <div style={{ width:40, height:40, borderRadius:10, background:'rgba(201,169,110,0.2)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:16, fontWeight:800, color:'#c9a96e' }}>
+                {(detail?.display_name || influencer.display_name || '?')[0]?.toUpperCase()}
+              </div>
+              <div>
+                <div style={{ fontSize:15, fontWeight:700, color:'#f1f5f9' }}>{detail?.display_name || influencer.display_name}</div>
+                <div style={{ fontSize:11, color:'#64748b' }}>{detail?.email || influencer.email}</div>
+              </div>
             </div>
-            <div>
-              <div style={{ fontSize:15, fontWeight:700, color:'#f1f5f9' }}>{detail?.display_name || influencer.display_name}</div>
-              <div style={{ fontSize:11, color:'#64748b' }}>{detail?.email || influencer.email}</div>
+            <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+              <button onClick={() => setEditMode(e => !e)} style={{ ...btn('#1e293b','#94a3b8'), padding:'6px 12px', fontSize:12 }}><Edit2 size={12} /> {editMode ? 'Cancel Edit' : 'Edit'}</button>
+              <button onClick={handleDelete} disabled={deleting} style={{ ...btn('#7f1d1d','#fca5a5'), padding:'6px 12px', fontSize:12, opacity:deleting?0.6:1 }}>
+                <Trash2 size={12} /> {deleting ? 'Deleting…' : 'Soft Delete'}
+              </button>
+              <button onClick={() => setShowHardDelete(true)} style={{ ...btn('#450a0a','#fca5a5'), padding:'6px 12px', fontSize:12, border:'1.5px solid #fca5a5' }}>
+                <Trash2 size={12} /> Hard Delete
+              </button>
+              <button onClick={onClose} style={{ width:30, height:30, borderRadius:'50%', border:'none', background:'rgba(255,255,255,0.1)', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}><X size={14} color="#94a3b8" /></button>
             </div>
           </div>
-          <div style={{ display:'flex', gap:8, alignItems:'center' }}>
-            <button onClick={() => setEditMode(e => !e)} style={{ ...btn('#1e293b','#94a3b8'), padding:'6px 12px', fontSize:12 }}><Edit2 size={12} /> {editMode ? 'Cancel Edit' : 'Edit'}</button>
-            <button onClick={handleDelete} disabled={deleting}
-              style={{ ...btn('#7f1d1d','#fca5a5'), padding:'6px 12px', fontSize:12, opacity:deleting?0.6:1 }}>
-              <Trash2 size={12} /> {deleting ? 'Deleting…' : 'Soft Delete'}
-            </button>
-            <button onClick={() => setShowHardDelete(true)}
-              style={{ ...btn('#450a0a','#fca5a5'), padding:'6px 12px', fontSize:12, border:'1.5px solid #fca5a5' }}>
-              <Trash2 size={12} /> Hard Delete
-            </button>
-            <button onClick={onClose} style={{ width:30, height:30, borderRadius:'50%', border:'none', background:'rgba(255,255,255,0.1)', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}><X size={14} color="#94a3b8" /></button>
+
+          {/* Tabs */}
+          <div style={{ display:'flex', gap:0, borderBottom:'1px solid #f3f4f6', flexShrink:0 }}>
+            {TABS.map(t => (
+              <button key={t.k} onClick={() => setTab(t.k)}
+                style={{ padding:'10px 18px', fontSize:13, fontWeight:tab===t.k?700:500, color:tab===t.k?'#c9a96e':'#6b7280', border:'none', background:'none', cursor:'pointer', borderBottom:tab===t.k?'2px solid #c9a96e':'2px solid transparent', marginBottom:-1 }}>
+                {t.l}
+              </button>
+            ))}
           </div>
-        </div>
 
-        {/* Tabs */}
-        <div style={{ display:'flex', gap:0, borderBottom:'1px solid #f3f4f6', flexShrink:0 }}>
-          {TABS.map(t => (
-            <button key={t.k} onClick={() => setTab(t.k)}
-              style={{ padding:'10px 18px', fontSize:13, fontWeight:tab===t.k?700:500, color:tab===t.k?'#c9a96e':'#6b7280', border:'none', background:'none', cursor:'pointer', borderBottom:tab===t.k?'2px solid #c9a96e':'2px solid transparent', marginBottom:-1 }}>
-              {t.l}
-            </button>
-          ))}
-        </div>
-
-        {/* Body */}
-        <div style={{ overflowY:'auto', flex:1, padding:'20px 24px' }}>
+          {/* Body */}
+          <div style={{ overflowY:'auto', flex:1, padding:'20px 24px' }}>
           {tab === 'overview' && (
             <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
               {/* KPI row */}
@@ -509,18 +508,18 @@ function InfluencerDetailModal({ influencer, onClose, onDone }) {
 
           {tab === 'links' && <InfluencerLinksTab influencerId={influencer.id} />}
           {tab === 'conversions' && <InfluencerConversionsTab influencerId={influencer.id} />}
+          </div>
         </div>
       </div>
-    </div>
 
-    {/* Hard Delete confirmation modal */}
-    {showHardDelete && (
-      <HardDeleteModal
-        influencer={detail || influencer}
-        onClose={() => setShowHardDelete(false)}
-        onDone={() => { setShowHardDelete(false); onDone(); }}
-      />
-    )}
+      {showHardDelete && (
+        <HardDeleteModal
+          influencer={detail || influencer}
+          onClose={() => setShowHardDelete(false)}
+          onDone={() => { setShowHardDelete(false); onDone(); }}
+        />
+      )}
+    </>
   );
 }
 
