@@ -2194,6 +2194,11 @@ const initDB = async () => {
         ))
     `).catch(() => {});
 
+    // 4j. Add updated_at to src_products if missing (used by seller product sync)
+    await client.query(`
+      ALTER TABLE src_products ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();
+    `).catch(() => {});
+
     console.log('✅ Phase 4 — Seller Marketplace schema applied');
 
   } finally {

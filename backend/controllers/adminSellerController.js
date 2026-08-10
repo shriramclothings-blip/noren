@@ -289,7 +289,7 @@ const reviewSellerProduct = async (req, res) => {
         // Update existing platform product
         await pool.query(
           `UPDATE src_products SET title=$1, description=$2, price=$3, discount_percent=$4,
-           category_id=$5, gender=$6, status='approved', updated_at=NOW() WHERE id=$7`,
+           category_id=$5, gender=$6, status='approved' WHERE id=$7`,
           [prod.title, prod.description, prod.price, prod.discount_percent, prod.category_id, prod.gender, existingPlatformProd]
         );
       } else {
