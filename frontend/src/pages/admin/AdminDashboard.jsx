@@ -9,7 +9,7 @@ import {
   MapPinned, Menu, MessageCircle, MessageSquare, Package, Phone,
   ReceiptText, ScanLine, Settings, ShieldCheck, ShoppingCart, Sparkles,
   Star, Store, Tag, Truck, Undo2, UsersRound, Video, Wallet, Warehouse,
-  AlertTriangle, ChevronDown, RefreshCw, Link2, X, Megaphone, Store,
+  AlertTriangle, ChevronDown, RefreshCw, Link2, X, Megaphone,
 } from 'lucide-react';
 import api from '../../utils/api';
 import AdminOverview from './AdminOverview';
