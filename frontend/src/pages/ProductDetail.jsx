@@ -440,6 +440,45 @@ export default function ProductDetail() {
                 <p style={{ fontSize: 13, color: '#6b7280', lineHeight: 1.7 }}>{product.description}</p>
               </div>
             )}
+
+            {/* Seller Info Card — shown only when product has an external seller */}
+            {product.seller_brand && (
+              <div style={{ borderTop: '1px solid #f3f4f6', paddingTop: 18 }}>
+                <p style={{ fontSize: 11, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10 }}>Sold by</p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', background: '#f8fafc', borderRadius: 12, border: '1px solid #e5e7eb' }}>
+                  {/* Logo / Avatar */}
+                  <div style={{ width: 44, height: 44, borderRadius: 10, background: '#1a1a18', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, overflow: 'hidden' }}>
+                    {product.seller_logo
+                      ? <img src={product.seller_logo} alt={product.seller_brand} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      : <span style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontWeight: 600, fontSize: 18, color: '#c9a96e', letterSpacing: '0.05em' }}>
+                          {(product.seller_brand || product.seller_name || 'S')[0].toUpperCase()}
+                        </span>
+                    }
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 700, fontSize: 14, color: '#111827', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {product.seller_brand}
+                    </div>
+                    <div style={{ fontSize: 12, color: '#6b7280', marginTop: 1 }}>
+                      {product.seller_name}
+                      {product.seller_total_products > 0 && (
+                        <span style={{ marginLeft: 8, fontSize: 11, color: '#9ca3af' }}>· {product.seller_total_products} product{product.seller_total_products !== 1 ? 's' : ''}</span>
+                      )}
+                    </div>
+                    {product.seller_description && (
+                      <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {product.seller_description}
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ flexShrink: 0 }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', borderRadius: 999, background: '#dcfce7', fontSize: 10, fontWeight: 700, color: '#15803d' }}>
+                      ✓ Verified
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

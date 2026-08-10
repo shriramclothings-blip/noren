@@ -48,12 +48,16 @@ const getProduct = async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT p.*, c.name as category_name, c.slug as category_slug,
-        u.name as seller_name, u.avatar_url as seller_avatar, u.id as seller_id,
+        u.name as seller_name, u.avatar_url as seller_avatar, u.id as seller_user_id,
+        sp.brand_name as seller_brand, sp.description as seller_description,
+        sp.logo_url as seller_logo, sp.id as seller_profile_id,
+        sp.total_products as seller_total_products,
         (SELECT AVG(r.rating)::NUMERIC(3,1) FROM src_reviews r WHERE r.product_id=p.id AND r.is_hidden=FALSE) as avg_rating,
         (SELECT COUNT(*) FROM src_reviews r WHERE r.product_id=p.id AND r.is_hidden=FALSE) as review_count
        FROM src_products p
        LEFT JOIN src_categories c ON p.category_id = c.id
        LEFT JOIN src_users u ON p.seller_id = u.id
+       LEFT JOIN src_seller_profiles sp ON sp.user_id = u.id
        WHERE p.id=$1 AND p.deleted_at IS NULL`,
       [req.params.id]
     );
