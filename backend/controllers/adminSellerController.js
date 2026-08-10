@@ -259,76 +259,98 @@ const getAdminSellerProductDetail = async (req, res) => {
 // ─── Approve / Reject Seller Product ─────────────────────────────────────────
 const reviewSellerProduct = async (req, res) => {
   const { id } = req.params;
-  const { action, message } = req.body; // action: 'approve' | 'reject'
+  const { action, message } = req.body;
   if (!['approve','reject'].includes(action)) return res.status(400).json({ message: 'action must be approve or reject' });
 
+  const client = await pool.connect();
   try {
-    const prev = await pool.query(
-      `SELECT spp.*,sp.user_id,sp.commission_rate,u.email,u.name AS seller_name
+    await client.query('BEGIN');
+
+    const prev = await client.query(
+      `SELECT spp.*, sp.user_id, sp.commission_rate, sp.id AS seller_profile_id,
+              u.email, u.name AS seller_name
        FROM src_seller_products spp
-       JOIN src_seller_profiles sp ON sp.id=spp.seller_id
-       JOIN src_users u ON u.id=sp.user_id
-       WHERE spp.id=$1`,
+       JOIN src_seller_profiles sp ON sp.id = spp.seller_id
+       JOIN src_users u ON u.id = sp.user_id
+       WHERE spp.id = $1`,
       [id]
     );
-    if (!prev.rows.length) return res.status(404).json({ message: 'Product not found' });
+    if (!prev.rows.length) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ message: 'Product not found' });
+    }
     const prod = prev.rows[0];
 
     const newStatus = action === 'approve' ? 'approved' : 'rejected';
-    await pool.query(
+
+    await client.query(
       `UPDATE src_seller_products
        SET status=$1, admin_message=$2, reviewed_by=$3, reviewed_at=NOW(), updated_at=NOW()
        WHERE id=$4`,
-      [newStatus, message||null, req.user.id, id]
+      [newStatus, message || null, req.user.id, id]
     );
 
-    // If approved: create/update the corresponding platform product
+    let platformProductId = prod.platform_product_id || null;
+
     if (action === 'approve') {
-      const existingPlatformProd = prod.platform_product_id;
-      if (existingPlatformProd) {
-        // Update existing platform product
-        await pool.query(
+      if (platformProductId) {
+        await client.query(
           `UPDATE src_products SET title=$1, description=$2, price=$3, discount_percent=$4,
            category_id=$5, gender=$6, status='approved' WHERE id=$7`,
-          [prod.title, prod.description, prod.price, prod.discount_percent, prod.category_id, prod.gender, existingPlatformProd]
+          [prod.title, prod.description, prod.price, prod.discount_percent,
+           prod.category_id, prod.gender, platformProductId]
         );
+        await client.query('DELETE FROM src_product_images WHERE product_id=$1', [platformProductId]);
+        await client.query('DELETE FROM src_product_variants WHERE product_id=$1', [platformProductId]);
       } else {
-        // Create new platform product
-        const newProd = await pool.query(
+        const newProd = await client.query(
           `INSERT INTO src_products (title,description,price,discount_percent,category_id,gender,seller_id,status)
            VALUES ($1,$2,$3,$4,$5,$6,$7,'approved') RETURNING id`,
-          [prod.title, prod.description, prod.price, prod.discount_percent, prod.category_id, prod.gender, prod.user_id]
+          [prod.title, prod.description, prod.price, prod.discount_percent,
+           prod.category_id, prod.gender, prod.user_id]
         );
-        const newProdId = newProd.rows[0].id;
+        platformProductId = newProd.rows[0].id;
+        await client.query('UPDATE src_seller_products SET platform_product_id=$1 WHERE id=$2', [platformProductId, id]);
+        await client.query('UPDATE src_seller_profiles SET total_products=total_products+1 WHERE id=$1', [prod.seller_profile_id]);
+      }
 
-        // Copy images to platform product
-        const imgs = await pool.query('SELECT * FROM src_seller_product_images WHERE product_id=$1 ORDER BY sort_order', [id]);
-        for (const img of imgs.rows) {
-          await pool.query(`INSERT INTO src_product_images (product_id,image_url,is_primary,sort_order) VALUES ($1,$2,$3,$4)`, [newProdId, img.image_url, img.is_primary, img.sort_order]);
-        }
-        // Copy variants
-        const vars = await pool.query('SELECT * FROM src_seller_product_variants WHERE product_id=$1', [id]);
-        for (const v of vars.rows) {
-          await pool.query(`INSERT INTO src_product_variants (product_id,size,stock,extra_price) VALUES ($1,$2,$3,$4)`, [newProdId, v.size, v.stock, v.extra_price]);
-        }
-        // Link back
-        await pool.query(`UPDATE src_seller_products SET platform_product_id=$1 WHERE id=$2`, [newProdId, id]);
-        // Update seller stats
-        await pool.query(`UPDATE src_seller_profiles SET total_products=total_products+1 WHERE id=$1`, [prod.seller_id]);
+      const imgs = await client.query('SELECT * FROM src_seller_product_images WHERE product_id=$1 ORDER BY sort_order', [id]);
+      for (const img of imgs.rows) {
+        await client.query(
+          'INSERT INTO src_product_images (product_id,image_url,is_primary,sort_order) VALUES ($1,$2,$3,$4)',
+          [platformProductId, img.image_url, img.is_primary, img.sort_order]
+        );
+      }
+      const vars = await client.query('SELECT * FROM src_seller_product_variants WHERE product_id=$1', [id]);
+      for (const v of vars.rows) {
+        await client.query(
+          'INSERT INTO src_product_variants (product_id,size,stock,extra_price) VALUES ($1,$2,$3,$4)',
+          [platformProductId, v.size, v.stock, v.extra_price]
+        );
       }
     }
 
-    await sellerAudit(req.user.id, req.user.role, prod.seller_id, `product_${newStatus}`, 'seller_product', id, { status: prod.status }, { status: newStatus }, req.ip);
+    if (action === 'reject' && prod.platform_product_id) {
+      await client.query(`UPDATE src_products SET status='rejected' WHERE id=$1`, [prod.platform_product_id]);
+    }
+
+    await client.query('COMMIT');
+
+    await sellerAudit(req.user.id, req.user.role, prod.seller_profile_id, `product_${newStatus}`, 'seller_product', id, { status: prod.status }, { status: newStatus }, req.ip).catch(() => {});
 
     const subject = action === 'approve' ? `Your Product is Live – ${prod.title}` : `Product Review Update – ${prod.title}`;
     const html = action === 'approve'
-      ? sellerProductApproved(prod.seller_name, prod.title, prod.platform_product_id || existingPlatformProd)
+      ? sellerProductApproved(prod.seller_name, prod.title, platformProductId)
       : sellerProductRejected(prod.seller_name, prod.title, message);
     sendMail(prod.email, subject, html).catch(() => {});
 
     res.json({ message: `Product ${newStatus}` });
   } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
+    console.error('reviewSellerProduct error:', err.message);
     res.status(500).json({ message: err.message });
+  } finally {
+    client.release();
   }
 };
 

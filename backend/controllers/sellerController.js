@@ -329,14 +329,13 @@ const getSellerProducts = async (req, res) => {
     const [products, count] = await Promise.all([
       pool.query(
         `SELECT spp.*, c.name AS category_name,
-                COALESCE(json_agg(spi ORDER BY spi.sort_order) FILTER (WHERE spi.id IS NOT NULL), '[]') AS images,
-                COALESCE(json_agg(spv) FILTER (WHERE spv.id IS NOT NULL), '[]') AS variants
+                (SELECT COALESCE(json_agg(spi ORDER BY spi.sort_order), '[]')
+                 FROM src_seller_product_images spi WHERE spi.product_id = spp.id) AS images,
+                (SELECT COALESCE(json_agg(spv), '[]')
+                 FROM src_seller_product_variants spv WHERE spv.product_id = spp.id) AS variants
          FROM src_seller_products spp
          LEFT JOIN src_categories c ON c.id = spp.category_id
-         LEFT JOIN src_seller_product_images spi ON spi.product_id = spp.id
-         LEFT JOIN src_seller_product_variants spv ON spv.product_id = spp.id
          ${where}
-         GROUP BY spp.id, c.name
          ORDER BY spp.created_at DESC
          LIMIT $${params.length+1} OFFSET $${params.length+2}`,
         [...params, limit, offset]
@@ -350,6 +349,31 @@ const getSellerProducts = async (req, res) => {
   }
 };
 
+// ─── Get Single Seller Product by ID ────────────────────────────────────────
+const getSellerProductById = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const sp = await pool.query('SELECT id FROM src_seller_profiles WHERE user_id=$1', [req.user.id]);
+    if (!sp.rows.length) return res.status(404).json({ message: 'Seller profile not found' });
+
+    const prod = await pool.query(
+      `SELECT spp.*, c.name AS category_name,
+              (SELECT COALESCE(json_agg(spi ORDER BY spi.sort_order), '[]')
+               FROM src_seller_product_images spi WHERE spi.product_id = spp.id) AS images,
+              (SELECT COALESCE(json_agg(spv), '[]')
+               FROM src_seller_product_variants spv WHERE spv.product_id = spp.id) AS variants
+       FROM src_seller_products spp
+       LEFT JOIN src_categories c ON c.id = spp.category_id
+       WHERE spp.id=$1 AND spp.seller_id=$2 AND spp.deleted_at IS NULL`,
+      [id, sp.rows[0].id]
+    );
+    if (!prod.rows.length) return res.status(404).json({ message: 'Product not found' });
+    res.json(prod.rows[0]);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
 // ─── Update Seller Product ───────────────────────────────────────────────────
 const updateSellerProduct = async (req, res) => {
   const { id } = req.params;
@@ -358,8 +382,8 @@ const updateSellerProduct = async (req, res) => {
     if (!sp.rows.length) return res.status(404).json({ message: 'Profile not found' });
     const prod = await pool.query('SELECT * FROM src_seller_products WHERE id=$1 AND seller_id=$2 AND deleted_at IS NULL', [id, sp.rows[0].id]);
     if (!prod.rows.length) return res.status(404).json({ message: 'Product not found' });
-    if (!['draft','rejected'].includes(prod.rows[0].status))
-      return res.status(400).json({ message: 'Only draft or rejected products can be edited' });
+    if (['pending_review', 'suspended'].includes(prod.rows[0].status))
+      return res.status(400).json({ message: `Cannot edit a product that is ${prod.rows[0].status}` });
 
     const allowed = ['title','description','category_id','gender','price','discount_percent','brand','fabric','care_instructions','return_policy','shipping_days'];
     const fields = [];
@@ -370,9 +394,14 @@ const updateSellerProduct = async (req, res) => {
     }
     if (!fields.length && !req.files?.length) return res.status(400).json({ message: 'Nothing to update' });
 
+    // If editing an approved product, put it back to pending_review so admin re-reviews
+    const currentStatus = prod.rows[0].status;
+    const revertStatus = currentStatus === 'approved' ? 'pending_review' : 'draft';
+    values.push(revertStatus);
+    const statusIdx = idx++;
     values.push(id);
     if (fields.length) {
-      await pool.query(`UPDATE src_seller_products SET ${fields.join(',')}, updated_at=NOW(), status='draft' WHERE id=$${idx}`, values);
+      await pool.query(`UPDATE src_seller_products SET ${fields.join(',')}, updated_at=NOW(), status=$${statusIdx} WHERE id=$${statusIdx+1}`, values);
     }
 
     // Replace images if provided
@@ -410,7 +439,7 @@ const submitProductForReview = async (req, res) => {
     if (!sp.rows.length) return res.status(404).json({ message: 'Profile not found' });
     const prod = await pool.query('SELECT * FROM src_seller_products WHERE id=$1 AND seller_id=$2 AND deleted_at IS NULL', [id, sp.rows[0].id]);
     if (!prod.rows.length) return res.status(404).json({ message: 'Product not found' });
-    if (!['draft','rejected'].includes(prod.rows[0].status))
+    if (!['draft','rejected', 'approved'].includes(prod.rows[0].status))
       return res.status(400).json({ message: `Product status is "${prod.rows[0].status}" — cannot submit` });
 
     // Validate: must have at least 1 image and 1 variant
@@ -447,7 +476,7 @@ const deleteSellerProduct = async (req, res) => {
     const prod = await pool.query('SELECT * FROM src_seller_products WHERE id=$1 AND seller_id=$2 AND deleted_at IS NULL', [id, sp.rows[0].id]);
     if (!prod.rows.length) return res.status(404).json({ message: 'Product not found' });
     if (prod.rows[0].status === 'approved')
-      return res.status(400).json({ message: 'Cannot delete an approved product. Contact admin.' });
+      return res.status(400).json({ message: 'Cannot delete a live product. Contact admin to remove it.' });
     await pool.query('UPDATE src_seller_products SET deleted_at=NOW() WHERE id=$1', [id]);
     await sellerAudit(req.user.id, 'seller', sp.rows[0].id, 'product_deleted', 'seller_product', id, null, null, req.ip);
     res.json({ message: 'Product deleted' });
@@ -503,7 +532,7 @@ const getSellerPayouts = async (req, res) => {
 module.exports = {
   sendRegistrationOTP, verifyRegistrationOTP,
   registerSeller, getSellerProfile, updateSellerProfile, submitKYC,
-  getSellerDashboard, createSellerProduct, getSellerProducts,
+  getSellerDashboard, createSellerProduct, getSellerProducts, getSellerProductById,
   updateSellerProduct, submitProductForReview, deleteSellerProduct,
   getSellerOrders, getSellerPayouts,
 };

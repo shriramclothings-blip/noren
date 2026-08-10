@@ -45,11 +45,12 @@ router.post('/kyc',               auth, uploadKYC.fields([
 router.get('/dashboard',          auth, ctrl.getSellerDashboard);
 
 // Products
-router.post('/products',          auth, uploadProductImgs.array('images', 10), ctrl.createSellerProduct);
-router.get('/products',           auth, ctrl.getSellerProducts);
-router.put('/products/:id',       auth, uploadProductImgs.array('images', 10), ctrl.updateSellerProduct);
+router.post('/products',            auth, uploadProductImgs.array('images', 10), ctrl.createSellerProduct);
+router.get('/products',             auth, ctrl.getSellerProducts);
+router.get('/products/:id',         auth, ctrl.getSellerProductById);
+router.put('/products/:id',         auth, uploadProductImgs.array('images', 10), ctrl.updateSellerProduct);
 router.post('/products/:id/submit', auth, ctrl.submitProductForReview);
-router.delete('/products/:id',    auth, ctrl.deleteSellerProduct);
+router.delete('/products/:id',      auth, ctrl.deleteSellerProduct);
 
 // Orders & Payouts
 router.get('/orders',             auth, ctrl.getSellerOrders);

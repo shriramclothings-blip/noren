@@ -38,13 +38,12 @@ export default function ProductForm() {
   // Load existing product if editing
   useEffect(() => {
     if (!isEdit) return;
-    api.get(`/seller/products?page=1&limit=100`).then(r => {
-      const prod = r.data.products.find(p => String(p.id) === id);
-      if (!prod) { toast.error('Product not found'); navigate('/products'); return; }
+    api.get(`/seller/products/${id}`).then(r => {
+      const prod = r.data;
       setForm({
         title: prod.title || '',
         description: prod.description || '',
-        category_id: prod.category_id || '',
+        category_id: prod.category_id ? String(prod.category_id) : '',
         gender: prod.gender || 'men',
         price: prod.price || '',
         discount_percent: prod.discount_percent || '0',
@@ -60,7 +59,10 @@ export default function ProductForm() {
       if (Array.isArray(prod.images) && prod.images.length) {
         setExistingImages(prod.images);
       }
-    }).catch(() => toast.error('Failed to load product'));
+    }).catch(err => {
+      toast.error(err.response?.data?.message || 'Failed to load product');
+      navigate('/products');
+    });
   }, [id, isEdit, navigate]);
 
   const onImageChange = (e) => {
@@ -106,7 +108,12 @@ export default function ProductForm() {
     try {
       if (isEdit) {
         await api.put(`/seller/products/${id}`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
-        toast.success('Product saved');
+        if (andSubmit) {
+          await api.post(`/seller/products/${id}/submit`);
+          toast.success('Product updated and resubmitted for review!');
+        } else {
+          toast.success('Product saved');
+        }
       } else {
         const r = await api.post('/seller/products', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
         if (andSubmit) {
