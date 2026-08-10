@@ -6,9 +6,6 @@ const BASE = process.env.DELHIVERY_MODE === 'production'
 
 const TOKEN = process.env.DELHIVERY_API_TOKEN;
 const PICKUP_LOCATION = process.env.DELHIVERY_PICKUP_NAME;
-const PICKUP_DATE = process.env.DELHIVERY_PICKUP_DATE || new Date().toISOString().split('T')[0];
-const PICKUP_START_TIME = process.env.DELHIVERY_PICKUP_START_TIME || '09:00:00';
-const PICKUP_END_TIME = process.env.DELHIVERY_PICKUP_END_TIME || '18:00:00';
 
 const assertConfigured = () => {
   if (!TOKEN || TOKEN === 'undefined') {
@@ -82,49 +79,53 @@ const cleanPayload = (obj) => Object.entries(obj).reduce((acc, [key, value]) => 
 const createShipment = async (order) => {
   assertConfigured();
 
-  const dataObj = {
-    shipments: [{
-      name: order.full_name,
-      add: order.address,
-      pin: order.pincode,
-      city: order.city,
-      state: order.state,
-      country: 'India',
-      phone: order.mobile,
-      order: order.order_id,
-      payment_mode: order.payment_status === 'paid' ? 'Prepaid' : 'COD',
-      return_pin: process.env.DELHIVERY_RETURN_PINCODE || '110001',
-      return_city: process.env.DELHIVERY_RETURN_CITY || 'Delhi',
-      return_phone: process.env.DELHIVERY_RETURN_PHONE || '9999999999',
-      return_name: 'NOREN',
-      return_add: process.env.DELHIVERY_RETURN_ADDRESS || 'Return Address',
-      return_state: process.env.DELHIVERY_RETURN_STATE || 'Delhi',
-      return_country: 'India',
-      products_desc: order.items?.map(i => i.title).join(', ') || 'Clothing',
-      hsn_code: '',
-      cod_amount: order.payment_status === 'paid' ? '0' : String(order.total),
-      order_date: new Date(order.created_at).toISOString().split('T')[0],
-      total_amount: String(order.total),
-      seller_add: process.env.DELHIVERY_RETURN_ADDRESS || 'Return Address',
-      seller_name: 'NOREN',
-      seller_inv: order.order_id,
-      quantity: String(order.items?.reduce((s, i) => s + i.quantity, 0) || 1),
-      weight: '0.5',
-      shipment_width: '15',
-      shipment_height: '10',
-      shipment_length: '20',
-      seller_gst_tin: process.env.DELHIVERY_GST || undefined,
-      shipping_mode: 'Surface',
-      address_type: 'home',
-      pickup_location: PICKUP_LOCATION,
-      pickup_date: { start_date: PICKUP_DATE, end_date: PICKUP_DATE },
-      pickup_time: { start_time: PICKUP_START_TIME, end_time: PICKUP_END_TIME },
-    }],
+  // Use today's date — Delhivery staging does NOT accept nested date/time objects
+  const pickupDate = process.env.DELHIVERY_PICKUP_DATE || new Date().toISOString().split('T')[0];
+
+  const shipment = {
+    name: order.full_name,
+    add: order.address,
+    pin: String(order.pincode),
+    city: order.city,
+    state: order.state,
+    country: 'India',
+    phone: String(order.mobile),
+    order: order.order_id,
+    payment_mode: order.payment_status === 'paid' ? 'Prepaid' : 'COD',
+    return_pin: process.env.DELHIVERY_RETURN_PINCODE || '392001',
+    return_city: process.env.DELHIVERY_RETURN_CITY || 'BHARUCH',
+    return_phone: process.env.DELHIVERY_RETURN_PHONE || '7984626447',
+    return_name: 'NOREN',
+    return_add: process.env.DELHIVERY_RETURN_ADDRESS || 'NOREN, BHARUCH, GUJARAT, 392001',
+    return_state: process.env.DELHIVERY_RETURN_STATE || 'GUJARAT',
+    return_country: 'India',
+    products_desc: order.items?.map(i => i.title).join(', ') || 'Clothing',
+    cod_amount: order.payment_status === 'paid' ? '0' : String(order.total),
+    order_date: new Date(order.created_at).toISOString().split('T')[0],
+    total_amount: String(order.total),
+    seller_add: process.env.DELHIVERY_RETURN_ADDRESS || 'NOREN, BHARUCH, GUJARAT, 392001',
+    seller_name: 'NOREN',
+    seller_inv: order.order_id,
+    quantity: String(order.items?.reduce((s, i) => s + i.quantity, 0) || 1),
+    weight: '0.500',
+    shipment_width: '15',
+    shipment_height: '10',
+    shipment_length: '20',
+    shipping_mode: 'Surface',
+    address_type: 'home',
     pickup_location: PICKUP_LOCATION,
-    pickup_date: { start_date: PICKUP_DATE, end_date: PICKUP_DATE },
-    pickup_time: { start_time: PICKUP_START_TIME, end_time: PICKUP_END_TIME },
-    pickup_start_time: PICKUP_START_TIME,
-    pickup_end_time: PICKUP_END_TIME,
+  };
+
+  // Only attach GST if actually set — empty string causes Delhivery validation errors
+  if (process.env.DELHIVERY_GST) {
+    shipment.seller_gst_tin = process.env.DELHIVERY_GST;
+  }
+
+  const dataObj = {
+    shipments: [shipment],
+    pickup_location: PICKUP_LOCATION,
+    pickup_date: pickupDate,          // flat string — NOT nested object
+    pickup_time: '10:00:00',          // flat string — NOT nested object
   };
 
   const cleanedData = cleanPayload(dataObj);
