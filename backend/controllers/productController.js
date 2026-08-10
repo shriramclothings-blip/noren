@@ -28,13 +28,11 @@ const getProducts = async (req, res) => {
     values.push(limit, offset);
     const result = await pool.query(
       `SELECT p.*, c.name as category_name, c.slug as category_slug,
-        u.name as seller_name, u.avatar_url as seller_avatar,
         (SELECT image_url FROM src_product_images WHERE product_id=p.id AND is_primary=TRUE LIMIT 1) as primary_image,
         (SELECT AVG(rating)::NUMERIC(3,1) FROM src_reviews WHERE product_id=p.id AND is_hidden=FALSE) as avg_rating,
         (SELECT COUNT(*) FROM src_reviews WHERE product_id=p.id AND is_hidden=FALSE) as review_count
        FROM src_products p
        LEFT JOIN src_categories c ON p.category_id = c.id
-       LEFT JOIN src_users u ON p.seller_id = u.id
        WHERE ${where} ORDER BY ${orderBy} LIMIT $${idx} OFFSET $${idx + 1}`,
       values
     );
@@ -48,7 +46,6 @@ const getProduct = async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT p.*, c.name as category_name, c.slug as category_slug,
-        u.name as seller_name, u.avatar_url as seller_avatar, u.id as seller_user_id,
         sp.brand_name as seller_brand, sp.description as seller_description,
         sp.logo_url as seller_logo, sp.id as seller_profile_id,
         sp.total_products as seller_total_products,

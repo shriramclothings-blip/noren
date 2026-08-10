@@ -459,12 +459,11 @@ export default function ProductDetail() {
                     <div style={{ fontWeight: 700, fontSize: 14, color: '#111827', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {product.seller_brand}
                     </div>
-                    <div style={{ fontSize: 12, color: '#6b7280', marginTop: 1 }}>
-                      {product.seller_name}
-                      {product.seller_total_products > 0 && (
-                        <span style={{ marginLeft: 8, fontSize: 11, color: '#9ca3af' }}>· {product.seller_total_products} product{product.seller_total_products !== 1 ? 's' : ''}</span>
-                      )}
-                    </div>
+                    {product.seller_total_products > 0 && (
+                      <div style={{ fontSize: 12, color: '#6b7280', marginTop: 1 }}>
+                        {product.seller_total_products} product{product.seller_total_products !== 1 ? 's' : ''} on NOREN
+                      </div>
+                    )}
                     {product.seller_description && (
                       <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {product.seller_description}
