@@ -158,8 +158,20 @@ const createShipment = async (order) => {
     throw new Error(pkg.error_message || pkg.error || 'Delhivery error');
   }
 
+  // Log full package to find correct AWB field name
+  console.log('[Delhivery] Package object:', JSON.stringify(pkg, null, 2));
+
+  const awb = pkg.waybill || pkg.waybill_number || pkg.awb || pkg.barcode
+    || pkg.wbn || pkg.package_id || pkg.shipment_id || pkg.tracking_id
+    || pkg.id || pkg.docket_number;
+
+  if (!awb) {
+    console.error('[Delhivery] AWB not found in package. Full pkg:', JSON.stringify(pkg));
+    throw new Error('Shipment created but AWB not returned. Contact Delhivery support.');
+  }
+
   return {
-    awb: pkg.waybill || pkg.waybill_number || pkg.awb || pkg.barcode,
+    awb,
     courier: 'Delhivery',
     status: 'processing',
   };
