@@ -145,17 +145,25 @@ const createShipment = async (order) => {
   const pkg = normalizePackage(res.data);
   if (!pkg) {
     const messageParts = [];
-    if (res.data === true || res.data === 'true') {
-      messageParts.push('Unexpected boolean response from Delhivery');
-    }
     if (res.data?.rmk) messageParts.push(res.data.rmk);
+    if (res.data?.packages?.[0]?.remarks?.length) {
+      messageParts.push(...res.data.packages[0].remarks);
+    }
     if (res.data?.Error) messageParts.push(res.data.Error);
     if (res.data?.error && typeof res.data.error === 'string') messageParts.push(res.data.error);
     if (!messageParts.length) messageParts.push(JSON.stringify(res.data || {}));
-    throw new Error(`No package returned from Delhivery: ${messageParts.join(' | ')}`);
+    throw new Error(messageParts.join(' | '));
   }
-  if (pkg.status === 'Error' || pkg.status === 'error') {
-    throw new Error(pkg.error_message || pkg.error || 'Delhivery error');
+
+  // Check package-level failure even when pkg exists
+  if (pkg.status === 'Fail' || pkg.status === 'fail' || pkg.status === 'Error' || pkg.status === 'error') {
+    const remarks = Array.isArray(pkg.remarks) ? pkg.remarks.join(' | ') : (pkg.remarks || '');
+    throw new Error(remarks || pkg.error_message || pkg.error || 'Delhivery shipment failed');
+  }
+
+  if (!pkg.waybill) {
+    const remarks = Array.isArray(pkg.remarks) ? pkg.remarks.join(' | ') : '';
+    throw new Error(remarks || 'Shipment created but no AWB returned');
   }
 
   // Log full package to find correct AWB field name
