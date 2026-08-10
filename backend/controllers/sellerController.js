@@ -9,6 +9,78 @@ const {
   sellerWelcome, sellerKYCSubmitted, sellerProductSubmitted,
 } = require('../services/sellerEmailTemplates');
 
+// ── OTP helpers ───────────────────────────────────────────────────────────────
+const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
+
+const otpEmailHtml = (otp) => `
+<div style="font-family:'Inter',Arial,sans-serif;max-width:520px;margin:auto;background:#faf9f7;padding:0">
+  <div style="background:#1a1a18;padding:28px 40px;text-align:center">
+    <div style="font-family:Georgia,serif;font-weight:600;font-size:26px;letter-spacing:0.35em;color:#faf9f7;text-transform:uppercase">NOREN</div>
+    <div style="font-size:8px;letter-spacing:0.28em;color:#c9a96e;margin-top:4px;text-transform:uppercase">Seller Portal</div>
+  </div>
+  <div style="padding:36px 40px 28px;border:1px solid #e6e0d8;border-top:none">
+    <p style="font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:#c9a96e;margin:0 0 12px">Email Verification</p>
+    <h2 style="font-family:Georgia,serif;font-size:22px;font-weight:600;color:#1a1a18;margin:0 0 16px">Verify your email address</h2>
+    <p style="color:#5a5750;line-height:1.8;font-size:14px;margin-bottom:24px">Use the OTP below to complete your NOREN seller account registration. This code is valid for <strong style="color:#1a1a18">10 minutes</strong>.</p>
+    <div style="background:#1a1a18;padding:28px;text-align:center;margin:0 0 28px;border-radius:2px">
+      <p style="color:#b8a898;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;margin:0 0 14px">Your One-Time Password</p>
+      <div style="font-family:Georgia,serif;font-size:46px;font-weight:700;letter-spacing:0.3em;color:#c9a96e">${otp}</div>
+      <p style="color:#5a5750;font-size:11px;margin:12px 0 0">Do not share this code with anyone</p>
+    </div>
+    <p style="color:#b8a898;font-size:12px;padding-top:20px;border-top:1px solid #e6e0d8">If you did not request this, you can safely ignore this email.</p>
+  </div>
+  <div style="padding:16px 40px;text-align:center">
+    <p style="color:#b8a898;font-size:11px;letter-spacing:0.06em">© ${new Date().getFullYear()} NOREN. Timeless By Design.</p>
+  </div>
+</div>`;
+
+// ── POST /api/seller/send-otp — send OTP to email before registration ─────────
+const sendRegistrationOTP = async (req, res) => {
+  const { email } = req.body;
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+    return res.status(400).json({ message: 'Valid email required' });
+  try {
+    // Check not already registered
+    const exists = await pool.query('SELECT id FROM src_users WHERE email=$1', [email.toLowerCase().trim()]);
+    if (exists.rows.length) return res.status(409).json({ message: 'This email is already registered. Please log in.' });
+
+    const otp = generateOTP();
+    const expires = new Date(Date.now() + 10 * 60 * 1000);
+
+    // Reuse password_resets table for OTP storage
+    await pool.query('DELETE FROM src_password_resets WHERE email=$1', [email]).catch(() => {});
+    await pool.query(
+      'INSERT INTO src_password_resets (email, token, expires_at, used) VALUES ($1,$2,$3,FALSE)',
+      [email.toLowerCase().trim(), otp, expires]
+    );
+
+    const sent = await sendMail(email, 'Your NOREN Seller OTP – Verify Your Email', otpEmailHtml(otp));
+    if (!sent) return res.status(500).json({ message: 'Failed to send OTP email. Check email address and try again.' });
+
+    res.json({ message: 'OTP sent to your email address' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// ── POST /api/seller/verify-otp — verify OTP ──────────────────────────────────
+const verifyRegistrationOTP = async (req, res) => {
+  const { email, otp } = req.body;
+  if (!email || !otp) return res.status(400).json({ message: 'Email and OTP required' });
+  try {
+    const result = await pool.query(
+      'SELECT id FROM src_password_resets WHERE email=$1 AND token=$2 AND used=FALSE AND expires_at > NOW()',
+      [email.toLowerCase().trim(), otp.trim()]
+    );
+    if (!result.rows.length) return res.status(400).json({ valid: false, message: 'Invalid or expired OTP. Please request a new one.' });
+    // Mark used immediately so it can't be reused
+    await pool.query('UPDATE src_password_resets SET used=TRUE WHERE email=$1 AND token=$2', [email.toLowerCase().trim(), otp.trim()]);
+    res.json({ valid: true, message: 'Email verified successfully' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
 // ─── Helpers ────────────────────────────────────────────────────────────────
 const sellerAudit = async (actorId, actorRole, sellerId, action, resourceType, resourceId, before, after, ip) => {
   try {
@@ -429,6 +501,7 @@ const getSellerPayouts = async (req, res) => {
 };
 
 module.exports = {
+  sendRegistrationOTP, verifyRegistrationOTP,
   registerSeller, getSellerProfile, updateSellerProfile, submitKYC,
   getSellerDashboard, createSellerProduct, getSellerProducts,
   updateSellerProduct, submitProductForReview, deleteSellerProduct,

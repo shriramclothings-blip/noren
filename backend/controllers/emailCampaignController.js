@@ -16,11 +16,13 @@ const ensureTable = async () => {
       type        TEXT NOT NULL DEFAULT 'custom',
       target      TEXT NOT NULL DEFAULT 'all',
       user_id     INTEGER REFERENCES src_users(id) ON DELETE SET NULL,
+      custom_emails TEXT,
       sent_count  INTEGER DEFAULT 0,
       status      TEXT NOT NULL DEFAULT 'sent',
       created_by  INTEGER REFERENCES src_users(id) ON DELETE SET NULL,
       created_at  TIMESTAMPTZ DEFAULT NOW()
-    )
+    );
+    ALTER TABLE src_email_campaigns ADD COLUMN IF NOT EXISTS custom_emails TEXT;
   `);
 };
 
@@ -45,54 +47,65 @@ const searchUsers = async (req, res) => {
 // ── POST /api/erp/email/send ──────────────────────────────────────────────────
 const sendCampaign = async (req, res) => {
   await ensureTable();
-  const { subject, message, type = 'custom', target = 'all', user_id, ctaText, ctaUrl } = req.body;
+  const { subject, message, type = 'custom', target = 'all', user_id, ctaText, ctaUrl, custom_html, custom_emails } = req.body;
 
   if (!subject?.trim()) return res.status(400).json({ message: 'Subject is required' });
-  if (!message?.trim()) return res.status(400).json({ message: 'Message is required' });
+  if (!message?.trim() && !custom_html?.trim()) return res.status(400).json({ message: 'Message is required' });
+
+  const bodyMessage = message?.trim() || '';
 
   try {
     let recipients = [];
 
-    if (target === 'specific') {
+    if (target === 'custom_emails') {
+      // ── New: send to any email addresses (marketing to non-users) ──
+      if (!custom_emails?.trim()) return res.status(400).json({ message: 'Provide at least one email address' });
+      const emailList = custom_emails
+        .split(/[\n,;]+/)
+        .map(e => e.trim().toLowerCase())
+        .filter(e => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e));
+      if (!emailList.length) return res.status(400).json({ message: 'No valid email addresses found' });
+      // Deduplicate
+      recipients = [...new Set(emailList)].map(email => ({ id: null, name: null, email }));
+    } else if (target === 'specific') {
       if (!user_id) return res.status(400).json({ message: 'user_id required for specific target' });
       const r = await pool.query('SELECT id, name, email FROM src_users WHERE id=$1 AND is_banned=FALSE', [user_id]);
       if (!r.rows.length) return res.status(404).json({ message: 'User not found' });
       recipients = r.rows;
     } else if (target === 'subscribers') {
-      // Send to newsletter subscribers only
       const r = await pool.query(
         `SELECT NULL as id, name, email FROM src_newsletter_subscribers WHERE is_active=TRUE AND email IS NOT NULL AND email != '' ORDER BY subscribed_at`
       ).catch(() => pool.query(`SELECT id, name, email FROM src_users WHERE is_banned=FALSE AND email IS NOT NULL AND email != '' ORDER BY id`));
       recipients = r.rows;
     } else {
-      // all active users with email
       const r = await pool.query(
         `SELECT id, name, email FROM src_users WHERE is_banned=FALSE AND email IS NOT NULL AND email != '' ORDER BY id`
       );
       recipients = r.rows;
     }
 
+    // Use custom HTML if provided, else build from template
+    const buildHtml = (name) => custom_html?.trim()
+      ? custom_html
+      : offerEmail(name || null, subject, bodyMessage, ctaText || 'Shop Now', ctaUrl || process.env.FRONTEND_URL?.split(',')[0], type);
+
     // Send in batches of 10
     let successCount = 0;
     for (let i = 0; i < recipients.length; i += 10) {
       const batch = recipients.slice(i, i + 10);
       const results = await Promise.allSettled(
-        batch.map(u => sendMail(
-          u.email,
-          subject,
-          offerEmail(u.name || null, subject, message, ctaText || 'Shop Now', ctaUrl || process.env.FRONTEND_URL, type)
-        ))
+        batch.map(u => sendMail(u.email, subject, buildHtml(u.name)))
       );
       successCount += results.filter(r => r.status === 'fulfilled' && r.value === true).length;
     }
 
-    const html = offerEmail(null, subject, message, ctaText || 'Shop Now', ctaUrl || process.env.FRONTEND_URL, type);
-
     // Log campaign
     await pool.query(
-      `INSERT INTO src_email_campaigns (subject, body_html, type, target, user_id, sent_count, status, created_by)
-       VALUES ($1,$2,$3,$4,$5,$6,'sent',$7)`,
-      [subject, html, type, target, user_id || null, successCount, req.user.id]
+      `INSERT INTO src_email_campaigns (subject, body_html, type, target, user_id, custom_emails, sent_count, status, created_by)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,'sent',$8)`,
+      [subject, buildHtml(null), type, target, user_id || null,
+       target === 'custom_emails' ? recipients.map(r => r.email).join(', ') : null,
+       successCount, req.user.id]
     );
 
     res.json({ message: `Email sent to ${successCount} recipient${successCount !== 1 ? 's' : ''}`, sent_count: successCount });

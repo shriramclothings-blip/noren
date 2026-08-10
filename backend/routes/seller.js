@@ -1,13 +1,17 @@
 /**
  * routes/seller.js  — seller-portal facing routes
- * All routes require auth.  Role check enforced in controller where appropriate.
  */
 const router = require('express').Router();
 const { auth } = require('../middleware/auth');
+const { authRateLimit } = require('../middleware/rateLimiter');
 const multer = require('multer');
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const { cloudinary } = require('../config/cloudinary');
 const ctrl = require('../controllers/sellerController');
+
+// ── OTP endpoints (public — no auth required) ────────────────────────────────
+router.post('/send-otp',   authRateLimit, ctrl.sendRegistrationOTP);
+router.post('/verify-otp', authRateLimit, ctrl.verifyRegistrationOTP);
 
 // ── Cloudinary storage for seller docs ──────────────────────────────────────
 const kycStorage = new CloudinaryStorage({
