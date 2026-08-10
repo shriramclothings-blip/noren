@@ -124,9 +124,7 @@ const createShipment = async (order) => {
 
   const dataObj = {
     shipments: [shipment],
-    pickup_location: PICKUP_LOCATION,
-    // pickup_date and pickup_time omitted — staging API infers these automatically
-    // and throws 'NoneType has no attribute end_date' when they are present
+    pickup_location: { name: PICKUP_LOCATION },  // production expects an object, not a plain string
   };
 
   const cleanedData = cleanPayload(dataObj);
