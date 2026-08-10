@@ -124,8 +124,8 @@ const createShipment = async (order) => {
   const dataObj = {
     shipments: [shipment],
     pickup_location: PICKUP_LOCATION,
-    pickup_date: pickupDate,          // flat string — NOT nested object
-    pickup_time: '10:00:00',          // flat string — NOT nested object
+    // pickup_date and pickup_time omitted — staging API infers these automatically
+    // and throws 'NoneType has no attribute end_date' when they are present
   };
 
   const cleanedData = cleanPayload(dataObj);
@@ -133,9 +133,15 @@ const createShipment = async (order) => {
   form.set('format', 'json');
   form.set('data', JSON.stringify(cleanedData));
 
+  // Log exact payload for debugging
+  console.log('[Delhivery] Sending data:', JSON.stringify(cleanedData, null, 2));
+
   const res = await client.post('/api/cmu/create.json', form.toString(), {
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
   });
+
+  // Log raw response for debugging
+  console.log('[Delhivery] Raw response:', JSON.stringify(res.data, null, 2));
 
   const pkg = normalizePackage(res.data);
   if (!pkg) {
