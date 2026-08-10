@@ -115,13 +115,20 @@ export const ADMIN_ROUTE_ALIASES = {
   orders: 'orders',
   'sales-orders': 'sales',
   users: 'user-management',
+  // Seller module aliases
+  'seller-overview':  'seller-overview',
+  'seller-accounts':  'seller-accounts',
+  'seller-kyc':       'seller-kyc',
+  'seller-products':  'seller-products',
+  'seller-payouts':   'seller-payouts',
+  'seller-audit':     'seller-audit',
   // Influencer module aliases
-  'influencer-campaigns': 'inf-campaigns',
-  'influencer-links':     'inf-links',
+  'influencer-campaigns':  'inf-campaigns',
+  'influencer-links':      'inf-links',
   'influencer-conversions':'inf-conversions',
-  'influencer-payouts':   'inf-payouts',
-  'influencer-fraud':     'inf-fraud',
-  'influencer-audit':     'inf-audit',
+  'influencer-payouts':    'inf-payouts',
+  'influencer-fraud':      'inf-fraud',
+  'influencer-audit':      'inf-audit',
 };
 
 export const ERP_MODULE_MAP = Object.fromEntries(
