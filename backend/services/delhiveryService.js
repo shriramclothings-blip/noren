@@ -116,9 +116,10 @@ const createShipment = async (order) => {
     pickup_location: PICKUP_LOCATION,
   };
 
-  // Only attach GST if actually set — empty string causes Delhivery validation errors
-  if (process.env.DELHIVERY_GST) {
-    shipment.seller_gst_tin = process.env.DELHIVERY_GST;
+  // Only attach GST if it's a valid 15-char GSTIN — invalid values crash Delhivery's API
+  const gst = (process.env.DELHIVERY_GST || '').trim();
+  if (gst && gst.length === 15) {
+    shipment.seller_gst_tin = gst;
   }
 
   const dataObj = {
