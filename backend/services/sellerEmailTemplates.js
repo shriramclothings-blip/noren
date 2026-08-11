@@ -319,6 +319,41 @@ const sellerAdminMessage = (name, subject, message) => wrap(`
   ${btn('Go to Seller Portal', SELLER_SITE)}
 `);
 
+// ─── 18. Product Removed from Marketplace ─────────────────────────────────────
+const sellerProductRemoved = (name, productTitle, reason, caseRef) => wrap(`
+  ${badge('Product Listing Update')}
+  ${h2(`Hi ${name},`)}
+  ${para(`We are writing to inform you that your product listing <strong style="color:#1a1a18">"${productTitle}"</strong> has been reviewed by our Marketplace Compliance Team and has been removed from the NOREN marketplace.`)}
+  ${infoBox([
+    ['Product',      productTitle],
+    ['Action',       'Removed from Marketplace'],
+    ['Effective',    new Date().toLocaleDateString('en-IN', { dateStyle: 'long' })],
+    ['Case Ref.',    caseRef || `NRN-${Date.now().toString(36).toUpperCase()}`],
+    ['Handled By',  'NOREN Marketplace Compliance Team'],
+  ])}
+  ${divider()}
+  <p style="font-size:13px;font-weight:700;color:#1a1a18;margin:0 0 8px">Reason for Removal</p>
+  <div style="border-left:3px solid #1a1a18;padding:12px 18px;background:#f5f0e8;margin-bottom:24px;font-size:14px;color:#5a5750;line-height:1.8">
+    ${reason || 'Your listing did not meet NOREN Marketplace standards.'}
+  </div>
+  ${divider()}
+  <p style="font-size:13px;font-weight:700;color:#1a1a18;margin:0 0 12px">Next Steps</p>
+  <ul style="color:#5a5750;font-size:13px;line-height:2.2;padding-left:20px;margin:0 0 24px">
+    <li>Review the reason above carefully</li>
+    <li>Update your product listing to comply with our <a href="${SELLER_SITE}/guidelines" style="color:#c9a96e;text-decoration:none">Seller Guidelines</a></li>
+    <li>Resubmit the updated listing for review from your Seller Portal</li>
+    <li>Our team will review your updated listing within 1–2 business days</li>
+  </ul>
+  ${alertBox('If you believe this removal was made in error or have questions, please contact our Seller Support team by replying to this email. Please include your Case Reference number in all communications.', '#c9a96e')}
+  ${btn('Go to Seller Portal', SELLER_SITE)}
+  ${divider()}
+  <p style="font-size:12px;color:#b8a898;line-height:1.8">
+    This notice has been issued by the NOREN Marketplace Compliance Team on behalf of NOREN Fashion House. 
+    NOREN reserves the right to remove listings that do not meet our quality, accuracy, or compliance standards. 
+    All removal decisions are made to maintain the integrity of the marketplace and the trust of our customers.
+  </p>
+`);
+
 module.exports = {
   sellerWelcome,
   sellerKYCSubmitted,
@@ -329,6 +364,7 @@ module.exports = {
   sellerProductSubmitted,
   sellerProductApproved,
   sellerProductRejected,
+  sellerProductRemoved,
   sellerNewOrder,
   sellerOrderDelivered,
   sellerOrderCancelled,

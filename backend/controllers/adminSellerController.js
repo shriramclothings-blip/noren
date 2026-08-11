@@ -8,7 +8,7 @@ const { sendMail } = require('../services/mailService');
 const {
   sellerKYCApproved, sellerKYCRejected,
   sellerAccountApproved, sellerAccountSuspended,
-  sellerProductApproved, sellerProductRejected,
+  sellerProductApproved, sellerProductRejected, sellerProductRemoved,
   sellerPayoutInitiated, sellerPayoutPaid,
 } = require('../services/sellerEmailTemplates');
 
@@ -497,10 +497,98 @@ const getSellerAuditLogs = async (req, res) => {
   }
 };
 
+// ─── Remove Seller Product (soft delete + hide from platform + professional email) ──
+const removeSellerProduct = async (req, res) => {
+  const { id } = req.params;
+  const { reason, category } = req.body;
+  // reason: the compliance reason text
+  // category: 'quality' | 'policy' | 'pricing' | 'ip' | 'safety' | 'other'
+  if (!reason?.trim()) return res.status(400).json({ message: 'Removal reason is required' });
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    const prod = await client.query(
+      `SELECT spp.*, sp.user_id, sp.id AS seller_profile_id,
+              u.email, u.name AS seller_name, sp.brand_name AS seller_brand
+       FROM src_seller_products spp
+       JOIN src_seller_profiles sp ON sp.id = spp.seller_id
+       JOIN src_users u ON u.id = sp.user_id
+       WHERE spp.id = $1`,
+      [id]
+    );
+    if (!prod.rows.length) { await client.query('ROLLBACK'); return res.status(404).json({ message: 'Product not found' }); }
+    const p = prod.rows[0];
+
+    const caseRef = `NRN-${Date.now().toString(36).toUpperCase()}-${id}`;
+
+    // 1. Soft-delete the seller product
+    await client.query(
+      `UPDATE src_seller_products
+       SET deleted_at=NOW(), status='rejected', admin_message=$1, reviewed_by=$2, reviewed_at=NOW(), updated_at=NOW()
+       WHERE id=$3`,
+      [`[REMOVED] ${reason}`, req.user.id, id]
+    );
+
+    // 2. Hide / soft-delete the platform product if it was live
+    if (p.platform_product_id) {
+      await client.query(
+        `UPDATE src_products SET deleted_at=NOW(), status='rejected' WHERE id=$1`,
+        [p.platform_product_id]
+      );
+    }
+
+    // 3. Decrement seller total_products count
+    await client.query(
+      `UPDATE src_seller_profiles SET total_products=GREATEST(0, total_products-1) WHERE id=$1`,
+      [p.seller_profile_id]
+    );
+
+    await client.query('COMMIT');
+
+    // 4. Audit log
+    await sellerAudit(req.user.id, req.user.role, p.seller_profile_id, 'product_removed', 'seller_product', id,
+      { status: p.status, platform_product_id: p.platform_product_id },
+      { deleted_at: new Date(), reason, category, caseRef },
+      req.ip
+    ).catch(() => {});
+
+    // 5. Send professional removal email
+    const fullReason = buildRemovalReason(category, reason);
+    sendMail(
+      p.email,
+      `Important: Product Listing Removal Notice – ${p.title} | NOREN`,
+      sellerProductRemoved(p.seller_name, p.title, fullReason, caseRef)
+    ).catch(() => {});
+
+    res.json({ message: 'Product removed successfully', case_ref: caseRef });
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
+    console.error('removeSellerProduct error:', err.message);
+    res.status(500).json({ message: err.message });
+  } finally {
+    client.release();
+  }
+};
+
+// Build a detailed, professional reason string from category + custom text
+const buildRemovalReason = (category, reason) => {
+  const prefixes = {
+    quality:  'Quality & Accuracy Issue: ',
+    policy:   'Marketplace Policy Violation: ',
+    pricing:  'Pricing Irregularity: ',
+    ip:       'Intellectual Property Concern: ',
+    safety:   'Product Safety Concern: ',
+    other:    '',
+  };
+  return (prefixes[category] || '') + reason;
+};
+
 module.exports = {
   getSellerStats, getSellers, getSellerDetail, updateSellerStatus,
   reviewKYC, getAdminSellerProducts, getAdminSellerProductDetail,
-  reviewSellerProduct, setSellerProductStatus,
+  reviewSellerProduct, setSellerProductStatus, removeSellerProduct,
   getAdminPayouts, createAdminPayout, updatePayoutStatus,
   getSellerAuditLogs,
 };

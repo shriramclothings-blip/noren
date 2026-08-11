@@ -16,6 +16,7 @@ router.get('/products/all',               ...guard, ctrl.getAdminSellerProducts)
 router.get('/products/:id',               ...guard, ctrl.getAdminSellerProductDetail);
 router.patch('/products/:id/review',      ...guard, ctrl.reviewSellerProduct);
 router.patch('/products/:id/status',      ...guard, ctrl.setSellerProductStatus);
+router.delete('/products/:id/remove',     ...guard, ctrl.removeSellerProduct);
 
 // ── Payouts (must be before /:id) ────────────────────────────────────────────
 router.get('/payouts',                    ...guard, ctrl.getAdminPayouts);

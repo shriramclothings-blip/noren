@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Search, Eye, CheckCircle, XCircle, ChevronLeft, ChevronRight, X,
-  Package, ExternalLink, Tag, Truck, AlertTriangle, RefreshCw, Store } from 'lucide-react';
+  Package, ExternalLink, Tag, Truck, AlertTriangle, RefreshCw, Store, Trash2 } from 'lucide-react';
 import api from '../../../../utils/api';
 import toast from 'react-hot-toast';
 
@@ -31,6 +31,10 @@ function ProductModal({ product, onClose, onDone }) {
   const [statusAction, setStatusAction] = useState('');
   const [statusMsg, setStatusMsg]       = useState('');
   const [statusSaving, setStatusSaving] = useState(false);
+  const [showRemove, setShowRemove]     = useState(false);
+  const [removeReason, setRemoveReason] = useState('');
+  const [removeCategory, setRemoveCategory] = useState('quality');
+  const [removing, setRemoving]           = useState(false);
 
   useEffect(() => {
     api.get(`/admin/sellers/products/${product.id}`)
@@ -58,6 +62,20 @@ function ProductModal({ product, onClose, onDone }) {
       onDone();
     } catch (e) { toast.error(e.response?.data?.message || 'Failed'); }
     finally { setStatusSaving(false); }
+  };
+
+  const removeProduct = async () => {
+    if (!removeReason.trim()) return toast.error('Please provide a removal reason');
+    if (!confirm(`Remove "${product.title}" permanently from the marketplace?\n\nA professional email will be sent to the seller.`)) return;
+    setRemoving(true);
+    try {
+      const r = await api.delete(`/admin/sellers/products/${product.id}/remove`, {
+        data: { reason: removeReason, category: removeCategory }
+      });
+      toast.success(`Product removed. Case ref: ${r.data.case_ref}`);
+      onDone();
+    } catch (e) { toast.error(e.response?.data?.message || 'Failed'); }
+    finally { setRemoving(false); }
   };
 
   const prod = detail?.product;
@@ -273,6 +291,84 @@ function ProductModal({ product, onClose, onDone }) {
                     <RefreshCw size={12} /> {statusSaving ? 'Updating…' : 'Update Status'}
                   </button>
                 </div>
+              </div>
+
+              {/* ── REMOVE PRODUCT ─────────────────────────────────────── */}
+              <div style={{ borderTop: '2px solid #fee2e2', paddingTop: 16 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: '#dc2626' }}>Remove Product from Marketplace</div>
+                    <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 2 }}>
+                      Permanently removes listing from store. Seller receives a professional compliance email.
+                    </div>
+                  </div>
+                  <button onClick={() => setShowRemove(r => !r)}
+                    style={{ ...btn(showRemove ? '#fee2e2' : '#fef2f2', showRemove ? '#b91c1c' : '#dc2626'), border: '1.5px solid #fecaca' }}>
+                    <Trash2 size={12} /> {showRemove ? 'Cancel' : 'Remove Product'}
+                  </button>
+                </div>
+
+                {showRemove && (
+                  <div style={{ background: '#fef2f2', border: '1.5px solid #fecaca', borderRadius: 12, padding: '18px 20px', display: 'grid', gap: 14 }}>
+
+                    {/* Removal category */}
+                    <div>
+                      <label style={{ fontSize: 11, fontWeight: 700, color: '#374151', display: 'block', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                        Removal Category
+                      </label>
+                      <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
+                        {[
+                          ['quality',  '📋 Quality Issue'],
+                          ['policy',   '📜 Policy Violation'],
+                          ['pricing',  '💰 Pricing Issue'],
+                          ['ip',       '©️ IP / Copyright'],
+                          ['safety',   '⚠️ Safety Concern'],
+                          ['other',    '📌 Other'],
+                        ].map(([val, label]) => (
+                          <button key={val} type="button" onClick={() => setRemoveCategory(val)}
+                            style={{ padding: '6px 13px', borderRadius: 20, border: `1.5px solid ${removeCategory === val ? '#dc2626' : '#fecaca'}`,
+                              background: removeCategory === val ? '#dc2626' : '#fff',
+                              color: removeCategory === val ? '#fff' : '#dc2626',
+                              fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+                            {label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Removal reason */}
+                    <div>
+                      <label style={{ fontSize: 11, fontWeight: 700, color: '#374151', display: 'block', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                        Detailed Reason <span style={{ color: '#dc2626' }}>*</span>
+                      </label>
+                      <textarea
+                        value={removeReason}
+                        onChange={e => setRemoveReason(e.target.value)}
+                        rows={3}
+                        placeholder="Describe specifically why this product is being removed. This will be included in the compliance email to the seller."
+                        style={{ ...inp, width: '100%', resize: 'vertical', background: '#fff', borderColor: '#fecaca' }}
+                      />
+                      <p style={{ margin: '5px 0 0', fontSize: 11, color: '#9ca3af' }}>
+                        Be specific and professional. The seller will receive this as part of a formal compliance notice from the NOREN Marketplace Compliance Team.
+                      </p>
+                    </div>
+
+                    {/* Warning + confirm button */}
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '12px 14px', background: '#fff', borderRadius: 9, border: '1px solid #fecaca' }}>
+                      <AlertTriangle size={16} color="#dc2626" style={{ flexShrink: 0, marginTop: 1 }} />
+                      <div style={{ flex: 1, fontSize: 12, color: '#7f1d1d', lineHeight: 1.6 }}>
+                        This action will <strong>permanently remove</strong> the product from the NOREN marketplace and hide it from all customers. The seller will receive a professional compliance email with a case reference number.
+                      </div>
+                    </div>
+
+                    <button onClick={removeProduct} disabled={removing || !removeReason.trim()}
+                      style={{ ...btn(removing || !removeReason.trim() ? '#fecaca' : '#dc2626'),
+                        justifyContent: 'center', opacity: !removeReason.trim() ? 0.6 : 1 }}>
+                      <Trash2 size={13} />
+                      {removing ? 'Removing & Sending Email…' : 'Confirm Removal & Send Compliance Email'}
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>
