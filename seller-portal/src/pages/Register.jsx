@@ -154,8 +154,8 @@ export default function Register() {
     setLoading(true);
     try {
       const res = await api.post('/auth/register', { name: form.name, email: email.trim().toLowerCase(), password: form.password, phone: form.phone });
-      login(res.data.token, res.data.user);
-      toast.success('Account created! Set up your seller profile.');
+      await login(res.data.token, res.data.user);
+      toast.success('Account created! Complete your seller setup.');
       navigate('/onboarding');
     } catch (err) {
       toast.error(err.response?.data?.message || 'Registration failed');

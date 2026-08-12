@@ -529,10 +529,81 @@ const getSellerPayouts = async (req, res) => {
   }
 };
 
-module.exports = {
-  sendRegistrationOTP, verifyRegistrationOTP,
+// ─── Update Stock for a specific variant ────────────────────────────────────
+const updateVariantStock = async (req, res) => {
+  const { id, variantId } = req.params;
+  const { stock, operation } = req.body;
+  // operation: 'set' | 'add' | 'subtract'
+  if (stock === undefined || isNaN(stock)) return res.status(400).json({ message: 'Stock value required' });
+  try {
+    const sp = await pool.query('SELECT id FROM src_seller_profiles WHERE user_id=$1', [req.user.id]);
+    if (!sp.rows.length) return res.status(404).json({ message: 'Profile not found' });
+    const prod = await pool.query(
+      'SELECT * FROM src_seller_products WHERE id=$1 AND seller_id=$2 AND deleted_at IS NULL',
+      [id, sp.rows[0].id]
+    );
+    if (!prod.rows.length) return res.status(404).json({ message: 'Product not found' });
+
+    let query;
+    const stockVal = parseInt(stock);
+    if (operation === 'add') {
+      query = await pool.query(
+        'UPDATE src_seller_product_variants SET stock=stock+$1 WHERE id=$2 AND product_id=$3 RETURNING *',
+        [Math.abs(stockVal), variantId, id]
+      );
+    } else if (operation === 'subtract') {
+      query = await pool.query(
+        'UPDATE src_seller_product_variants SET stock=GREATEST(0,stock-$1) WHERE id=$2 AND product_id=$3 RETURNING *',
+        [Math.abs(stockVal), variantId, id]
+      );
+    } else {
+      query = await pool.query(
+        'UPDATE src_seller_product_variants SET stock=$1 WHERE id=$2 AND product_id=$3 RETURNING *',
+        [Math.max(0, stockVal), variantId, id]
+      );
+    }
+    if (!query.rows.length) return res.status(404).json({ message: 'Variant not found' });
+    await sellerAudit(req.user.id, 'seller', sp.rows[0].id, 'stock_updated', 'seller_product_variant', variantId, null, { stock: stockVal, operation }, req.ip);
+    res.json(query.rows[0]);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// ─── Request product removal (seller initiates, soft-deletes draft/rejected) ─
+const requestProductRemoval = async (req, res) => {
+  const { id } = req.params;
+  const { reason } = req.body;
+  try {
+    const sp = await pool.query('SELECT id FROM src_seller_profiles WHERE user_id=$1', [req.user.id]);
+    if (!sp.rows.length) return res.status(404).json({ message: 'Profile not found' });
+    const prod = await pool.query(
+      'SELECT * FROM src_seller_products WHERE id=$1 AND seller_id=$2 AND deleted_at IS NULL',
+      [id, sp.rows[0].id]
+    );
+    if (!prod.rows.length) return res.status(404).json({ message: 'Product not found' });
+
+    if (prod.rows[0].status === 'approved') {
+      // Can't self-remove live products — must contact admin
+      return res.status(400).json({
+        message: 'Live products cannot be self-removed. Please contact NOREN support to remove a live listing.',
+        code: 'CONTACT_SUPPORT'
+      });
+    }
+
+    await pool.query(
+      'UPDATE src_seller_products SET deleted_at=NOW(), admin_message=$1, updated_at=NOW() WHERE id=$2',
+      [reason ? `Removed by seller: ${reason}` : 'Removed by seller', id]
+    );
+    await sellerAudit(req.user.id, 'seller', sp.rows[0].id, 'product_removed_by_seller', 'seller_product', id, { status: prod.rows[0].status }, { deleted: true, reason }, req.ip);
+    res.json({ message: 'Product removed successfully' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
   registerSeller, getSellerProfile, updateSellerProfile, submitKYC,
   getSellerDashboard, createSellerProduct, getSellerProducts, getSellerProductById,
   updateSellerProduct, submitProductForReview, deleteSellerProduct,
+  updateVariantStock, requestProductRemoval,
   getSellerOrders, getSellerPayouts,
 };

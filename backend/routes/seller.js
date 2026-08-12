@@ -51,6 +51,11 @@ router.get('/products/:id',         auth, ctrl.getSellerProductById);
 router.put('/products/:id',         auth, uploadProductImgs.array('images', 10), ctrl.updateSellerProduct);
 router.post('/products/:id/submit', auth, ctrl.submitProductForReview);
 router.delete('/products/:id',      auth, ctrl.deleteSellerProduct);
+router.post('/products/:id/remove', auth, ctrl.requestProductRemoval);
+// Stock management
+router.patch('/products/:id/variants/:variantId/stock', auth, ctrl.updateVariantStock);
+// Seller-initiated removal
+router.delete('/products/:id/remove', auth, ctrl.requestProductRemoval);
 
 // Orders & Payouts
 router.get('/orders',             auth, ctrl.getSellerOrders);
