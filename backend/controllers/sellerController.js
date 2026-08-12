@@ -622,6 +622,8 @@ const requestProductRemoval = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+
+module.exports = {
   registerSeller, getSellerProfile, updateSellerProfile, submitKYC,
   getSellerDashboard, createSellerProduct, getSellerProducts, getSellerProductById,
   updateSellerProduct, submitProductForReview, deleteSellerProduct,

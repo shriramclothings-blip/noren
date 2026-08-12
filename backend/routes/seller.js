@@ -54,8 +54,6 @@ router.delete('/products/:id',      auth, ctrl.deleteSellerProduct);
 router.post('/products/:id/remove', auth, ctrl.requestProductRemoval);
 // Stock management
 router.patch('/products/:id/variants/:variantId/stock', auth, ctrl.updateVariantStock);
-// Seller-initiated removal
-router.delete('/products/:id/remove', auth, ctrl.requestProductRemoval);
 
 // Orders & Payouts
 router.get('/orders',             auth, ctrl.getSellerOrders);

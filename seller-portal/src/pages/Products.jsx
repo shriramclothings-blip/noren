@@ -1,736 +1,680 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import api from '../utils/api';
 import SellerLayout from '../components/SellerLayout';
 import {
-  Plus, Edit2, Trash2, Eye, AlertCircle, Clock, CheckCircle,
-  XCircle, Package, Search, Filter, ChevronDown, MoreVertical,
-  TrendingUp, BarChart3, X,
+  Plus, Edit2, Trash2, AlertCircle, Clock, CheckCircle,
+  XCircle, Package, Search, MoreVertical, Send,
+  BarChart3, X, RefreshCw, ImageOff,
 } from 'lucide-react';
 
-const STATUS_CONFIG = {
-  draft: { label: 'Draft', color: '#6b7280', bg: '#f3f4f6', icon: Edit2 },
-  pending_review: { label: 'Pending Review', color: '#f59e0b', bg: '#fffbeb', icon: Clock },
-  approved: { label: 'Live', color: '#16a34a', bg: '#f0fdf4', icon: CheckCircle },
-  rejected: { label: 'Rejected', color: '#ef4444', bg: '#fef2f2', icon: XCircle },
+// ─── Status configuration ─────────────────────────────────────────────────────
+const STATUS = {
+  draft:          { label: 'Draft',          color: '#6b7280', bg: '#f3f4f6', border: '#d1d5db', icon: Edit2 },
+  pending_review: { label: 'Under Review',   color: '#d97706', bg: '#fffbeb', border: '#fde68a', icon: Clock },
+  approved:       { label: 'Live',           color: '#16a34a', bg: '#f0fdf4', border: '#bbf7d0', icon: CheckCircle },
+  rejected:       { label: 'Rejected',       color: '#dc2626', bg: '#fef2f2', border: '#fecaca', icon: XCircle },
+  suspended:      { label: 'Suspended',      color: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe', icon: AlertCircle },
 };
 
-export default function Products() {
-  const navigate = useNavigate();
-  const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState({ total: 0, draft: 0, pending_review: 0, approved: 0, rejected: 0 });
-  const [filter, setFilter] = useState('all');
-  const [search, setSearch] = useState('');
-  const [showFilters, setShowFilters] = useState(false);
-  const [actionMenu, setActionMenu] = useState(null);
-  const [deleteModal, setDeleteModal] = useState(null);
-  const [stockModal, setStockModal] = useState(null);
+const FILTER_TABS = [
+  { key: 'all',            label: 'All' },
+  { key: 'draft',          label: 'Draft' },
+  { key: 'pending_review', label: 'Under Review' },
+  { key: 'approved',       label: 'Live' },
+  { key: 'rejected',       label: 'Rejected' },
+];
 
-  useEffect(() => {
-    fetchProducts();
-  }, []);
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+const primaryImg = (product) => {
+  if (!Array.isArray(product.images) || product.images.length === 0) return null;
+  const primary = product.images.find(i => i.is_primary) || product.images[0];
+  return primary?.image_url || null;
+};
 
-  const fetchProducts = async () => {
+const totalStock = (product) =>
+  Array.isArray(product.variants)
+    ? product.variants.reduce((s, v) => s + (parseInt(v.stock) || 0), 0)
+    : 0;
+
+// ─── Sub-components ───────────────────────────────────────────────────────────
+function StatusBadge({ status }) {
+  const cfg = STATUS[status] || STATUS.draft;
+  const Icon = cfg.icon;
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', gap: 4,
+      padding: '3px 9px', borderRadius: 999,
+      background: cfg.bg, border: `1px solid ${cfg.border}`,
+      fontSize: 11, fontWeight: 700, color: cfg.color,
+    }}>
+      <Icon size={10} />
+      {cfg.label}
+    </span>
+  );
+}
+
+function StockBadge({ value }) {
+  const color = value === 0 ? '#dc2626' : value <= 10 ? '#d97706' : '#16a34a';
+  return (
+    <span style={{ fontSize: 15, fontWeight: 800, color }}>{value}</span>
+  );
+}
+
+function ProductImage({ src, size = 200 }) {
+  const [err, setErr] = useState(false);
+  if (!src || err) {
+    return (
+      <div style={{
+        width: '100%', height: size, background: '#f1f5f9',
+        display: 'flex', flexDirection: 'column', alignItems: 'center',
+        justifyContent: 'center', gap: 6,
+      }}>
+        <ImageOff size={28} color="#cbd5e1" />
+        <span style={{ fontSize: 11, color: '#94a3b8' }}>No image</span>
+      </div>
+    );
+  }
+  return (
+    <img
+      src={src}
+      alt=""
+      onError={() => setErr(true)}
+      style={{ width: '100%', height: size, objectFit: 'cover', display: 'block' }}
+    />
+  );
+}
+
+// ─── Delete / Removal modal ───────────────────────────────────────────────────
+function RemoveModal({ product, onClose, onSuccess }) {
+  const isLive = product.status === 'approved';
+  const [reason, setReason] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  const confirm = async () => {
+    if (isLive && !reason.trim()) return;
+    setBusy(true);
+    try {
+      if (isLive) {
+        await api.post(`/seller/products/${product.id}/remove`, { reason });
+        toast.success('Removal request submitted. Admin will review.');
+      } else {
+        await api.delete(`/seller/products/${product.id}`);
+        toast.success('Product deleted.');
+      }
+      onSuccess();
+    } catch (e) {
+      toast.error(e.response?.data?.message || 'Failed');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Overlay onClose={onClose}>
+      <div style={{ maxWidth: 440, width: '100%' }}>
+        <ModalHeader
+          title={isLive ? 'Request Removal' : 'Delete Product'}
+          onClose={onClose}
+        />
+        <p style={{ margin: '0 0 16px', fontSize: 14, color: '#6b7280', lineHeight: 1.6 }}>
+          {isLive
+            ? 'This product is live. Removal requires admin approval. Please state the reason.'
+            : `Delete "${product.title}"? This cannot be undone.`}
+        </p>
+        {isLive && (
+          <textarea
+            autoFocus
+            placeholder="Reason for removal (required)"
+            value={reason}
+            onChange={e => setReason(e.target.value)}
+            rows={3}
+            style={{
+              width: '100%', padding: 12, border: '1px solid #e5e7eb',
+              borderRadius: 8, fontSize: 14, resize: 'vertical',
+              marginBottom: 16, fontFamily: 'inherit', boxSizing: 'border-box',
+            }}
+          />
+        )}
+        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+          <Btn variant="outline" onClick={onClose}>Cancel</Btn>
+          <Btn
+            variant="danger"
+            onClick={confirm}
+            disabled={busy || (isLive && !reason.trim())}
+          >
+            {busy ? 'Please wait…' : isLive ? 'Submit Request' : 'Delete'}
+          </Btn>
+        </div>
+      </div>
+    </Overlay>
+  );
+}
+
+// ─── Stock modal ──────────────────────────────────────────────────────────────
+function StockModal({ product, onClose, onSuccess }) {
+  const [variants, setVariants] = useState(product.variants || []);
+  const [loading, setLoading] = useState(false);
+  const [values, setValues] = useState(() =>
+    Object.fromEntries((product.variants || []).map(v => [v.id, String(v.stock ?? 0)]))
+  );
+
+  const save = async (variantId) => {
+    const val = parseInt(values[variantId]);
+    if (isNaN(val) || val < 0) { toast.error('Enter a valid stock number'); return; }
     setLoading(true);
     try {
-      console.log('🔄 Fetching products from /seller/products...');
-      const res = await api.get('/seller/products?limit=100');
-      console.log('✅ API Response:', res.data);
-      console.log('📦 Products array:', res.data.data);
-      console.log('📊 Total products:', res.data.data?.length || 0);
-      
-      const productsData = res.data.data || [];
-      setProducts(productsData);
-      calculateStats(productsData);
-      
-      if (productsData.length === 0) {
-        console.warn('⚠️ No products found in response');
-      } else {
-        console.log('✅ Products loaded successfully:', productsData.length);
-        // Log first product for debugging
-        console.log('📝 Sample product:', productsData[0]);
-      }
-    } catch (err) {
-      console.error('❌ Error fetching products:', err);
-      console.error('Error response:', err.response?.data);
-      toast.error(err.response?.data?.message || 'Failed to load products');
+      await api.patch(`/seller/products/${product.id}/variants/${variantId}/stock`, {
+        stock: val, operation: 'set',
+      });
+      toast.success('Stock updated');
+      // Refresh variants
+      const res = await api.get(`/seller/products/${product.id}`);
+      const fresh = res.data.variants || [];
+      setVariants(fresh);
+      setValues(Object.fromEntries(fresh.map(v => [v.id, String(v.stock ?? 0)])));
+      onSuccess();
+    } catch (e) {
+      toast.error(e.response?.data?.message || 'Failed to update stock');
     } finally {
       setLoading(false);
     }
   };
 
-  const calculateStats = (data) => {
-    console.log('📊 Calculating stats for products:', data.length);
-    const statsData = {
-      total: data.length,
-      draft: data.filter(p => p.status === 'draft').length,
-      pending_review: data.filter(p => p.status === 'pending_review').length,
-      approved: data.filter(p => p.status === 'approved').length,
-      rejected: data.filter(p => p.status === 'rejected').length,
-    };
-    console.log('📊 Stats calculated:', statsData);
-    setStats(statsData);
-  };
-
-  const handleDelete = async (product) => {
-    if (product.status === 'approved') {
-      setDeleteModal({ product, needsReason: true, reason: '' });
-      return;
-    }
-    setDeleteModal({ product, needsReason: false, reason: '' });
-  };
-
-  const confirmDelete = async () => {
-    if (!deleteModal) return;
-    const { product, needsReason, reason } = deleteModal;
-
-    try {
-      if (needsReason) {
-        // Live product - request removal
-        await api.post(`/seller/products/${product.id}/remove`, { reason });
-        toast.success('Removal request submitted. Admin will review your request.');
-      } else {
-        // Draft/rejected - direct delete
-        await api.delete(`/seller/products/${product.id}`);
-        toast.success('Product deleted successfully');
-      }
-      setDeleteModal(null);
-      fetchProducts();
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to delete product');
-    }
-  };
-
-  const handleSubmitForReview = async (productId) => {
-    try {
-      await api.post(`/seller/products/${productId}/submit`);
-      toast.success('Product submitted for admin review!');
-      fetchProducts();
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to submit product');
-    }
-  };
-
-  const openStockModal = (product) => {
-    setStockModal({ product, variants: [] });
-    // Fetch variants
-    api.get(`/seller/products/${product.id}`)
-      .then(res => setStockModal(prev => ({ ...prev, variants: res.data.variants || [] })))
-      .catch(() => toast.error('Failed to load variants'));
-  };
-
-  const updateStock = async (variantId, stock, operation = 'set') => {
-    try {
-      await api.patch(`/seller/products/${stockModal.product.id}/variants/${variantId}/stock`, {
-        stock,
-        operation,
-      });
-      toast.success('Stock updated');
-      // Refresh variant data
-      const res = await api.get(`/seller/products/${stockModal.product.id}`);
-      setStockModal(prev => ({ ...prev, variants: res.data.variants || [] }));
-      fetchProducts();
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to update stock');
-    }
-  };
-
-  const filteredProducts = products.filter(p => {
-    const matchesFilter = filter === 'all' || p.status === filter;
-    const matchesSearch = !search || p.title.toLowerCase().includes(search.toLowerCase());
-    return matchesFilter && matchesSearch;
-  });
-
-  console.log('🔍 Filter:', filter, '| Search:', search, '| Filtered count:', filteredProducts.length);
-
-  const card = { background: '#fff', borderRadius: 12, border: '1px solid #e5e7eb', padding: 20 };
-
   return (
-    <SellerLayout>
-      <div style={{ display: 'grid', gap: 20 }}>
-        {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
-          <div>
-            <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: '#111827' }}>My Products</h1>
-            <p style={{ margin: '4px 0 0', fontSize: 13, color: '#6b7280' }}>
-              Manage your product listings, stock, and submissions.
-            </p>
-          </div>
-          <button
-            onClick={() => navigate('/products/new')}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-              padding: '11px 22px',
-              borderRadius: 9,
-              background: '#0f172a',
-              color: '#fff',
-              border: 'none',
-              fontSize: 14,
-              fontWeight: 700,
-              cursor: 'pointer',
-            }}
-          >
-            <Plus size={16} /> Add New Product
-          </button>
-        </div>
-
-        {/* Stats */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(160px,1fr))', gap: 12 }}>
-          {[
-            { key: 'all', label: 'All Products', value: stats.total, color: '#111827', icon: Package },
-            { key: 'draft', label: 'Draft', value: stats.draft, color: '#6b7280', icon: Edit2 },
-            { key: 'pending_review', label: 'Pending', value: stats.pending_review, color: '#f59e0b', icon: Clock },
-            { key: 'approved', label: 'Live', value: stats.approved, color: '#16a34a', icon: CheckCircle },
-            { key: 'rejected', label: 'Rejected', value: stats.rejected, color: '#ef4444', icon: XCircle },
-          ].map(({ key, label, value, color, icon: Icon }) => (
-            <button
-              key={key}
-              onClick={() => setFilter(key)}
-              style={{
-                ...card,
-                cursor: 'pointer',
-                borderColor: filter === key ? color : '#e5e7eb',
-                borderWidth: 2,
-                padding: '14px 16px',
-                transition: 'all 0.2s',
-                opacity: filter === key ? 1 : 0.75,
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div>
-                  <div style={{ fontSize: 24, fontWeight: 800, color: '#111827' }}>{value}</div>
-                  <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>{label}</div>
-                </div>
-                <div style={{ width: 36, height: 36, borderRadius: 8, background: `${color}15`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Icon size={16} color={color} />
-                </div>
-              </div>
-            </button>
-          ))}
-        </div>
-
-        {/* Search & Filters */}
-        <div style={{ ...card, padding: 16 }}>
-          <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-            <div style={{ flex: 1, minWidth: 240, position: 'relative' }}>
-              <Search size={16} color="#9ca3af" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)' }} />
-              <input
-                type="text"
-                placeholder="Search products..."
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '10px 12px 10px 38px',
-                  border: '1px solid #e5e7eb',
-                  borderRadius: 8,
-                  fontSize: 14,
-                  outline: 'none',
-                }}
-              />
-            </div>
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-                padding: '10px 16px',
-                border: '1px solid #e5e7eb',
-                borderRadius: 8,
-                background: '#fff',
-                fontSize: 13,
-                fontWeight: 600,
-                cursor: 'pointer',
-                color: '#374151',
-              }}
-            >
-              <Filter size={14} /> Filters
-            </button>
-          </div>
-        </div>
-
-        {/* Products Grid */}
-        {loading ? (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(280px,1fr))', gap: 16 }}>
-            {[1, 2, 3, 4].map(i => (
-              <div key={i} style={{ ...card, height: 340, background: '#f8fafc' }} />
-            ))}
-          </div>
-        ) : filteredProducts.length === 0 ? (
-          <div style={{ ...card, textAlign: 'center', padding: 60 }}>
-            <Package size={48} color="#d1d5db" style={{ margin: '0 auto 16px' }} />
-            <h3 style={{ margin: '0 0 8px', fontSize: 16, fontWeight: 700, color: '#374151' }}>
-              {search ? 'No products found' : 'No products yet'}
-            </h3>
-            <p style={{ margin: 0, fontSize: 13, color: '#9ca3af' }}>
-              {search ? 'Try adjusting your search' : 'Add your first product to get started'}
-            </p>
-            {!search && (
-              <button
-                onClick={() => navigate('/products/new')}
-                style={{
-                  marginTop: 20,
-                  padding: '10px 20px',
-                  border: 'none',
-                  borderRadius: 8,
-                  background: '#0f172a',
-                  color: '#fff',
-                  fontSize: 13,
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                }}
-              >
-                Add Product
-              </button>
-            )}
-          </div>
+    <Overlay onClose={onClose}>
+      <div style={{ maxWidth: 500, width: '100%', maxHeight: '85vh', overflowY: 'auto' }}>
+        <ModalHeader title={`Stock — ${product.title}`} onClose={onClose} />
+        {variants.length === 0 ? (
+          <p style={{ color: '#6b7280', fontSize: 14, textAlign: 'center', padding: '20px 0' }}>
+            No variants found.
+          </p>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(280px,1fr))', gap: 16 }}>
-            {filteredProducts.map(product => {
-              const statusConfig = STATUS_CONFIG[product.status] || STATUS_CONFIG.draft;
-              const StatusIcon = statusConfig.icon;
-              const primaryImage = product.images?.[0]?.image_url || null;
-              const totalStock = product.variants?.reduce((sum, v) => sum + (v.stock || 0), 0) || 0;
-
+          <div style={{ display: 'grid', gap: 10 }}>
+            {variants.map(v => {
+              const stockVal = parseInt(values[v.id] ?? v.stock) || 0;
+              const color = stockVal === 0 ? '#dc2626' : stockVal <= 10 ? '#d97706' : '#16a34a';
               return (
-                <div key={product.id} style={{ ...card, padding: 0, position: 'relative', overflow: 'hidden' }}>
-                  {/* Image */}
-                  <div
-                    style={{
-                      width: '100%',
-                      height: 200,
-                      background: primaryImage ? `url(${primaryImage}) center/cover` : '#f3f4f6',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      position: 'relative',
-                    }}
-                  >
-                    {!primaryImage && <Package size={48} color="#d1d5db" />}
-                    <div style={{ position: 'absolute', top: 10, right: 10 }}>
-                      <button
-                        onClick={() => setActionMenu(actionMenu === product.id ? null : product.id)}
-                        style={{
-                          width: 32,
-                          height: 32,
-                          borderRadius: 8,
-                          background: 'rgba(255,255,255,0.95)',
-                          border: 'none',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          cursor: 'pointer',
-                          boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-                        }}
-                      >
-                        <MoreVertical size={16} color="#374151" />
-                      </button>
-                      {actionMenu === product.id && (
-                        <div
-                          style={{
-                            position: 'absolute',
-                            top: 38,
-                            right: 0,
-                            background: '#fff',
-                            border: '1px solid #e5e7eb',
-                            borderRadius: 8,
-                            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                            minWidth: 160,
-                            overflow: 'hidden',
-                            zIndex: 10,
-                          }}
-                        >
-                          <button
-                            onClick={() => { navigate(`/products/${product.id}/edit`); setActionMenu(null); }}
-                            style={{
-                              width: '100%',
-                              padding: '10px 14px',
-                              border: 'none',
-                              background: 'none',
-                              textAlign: 'left',
-                              fontSize: 13,
-                              fontWeight: 600,
-                              color: '#374151',
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: 8,
-                            }}
-                            onMouseEnter={e => (e.currentTarget.style.background = '#f9fafb')}
-                            onMouseLeave={e => (e.currentTarget.style.background = 'none')}
-                          >
-                            <Edit2 size={14} /> Edit
-                          </button>
-                          <button
-                            onClick={() => { openStockModal(product); setActionMenu(null); }}
-                            style={{
-                              width: '100%',
-                              padding: '10px 14px',
-                              border: 'none',
-                              background: 'none',
-                              textAlign: 'left',
-                              fontSize: 13,
-                              fontWeight: 600,
-                              color: '#374151',
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: 8,
-                            }}
-                            onMouseEnter={e => (e.currentTarget.style.background = '#f9fafb')}
-                            onMouseLeave={e => (e.currentTarget.style.background = 'none')}
-                          >
-                            <BarChart3 size={14} /> Manage Stock
-                          </button>
-                          {['draft', 'rejected'].includes(product.status) && (
-                            <button
-                              onClick={() => { handleSubmitForReview(product.id); setActionMenu(null); }}
-                              style={{
-                                width: '100%',
-                                padding: '10px 14px',
-                                border: 'none',
-                                background: 'none',
-                                textAlign: 'left',
-                                fontSize: 13,
-                                fontWeight: 600,
-                                color: '#0891b2',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 8,
-                              }}
-                              onMouseEnter={e => (e.currentTarget.style.background = '#f0fdfa')}
-                              onMouseLeave={e => (e.currentTarget.style.background = 'none')}
-                            >
-                              <TrendingUp size={14} /> Submit for Review
-                            </button>
-                          )}
-                          <button
-                            onClick={() => { handleDelete(product); setActionMenu(null); }}
-                            style={{
-                              width: '100%',
-                              padding: '10px 14px',
-                              border: 'none',
-                              background: 'none',
-                              textAlign: 'left',
-                              fontSize: 13,
-                              fontWeight: 600,
-                              color: '#ef4444',
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: 8,
-                              borderTop: '1px solid #f3f4f6',
-                            }}
-                            onMouseEnter={e => (e.currentTarget.style.background = '#fef2f2')}
-                            onMouseLeave={e => (e.currentTarget.style.background = 'none')}
-                          >
-                            <Trash2 size={14} /> Remove
-                          </button>
-                        </div>
-                      )}
+                <div key={v.id} style={{
+                  padding: 14, border: '1px solid #e5e7eb', borderRadius: 8,
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+                }}>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: 14 }}>Size: {v.size}</div>
+                    <div style={{ fontSize: 12, color, fontWeight: 600, marginTop: 2 }}>
+                      Current: {v.stock ?? 0}
                     </div>
-                  </div>
-
-                  {/* Info */}
-                  <div style={{ padding: 16 }}>
-                    <div
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: 4,
-                        padding: '4px 10px',
-                        borderRadius: 999,
-                        background: statusConfig.bg,
-                        marginBottom: 10,
-                      }}
-                    >
-                      <StatusIcon size={11} color={statusConfig.color} />
-                      <span style={{ fontSize: 11, fontWeight: 700, color: statusConfig.color }}>
-                        {statusConfig.label}
-                      </span>
-                    </div>
-                    <h3
-                      style={{
-                        margin: '0 0 4px',
-                        fontSize: 15,
-                        fontWeight: 700,
-                        color: '#111827',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      {product.title}
-                    </h3>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
-                      <div>
-                        <div style={{ fontSize: 18, fontWeight: 800, color: '#111827' }}>
-                          ₹{Number(product.price).toLocaleString('en-IN')}
-                        </div>
-                        {product.discount_percent > 0 && (
-                          <div style={{ fontSize: 11, color: '#16a34a', fontWeight: 600 }}>
-                            {product.discount_percent}% OFF
-                          </div>
-                        )}
-                      </div>
-                      <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontSize: 11, color: '#6b7280' }}>Stock</div>
-                        <div
-                          style={{
-                            fontSize: 16,
-                            fontWeight: 700,
-                            color: totalStock > 10 ? '#16a34a' : totalStock > 0 ? '#f59e0b' : '#ef4444',
-                          }}
-                        >
-                          {totalStock}
-                        </div>
-                      </div>
-                    </div>
-                    {product.admin_message && (
-                      <div
-                        style={{
-                          marginTop: 10,
-                          padding: 8,
-                          borderRadius: 6,
-                          background: '#fef2f2',
-                          border: '1px solid #fecaca',
-                        }}
-                      >
-                        <div style={{ display: 'flex', gap: 6, alignItems: 'flex-start' }}>
-                          <AlertCircle size={12} color="#ef4444" style={{ marginTop: 1, flexShrink: 0 }} />
-                          <span style={{ fontSize: 11, color: '#991b1b', lineHeight: 1.4 }}>
-                            {product.admin_message}
-                          </span>
-                        </div>
-                      </div>
+                    {v.extra_price > 0 && (
+                      <div style={{ fontSize: 11, color: '#9ca3af' }}>+₹{v.extra_price}</div>
                     )}
+                  </div>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <input
+                      type="number"
+                      min="0"
+                      value={values[v.id] ?? v.stock}
+                      onChange={e => setValues(prev => ({ ...prev, [v.id]: e.target.value }))}
+                      style={{
+                        width: 80, padding: '8px 10px', textAlign: 'center',
+                        border: '1px solid #e5e7eb', borderRadius: 6, fontSize: 14,
+                      }}
+                    />
+                    <Btn
+                      variant="primary"
+                      onClick={() => save(v.id)}
+                      disabled={loading}
+                    >
+                      Set
+                    </Btn>
                   </div>
                 </div>
               );
             })}
           </div>
         )}
+        <div style={{
+          marginTop: 14, padding: 12, background: '#f0fdf4',
+          borderRadius: 8, border: '1px solid #bbf7d0',
+        }}>
+          <p style={{ margin: 0, fontSize: 12, color: '#15803d' }}>
+            Enter new quantity and press "Set" to update immediately.
+          </p>
+        </div>
       </div>
+    </Overlay>
+  );
+}
 
-      {/* Delete Modal */}
-      {deleteModal && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0,0,0,0.6)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 999,
-            padding: 20,
-          }}
-          onClick={() => setDeleteModal(null)}
-        >
-          <div
-            style={{
-              background: '#fff',
-              borderRadius: 12,
-              maxWidth: 440,
-              width: '100%',
-              padding: 24,
-            }}
-            onClick={e => e.stopPropagation()}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: '#111827' }}>
-                {deleteModal.needsReason ? 'Request Product Removal' : 'Delete Product'}
-              </h3>
-              <button
-                onClick={() => setDeleteModal(null)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}
-              >
-                <X size={18} color="#6b7280" />
-              </button>
-            </div>
-            <p style={{ margin: '0 0 16px', fontSize: 14, color: '#6b7280', lineHeight: 1.6 }}>
-              {deleteModal.needsReason
-                ? 'This product is currently live and generating sales. You need admin approval to remove it. Please provide a reason for removal.'
-                : 'Are you sure you want to delete this product? This action cannot be undone.'}
-            </p>
-            {deleteModal.needsReason && (
-              <textarea
-                placeholder="Reason for removal (required)"
-                value={deleteModal.reason}
-                onChange={e => setDeleteModal({ ...deleteModal, reason: e.target.value })}
-                style={{
-                  width: '100%',
-                  minHeight: 80,
-                  padding: 12,
-                  border: '1px solid #e5e7eb',
-                  borderRadius: 8,
-                  fontSize: 14,
-                  resize: 'vertical',
-                  marginBottom: 16,
-                  fontFamily: 'inherit',
-                }}
-              />
-            )}
-            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-              <button
-                onClick={() => setDeleteModal(null)}
-                style={{
-                  padding: '10px 20px',
-                  border: '1px solid #e5e7eb',
-                  borderRadius: 8,
-                  background: '#fff',
-                  fontSize: 14,
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  color: '#374151',
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={confirmDelete}
-                disabled={deleteModal.needsReason && !deleteModal.reason.trim()}
-                style={{
-                  padding: '10px 20px',
-                  border: 'none',
-                  borderRadius: 8,
-                  background: deleteModal.needsReason && !deleteModal.reason.trim() ? '#d1d5db' : '#ef4444',
-                  color: '#fff',
-                  fontSize: 14,
-                  fontWeight: 600,
-                  cursor: deleteModal.needsReason && !deleteModal.reason.trim() ? 'not-allowed' : 'pointer',
-                }}
-              >
-                {deleteModal.needsReason ? 'Submit Request' : 'Delete'}
-              </button>
-            </div>
-          </div>
+// ─── Shared primitives ────────────────────────────────────────────────────────
+function Overlay({ children, onClose }) {
+  return (
+    <div
+      style={{
+        position: 'fixed', inset: 0, zIndex: 1000,
+        background: 'rgba(0,0,0,0.55)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
+      }}
+      onClick={onClose}
+    >
+      <div
+        style={{ background: '#fff', borderRadius: 14, padding: 24, width: '100%' }}
+        onClick={e => e.stopPropagation()}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function ModalHeader({ title, onClose }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+      <h3 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: '#111827' }}>{title}</h3>
+      <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
+        <X size={18} color="#6b7280" />
+      </button>
+    </div>
+  );
+}
+
+function Btn({ children, onClick, variant = 'primary', disabled = false }) {
+  const styles = {
+    primary: { background: '#0f172a', color: '#fff', border: 'none' },
+    outline:  { background: '#fff', color: '#374151', border: '1px solid #e5e7eb' },
+    danger:   { background: disabled ? '#fca5a5' : '#dc2626', color: '#fff', border: 'none' },
+    ghost:    { background: 'none', color: '#374151', border: 'none' },
+  };
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      style={{
+        padding: '9px 18px', borderRadius: 8, fontSize: 13, fontWeight: 600,
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        display: 'inline-flex', alignItems: 'center', gap: 6,
+        ...styles[variant],
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
+// ─── Action dropdown ──────────────────────────────────────────────────────────
+function ActionMenu({ product, onEdit, onStock, onSubmit, onRemove }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const item = (label, icon, color, action) => (
+    <button
+      key={label}
+      onClick={() => { action(); setOpen(false); }}
+      style={{
+        width: '100%', padding: '9px 14px', border: 'none', background: 'none',
+        textAlign: 'left', fontSize: 13, fontWeight: 600, color, cursor: 'pointer',
+        display: 'flex', alignItems: 'center', gap: 8,
+      }}
+      onMouseEnter={e => (e.currentTarget.style.background = '#f9fafb')}
+      onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+    >
+      {icon}
+      {label}
+    </button>
+  );
+
+  return (
+    <div ref={ref} style={{ position: 'relative' }}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        style={{
+          width: 32, height: 32, borderRadius: 8,
+          background: 'rgba(255,255,255,0.95)',
+          border: 'none', cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          boxShadow: '0 1px 6px rgba(0,0,0,0.12)',
+        }}
+      >
+        <MoreVertical size={15} color="#374151" />
+      </button>
+      {open && (
+        <div style={{
+          position: 'absolute', top: 36, right: 0, zIndex: 50,
+          background: '#fff', border: '1px solid #e5e7eb', borderRadius: 10,
+          boxShadow: '0 8px 24px rgba(0,0,0,0.12)', minWidth: 168, overflow: 'hidden',
+        }}>
+          {item('Edit', <Edit2 size={13} />, '#374151', onEdit)}
+          {item('Manage Stock', <BarChart3 size={13} />, '#374151', onStock)}
+          {['draft', 'rejected'].includes(product.status) &&
+            item('Submit for Review', <Send size={13} />, '#0891b2', onSubmit)}
+          <div style={{ height: 1, background: '#f3f4f6', margin: '2px 0' }} />
+          {item('Remove', <Trash2 size={13} />, '#dc2626', onRemove)}
         </div>
       )}
+    </div>
+  );
+}
 
-      {/* Stock Management Modal */}
-      {stockModal && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0,0,0,0.6)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 999,
-            padding: 20,
-          }}
-          onClick={() => setStockModal(null)}
-        >
-          <div
-            style={{
-              background: '#fff',
-              borderRadius: 12,
-              maxWidth: 540,
-              width: '100%',
-              padding: 24,
-              maxHeight: '90vh',
-              overflow: 'auto',
-            }}
-            onClick={e => e.stopPropagation()}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: '#111827' }}>
-                Manage Stock - {stockModal.product.title}
-              </h3>
-              <button
-                onClick={() => setStockModal(null)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}
-              >
-                <X size={18} color="#6b7280" />
-              </button>
-            </div>
+// ─── Main page ────────────────────────────────────────────────────────────────
+export default function Products() {
+  const navigate = useNavigate();
+  const [products, setProducts]   = useState([]);
+  const [loading, setLoading]     = useState(true);
+  const [filter, setFilter]       = useState('all');
+  const [search, setSearch]       = useState('');
+  const [removeModal, setRemoveModal] = useState(null);   // product to remove
+  const [stockModal, setStockModal]   = useState(null);   // product for stock
 
-            {stockModal.variants.length === 0 ? (
-              <p style={{ color: '#6b7280', fontSize: 14, textAlign: 'center', padding: 20 }}>
-                No variants found for this product.
-              </p>
-            ) : (
-              <div style={{ display: 'grid', gap: 12 }}>
-                {stockModal.variants.map(variant => (
-                  <div
-                    key={variant.id}
-                    style={{
-                      padding: 16,
-                      border: '1px solid #e5e7eb',
-                      borderRadius: 8,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      gap: 12,
-                    }}
-                  >
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 14, fontWeight: 700, color: '#111827', marginBottom: 4 }}>
-                        Size: {variant.size}
-                      </div>
-                      <div style={{ fontSize: 13, color: '#6b7280' }}>
-                        Current Stock: <strong>{variant.stock}</strong>
-                      </div>
-                      {variant.extra_price > 0 && (
-                        <div style={{ fontSize: 12, color: '#f59e0b', marginTop: 2 }}>
-                          +₹{variant.extra_price}
-                        </div>
-                      )}
-                    </div>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <input
-                        type="number"
-                        min="0"
-                        placeholder="Qty"
-                        id={`stock-${variant.id}`}
-                        style={{
-                          width: 70,
-                          padding: '8px 10px',
-                          border: '1px solid #e5e7eb',
-                          borderRadius: 6,
-                          fontSize: 14,
-                          textAlign: 'center',
-                        }}
-                      />
-                      <button
-                        onClick={() => {
-                          const val = parseInt(document.getElementById(`stock-${variant.id}`).value);
-                          if (!isNaN(val) && val >= 0) updateStock(variant.id, val, 'set');
-                        }}
-                        style={{
-                          padding: '8px 14px',
-                          border: 'none',
-                          borderRadius: 6,
-                          background: '#0f172a',
-                          color: '#fff',
-                          fontSize: 13,
-                          fontWeight: 600,
-                          cursor: 'pointer',
-                        }}
-                      >
-                        Set
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+  // ── Fetch ──────────────────────────────────────────────────────────────────
+  const fetchProducts = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await api.get('/seller/products?limit=200');
+      // Accept both { data: [] } and { products: [] } shapes for safety
+      const list = res.data?.data ?? res.data?.products ?? [];
+      setProducts(Array.isArray(list) ? list : []);
+    } catch (e) {
+      const msg = e.response?.data?.message || e.message;
+      toast.error(`Failed to load products: ${msg}`);
+      setProducts([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-            <div style={{ marginTop: 16, padding: 12, background: '#f0fdf4', borderRadius: 8, border: '1px solid #bbf7d0' }}>
-              <p style={{ margin: 0, fontSize: 12, color: '#15803d', lineHeight: 1.5 }}>
-                <strong>Tip:</strong> Enter quantity and click "Set" to update stock levels. Stock changes are reflected immediately.
-              </p>
-            </div>
+  useEffect(() => { fetchProducts(); }, [fetchProducts]);
+
+  // ── Submit for review ──────────────────────────────────────────────────────
+  const submitForReview = async (productId) => {
+    try {
+      await api.post(`/seller/products/${productId}/submit`);
+      toast.success('Submitted for review!');
+      fetchProducts();
+    } catch (e) {
+      toast.error(e.response?.data?.message || 'Failed to submit');
+    }
+  };
+
+  // ── Derived state ──────────────────────────────────────────────────────────
+  const counts = {
+    all: products.length,
+    draft: products.filter(p => p.status === 'draft').length,
+    pending_review: products.filter(p => p.status === 'pending_review').length,
+    approved: products.filter(p => p.status === 'approved').length,
+    rejected: products.filter(p => p.status === 'rejected').length,
+  };
+
+  const filtered = products.filter(p => {
+    const okStatus = filter === 'all' || p.status === filter;
+    const okSearch = !search.trim() ||
+      p.title?.toLowerCase().includes(search.toLowerCase()) ||
+      String(p.id).includes(search);
+    return okStatus && okSearch;
+  });
+
+  // ── Render ─────────────────────────────────────────────────────────────────
+  return (
+    <SellerLayout>
+      <div style={{ display: 'grid', gap: 20 }}>
+
+        {/* ── Header ── */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+          <div>
+            <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: '#111827' }}>My Products</h1>
+            <p style={{ margin: '4px 0 0', fontSize: 13, color: '#6b7280' }}>
+              Manage listings, stock, and review submissions.
+            </p>
+          </div>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <Btn variant="outline" onClick={fetchProducts}>
+              <RefreshCw size={14} /> Refresh
+            </Btn>
+            <Btn variant="primary" onClick={() => navigate('/products/new')}>
+              <Plus size={15} /> Add Product
+            </Btn>
           </div>
         </div>
+
+        {/* ── Filter tabs ── */}
+        <div style={{
+          display: 'flex', gap: 0, background: '#fff',
+          border: '1px solid #e5e7eb', borderRadius: 10, padding: 4, flexWrap: 'wrap',
+        }}>
+          {FILTER_TABS.map(tab => (
+            <button
+              key={tab.key}
+              onClick={() => setFilter(tab.key)}
+              style={{
+                padding: '8px 16px', borderRadius: 7, border: 'none',
+                fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                background: filter === tab.key ? '#0f172a' : 'transparent',
+                color: filter === tab.key ? '#fff' : '#6b7280',
+                transition: 'all 0.15s',
+                display: 'flex', alignItems: 'center', gap: 6,
+              }}
+            >
+              {tab.label}
+              <span style={{
+                fontSize: 11, fontWeight: 700, minWidth: 20, height: 18,
+                borderRadius: 999, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                background: filter === tab.key ? 'rgba(255,255,255,0.2)' : '#f3f4f6',
+                color: filter === tab.key ? '#fff' : '#6b7280',
+                padding: '0 5px',
+              }}>
+                {counts[tab.key] ?? 0}
+              </span>
+            </button>
+          ))}
+        </div>
+
+        {/* ── Search ── */}
+        <div style={{ position: 'relative' }}>
+          <Search size={16} color="#9ca3af" style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)' }} />
+          <input
+            type="text"
+            placeholder="Search by name or product ID…"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            style={{
+              width: '100%', padding: '11px 14px 11px 42px', boxSizing: 'border-box',
+              border: '1px solid #e5e7eb', borderRadius: 9, fontSize: 14, outline: 'none',
+              background: '#fff',
+            }}
+          />
+          {search && (
+            <button
+              onClick={() => setSearch('')}
+              style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer' }}
+            >
+              <X size={15} color="#9ca3af" />
+            </button>
+          )}
+        </div>
+
+        {/* ── Product grid ── */}
+        {loading ? (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(270px,1fr))', gap: 16 }}>
+            {[1, 2, 3, 4].map(i => (
+              <div key={i} style={{ height: 320, borderRadius: 12, background: '#f8fafc', border: '1px solid #e5e7eb' }} />
+            ))}
+          </div>
+        ) : filtered.length === 0 ? (
+          <div style={{
+            background: '#fff', borderRadius: 12, border: '1px solid #e5e7eb',
+            textAlign: 'center', padding: '60px 20px',
+          }}>
+            <Package size={48} color="#d1d5db" style={{ margin: '0 auto 16px' }} />
+            <h3 style={{ margin: '0 0 6px', fontSize: 16, fontWeight: 700, color: '#374151' }}>
+              {search ? 'No matching products' : products.length === 0 ? 'No products yet' : `No ${filter === 'all' ? '' : filter.replace('_', ' ')} products`}
+            </h3>
+            <p style={{ margin: '0 0 20px', fontSize: 13, color: '#9ca3af' }}>
+              {search ? 'Try a different search term' : products.length === 0 ? 'Start by adding your first product.' : 'Change the filter to see other products.'}
+            </p>
+            {!search && products.length === 0 && (
+              <Btn variant="primary" onClick={() => navigate('/products/new')}>
+                <Plus size={14} /> Add First Product
+              </Btn>
+            )}
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(270px,1fr))', gap: 16 }}>
+            {filtered.map(product => {
+              const imgSrc = primaryImg(product);
+              const stock  = totalStock(product);
+
+              return (
+                <div key={product.id} style={{
+                  background: '#fff', borderRadius: 12,
+                  border: '1px solid #e5e7eb', overflow: 'hidden',
+                  display: 'flex', flexDirection: 'column',
+                  transition: 'box-shadow 0.15s',
+                }}
+                  onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.08)')}
+                  onMouseLeave={e => (e.currentTarget.style.boxShadow = 'none')}
+                >
+                  {/* Image */}
+                  <div style={{ position: 'relative' }}>
+                    <ProductImage src={imgSrc} size={200} />
+                    <div style={{ position: 'absolute', top: 10, right: 10 }}>
+                      <ActionMenu
+                        product={product}
+                        onEdit={() => navigate(`/products/${product.id}/edit`)}
+                        onStock={() => setStockModal(product)}
+                        onSubmit={() => submitForReview(product.id)}
+                        onRemove={() => setRemoveModal(product)}
+                      />
+                    </div>
+                    {/* Stock pill */}
+                    <div style={{
+                      position: 'absolute', bottom: 10, left: 10,
+                      padding: '3px 9px', borderRadius: 999,
+                      background: stock === 0 ? '#fef2f2' : stock <= 10 ? '#fffbeb' : '#f0fdf4',
+                      border: `1px solid ${stock === 0 ? '#fecaca' : stock <= 10 ? '#fde68a' : '#bbf7d0'}`,
+                      fontSize: 11, fontWeight: 700,
+                      color: stock === 0 ? '#dc2626' : stock <= 10 ? '#d97706' : '#16a34a',
+                    }}>
+                      {stock === 0 ? 'Out of Stock' : `Stock: ${stock}`}
+                    </div>
+                  </div>
+
+                  {/* Body */}
+                  <div style={{ padding: '14px 16px', flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <StatusBadge status={product.status} />
+                    <div>
+                      <h3 style={{
+                        margin: 0, fontSize: 15, fontWeight: 700, color: '#111827',
+                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                      }}>
+                        {product.title}
+                      </h3>
+                      <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 2 }}>
+                        ID #{product.id} {product.category_name ? `• ${product.category_name}` : ''}
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div>
+                        <span style={{ fontSize: 18, fontWeight: 800, color: '#111827' }}>
+                          ₹{Number(product.price).toLocaleString('en-IN')}
+                        </span>
+                        {product.discount_percent > 0 && (
+                          <span style={{ marginLeft: 6, fontSize: 11, fontWeight: 700, color: '#16a34a' }}>
+                            {product.discount_percent}% off
+                          </span>
+                        )}
+                      </div>
+                      {/* Variant sizes preview */}
+                      <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                        {(product.variants || []).slice(0, 4).map(v => (
+                          <span key={v.id} style={{
+                            padding: '2px 6px', borderRadius: 4,
+                            background: '#f1f5f9', fontSize: 10, fontWeight: 600, color: '#475569',
+                          }}>
+                            {v.size}
+                          </span>
+                        ))}
+                        {(product.variants || []).length > 4 && (
+                          <span style={{ fontSize: 10, color: '#9ca3af', alignSelf: 'center' }}>
+                            +{product.variants.length - 4}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Admin message */}
+                    {product.admin_message && (
+                      <div style={{
+                        padding: '8px 10px', borderRadius: 7,
+                        background: '#fef2f2', border: '1px solid #fecaca',
+                        display: 'flex', gap: 6, alignItems: 'flex-start',
+                      }}>
+                        <AlertCircle size={12} color="#dc2626" style={{ marginTop: 1, flexShrink: 0 }} />
+                        <span style={{ fontSize: 11, color: '#991b1b', lineHeight: 1.4 }}>
+                          {product.admin_message}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Quick actions */}
+                    <div style={{ display: 'flex', gap: 8, marginTop: 'auto', paddingTop: 6 }}>
+                      <button
+                        onClick={() => navigate(`/products/${product.id}/edit`)}
+                        style={{
+                          flex: 1, padding: '8px 0', border: '1px solid #e5e7eb',
+                          borderRadius: 7, background: '#fff', fontSize: 12,
+                          fontWeight: 600, cursor: 'pointer', color: '#374151',
+                        }}
+                      >
+                        Edit
+                      </button>
+                      {['draft', 'rejected'].includes(product.status) && (
+                        <button
+                          onClick={() => submitForReview(product.id)}
+                          style={{
+                            flex: 1, padding: '8px 0', border: 'none',
+                            borderRadius: 7, background: '#0f172a', fontSize: 12,
+                            fontWeight: 600, cursor: 'pointer', color: '#fff',
+                          }}
+                        >
+                          Submit
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Summary line */}
+        {!loading && filtered.length > 0 && (
+          <p style={{ margin: 0, fontSize: 12, color: '#9ca3af', textAlign: 'center' }}>
+            Showing {filtered.length} of {products.length} product{products.length !== 1 ? 's' : ''}
+          </p>
+        )}
+      </div>
+
+      {/* Modals */}
+      {removeModal && (
+        <RemoveModal
+          product={removeModal}
+          onClose={() => setRemoveModal(null)}
+          onSuccess={() => { setRemoveModal(null); fetchProducts(); }}
+        />
+      )}
+      {stockModal && (
+        <StockModal
+          product={stockModal}
+          onClose={() => setStockModal(null)}
+          onSuccess={fetchProducts}
+        />
       )}
     </SellerLayout>
   );
