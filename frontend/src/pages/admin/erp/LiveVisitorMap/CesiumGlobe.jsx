@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import * as Cesium from 'cesium';
-import '../../../../styles/cesium.css';
 import toast from 'react-hot-toast';
 
 // Production-Grade Real Data Sources (No API keys required)
