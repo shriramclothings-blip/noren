@@ -12,6 +12,7 @@ const Onboarding   = lazy(() => import('./pages/Onboarding'));
 const Dashboard    = lazy(() => import('./pages/Dashboard'));
 const Products     = lazy(() => import('./pages/Products'));
 const ProductForm  = lazy(() => import('./pages/ProductForm'));
+const Inventory    = lazy(() => import('./pages/Inventory'));
 const Orders       = lazy(() => import('./pages/Orders'));
 const Payouts      = lazy(() => import('./pages/Payouts'));
 const KYC          = lazy(() => import('./pages/KYC'));
@@ -45,6 +46,7 @@ export default function App() {
             <Route path="/products"       element={<SellerProtectedRoute requireProfile><Products /></SellerProtectedRoute>} />
             <Route path="/products/new"   element={<SellerProtectedRoute requireProfile><ProductForm /></SellerProtectedRoute>} />
             <Route path="/products/:id/edit" element={<SellerProtectedRoute requireProfile><ProductForm /></SellerProtectedRoute>} />
+            <Route path="/inventory"      element={<SellerProtectedRoute requireProfile><Inventory /></SellerProtectedRoute>} />
             <Route path="/orders"         element={<SellerProtectedRoute requireProfile><Orders /></SellerProtectedRoute>} />
             <Route path="/payouts"        element={<SellerProtectedRoute requireProfile><Payouts /></SellerProtectedRoute>} />
             <Route path="/kyc"            element={<SellerProtectedRoute><KYC /></SellerProtectedRoute>} />

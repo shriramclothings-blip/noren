@@ -273,7 +273,7 @@ export default function Products() {
             {filteredProducts.map(product => {
               const statusConfig = STATUS_CONFIG[product.status] || STATUS_CONFIG.draft;
               const StatusIcon = statusConfig.icon;
-              const primaryImage = product.images?.[0] || null;
+              const primaryImage = product.images?.[0]?.image_url || null;
               const totalStock = product.variants?.reduce((sum, v) => sum + (v.stock || 0), 0) || 0;
 
               return (

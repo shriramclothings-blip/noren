@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Package, ShoppingCart, Wallet, TrendingUp, AlertTriangle, CheckCircle, Clock, ArrowRight, Plus } from 'lucide-react';
+import { Package, ShoppingCart, Wallet, TrendingUp, AlertTriangle, CheckCircle, Clock, ArrowRight, Plus, BarChart3 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../utils/api';
 import { useSellerAuth } from '../context/SellerAuthContext';
@@ -125,6 +125,7 @@ export default function Dashboard() {
           {[
             { label: 'Add New Product',   desc: 'Upload images, set price and stock', path: '/products/new', icon: Plus, color: '#0f172a' },
             { label: 'View My Products',  desc: 'Manage your product listings', path: '/products', icon: Package, color: '#6366f1' },
+            { label: 'Manage Inventory',  desc: 'Track and update stock levels', path: '/inventory', icon: BarChart3, color: '#0891b2' },
             { label: 'View Orders',       desc: 'Track customer orders', path: '/orders', icon: ShoppingCart, color: '#0891b2' },
             { label: 'Complete KYC',      desc: 'Upload verification documents', path: '/kyc', icon: CheckCircle, color: '#16a34a', hide: profile?.kyc_status === 'approved' },
           ].filter(a => !a.hide).map(({ label, desc, path, icon: Icon, color }) => (

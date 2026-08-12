@@ -343,7 +343,7 @@ const getSellerProducts = async (req, res) => {
       pool.query(`SELECT COUNT(*) FROM src_seller_products spp ${where}`, params),
     ]);
 
-    res.json({ products: products.rows, total: parseInt(count.rows[0].count), page, limit });
+    res.json({ data: products.rows, total: parseInt(count.rows[0].count), page, limit });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

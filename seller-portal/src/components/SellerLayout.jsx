@@ -3,12 +3,13 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useSellerAuth } from '../context/SellerAuthContext';
 import {
   LayoutDashboard, Package, ShoppingCart, Wallet, ShieldCheck,
-  User, LogOut, Menu, X, ChevronRight, AlertTriangle, Store,
+  User, LogOut, Menu, X, ChevronRight, AlertTriangle, Store, BarChart3,
 } from 'lucide-react';
 
 const NAV = [
   { path: '/dashboard', label: 'Dashboard',  icon: LayoutDashboard },
   { path: '/products',  label: 'My Products', icon: Package },
+  { path: '/inventory', label: 'Inventory',   icon: BarChart3 },
   { path: '/orders',    label: 'Orders',      icon: ShoppingCart },
   { path: '/payouts',   label: 'Payouts',     icon: Wallet },
   { path: '/kyc',       label: 'KYC & Docs',  icon: ShieldCheck },
