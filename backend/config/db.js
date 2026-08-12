@@ -1157,12 +1157,21 @@ const initDB = async () => {
         device_model VARCHAR(120),
         browser     VARCHAR(100),
         os          VARCHAR(100),
+        latitude    DECIMAL(9,6),
+        longitude   DECIMAL(9,6),
         referer     TEXT,
         user_agent  TEXT,
         clicked_at  TIMESTAMP DEFAULT NOW()
       );
       CREATE INDEX IF NOT EXISTS idx_utm_clicks_link ON src_utm_clicks(link_id, clicked_at DESC);
       CREATE INDEX IF NOT EXISTS idx_utm_links_slug  ON src_utm_links(slug);
+    `).catch(() => {});
+
+    // ── Migrate utm_clicks: add missing geo columns ─────────────────────────
+    await client.query(`
+      ALTER TABLE src_utm_clicks
+        ADD COLUMN IF NOT EXISTS latitude    DECIMAL(9,6),
+        ADD COLUMN IF NOT EXISTS longitude   DECIMAL(9,6);
     `).catch(() => {});
 
     // POS sessions table

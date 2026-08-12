@@ -104,9 +104,9 @@ const getVisitorLocations = async (req, res) => {
         country,
         COUNT(*) as visitor_count,
         COUNT(DISTINCT ip_address) as unique_visitors,
-        MAX(latitude) as lat,
-        MAX(longitude) as lon,
-        ARRAY_AGG(DISTINCT city) as cities,
+        COALESCE(MAX(latitude), 0) as lat,
+        COALESCE(MAX(longitude), 0) as lon,
+        ARRAY_AGG(DISTINCT city) FILTER (WHERE city IS NOT NULL) as cities,
         AVG(EXTRACT(EPOCH FROM (MAX(clicked_at) - MIN(clicked_at)))) as avg_session_duration
       FROM src_utm_clicks
       WHERE 1=1
@@ -154,7 +154,7 @@ const getVisitorLocations = async (req, res) => {
       query += ` AND clicked_at < NOW() - INTERVAL '5 minutes'`;
     }
 
-    query += ` AND country IS NOT NULL AND latitude IS NOT NULL AND longitude IS NOT NULL
+    query += ` AND country IS NOT NULL
       GROUP BY country
       ORDER BY visitor_count DESC`;
 
@@ -295,16 +295,16 @@ const getGeoSummary = async (req, res) => {
     );
     const uniqueCountries = parseInt(countriesCountRes.rows[0]?.count || 0);
 
-    // Top locations with city
+    // Top locations with city - allow NULL lat/lon but prefer records with coordinates
     const topLocationsRes = await pool.query(
       `SELECT
         country,
         city,
         COUNT(*) as visitor_count,
-        latitude,
-        longitude
+        COALESCE(latitude, 0) as latitude,
+        COALESCE(longitude, 0) as longitude
       FROM src_utm_clicks ${filter}
-      AND country IS NOT NULL AND latitude IS NOT NULL AND longitude IS NOT NULL
+      AND country IS NOT NULL
       GROUP BY country, city, latitude, longitude
       ORDER BY visitor_count DESC
       LIMIT 20`,
