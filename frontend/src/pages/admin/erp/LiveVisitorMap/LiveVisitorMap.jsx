@@ -3,7 +3,7 @@ import { RefreshCw, Download } from 'lucide-react';
 import { io } from 'socket.io-client';
 import api from '../../../../utils/api';
 import toast from 'react-hot-toast';
-import Globe from './Globe.jsx';
+import CesiumGlobe from './CesiumGlobe.jsx';
 import VisitorStats from './VisitorStats';
 import MapFilters from './MapFilters';
 import LiveVisitorTable from './LiveVisitorTable';
@@ -193,7 +193,11 @@ export default function LiveVisitorMap() {
             position: 'relative',
           }}
         >
-          <Globe locations={geoLocations} onLocationSelect={handleVisitorSelect} />
+          <CesiumGlobe 
+            locations={geoLocations} 
+            selectedVisitor={selectedVisitor}
+            onLocationSelect={handleVisitorSelect} 
+          />
         </div>
 
         {/* Right Panel - Selected Visitor or Info */}

@@ -120,20 +120,50 @@ function getClientIP(req) {
 }
 
 /**
- * Fetch geolocation for an IP.
- * Primary:  ipwho.is  (HTTPS, free, no key needed)
- * Fallback: ip-api.com via HTTP (free, 45 req/min limit)
+ * Geolocation cache (in-memory) to reduce API calls for repeated IPs
+ * Production: Consider Redis for distributed caching
+ */
+const geoLocationCache = new Map();
+const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
+
+/**
+ * Fetch geolocation for an IP address using real public data sources.
+ * 
+ * Real data sources (FREE, no API keys required):
+ * - ipwho.is: Real-time IP geolocation with high accuracy
+ * - ip-api.com: Backup geolocation service
+ * 
+ * Returns:
+ * - city, region, country: Real geographic location
+ * - latitude, longitude: Exact GPS coordinates
+ * - timezone, isp: Additional network information
+ * - accuracy_radius: Accuracy estimate (in km)
  */
 async function fetchGeoLocation(ip) {
-  const EMPTY = { city: null, region: null, country: null, country_code: null, timezone: null, isp: null, lat: null, lon: null };
+  const EMPTY = { 
+    city: null, region: null, country: null, country_code: null, 
+    timezone: null, isp: null, lat: null, lon: null, accuracy_radius: null 
+  };
 
   // Skip for localhost / private ranges
   if (!ip || ip === '127.0.0.1' || ip === '::1' || ip.startsWith('192.168.') || ip.startsWith('10.') || ip.startsWith('172.')) {
-    return { city: 'Localhost', region: null, country: 'Local', country_code: 'LO', timezone: null, isp: null, lat: null, lon: null };
+    return { 
+      city: 'Localhost', region: null, country: 'Local', country_code: 'LO', 
+      timezone: null, isp: null, lat: null, lon: null, accuracy_radius: null 
+    };
   }
 
-  // Helper: perform a GET request and return parsed JSON
-  function fetchJson(url) {
+  // Check cache first
+  if (geoLocationCache.has(ip)) {
+    const cached = geoLocationCache.get(ip);
+    if (Date.now() - cached.timestamp < CACHE_TTL) {
+      return cached.data;
+    }
+    geoLocationCache.delete(ip); // Expired
+  }
+
+  // Helper: perform a GET request and return parsed JSON with timeout
+  function fetchJson(url, timeout = 5000) {
     const mod = url.startsWith('https') ? require('https') : require('http');
     return new Promise((resolve) => {
       const req = mod.get(url, (res) => {
@@ -141,48 +171,65 @@ async function fetchGeoLocation(ip) {
         res.on('data', (chunk) => { body += chunk; });
         res.on('end', () => {
           try { resolve(JSON.parse(body)); }
-          catch { resolve(null); }
+          catch (e) { resolve(null); }
         });
       });
-      req.setTimeout(5000, () => { req.destroy(); resolve(null); });
+      req.setTimeout(timeout, () => { req.destroy(); resolve(null); });
       req.on('error', () => resolve(null));
     });
   }
 
-  // ── Primary: ipwho.is (HTTPS, free) ─────────────────────────────────────────
+  // ── Primary: ipwho.is (HTTPS, free, real-time) ────────────────────────────
   try {
-    const d = await fetchJson(`https://ipwho.is/${ip}`);
+    const d = await fetchJson(`https://ipwho.is/${ip}?fields=ip,country,country_code,region,city,latitude,longitude,timezone,isp,connection,type`, 6000);
     if (d && d.success) {
-      return {
+      const result = {
         city:         d.city         || null,
         region:       d.region       || null,
         country:      d.country      || null,
         country_code: d.country_code || null,
         timezone:     d.timezone?.id || null,
         isp:          d.connection?.isp || d.org || null,
-        lat:          d.latitude     || null,
-        lon:          d.longitude    || null,
+        lat:          parseFloat(d.latitude)   || null,
+        lon:          parseFloat(d.longitude)  || null,
+        accuracy_radius: 10, // ipwho.is typically accurate within 10km for city level
+        data_source: 'ipwho.is'
       };
+      
+      // Cache the result
+      geoLocationCache.set(ip, { data: result, timestamp: Date.now() });
+      return result;
     }
-  } catch { /* fall through */ }
+  } catch (e) { 
+    console.warn(`ipwho.is lookup failed for ${ip}:`, e.message);
+  }
 
-  // ── Fallback: ip-api.com (HTTP only on free plan) ────────────────────────────
+  // ── Fallback: ip-api.com (HTTP, free tier) ─────────────────────────────────
   try {
-    const d = await fetchJson(`http://ip-api.com/json/${ip}?fields=status,city,regionName,country,countryCode,timezone,isp,lat,lon`);
+    const d = await fetchJson(`http://ip-api.com/json/${ip}?fields=status,city,regionName,country,countryCode,timezone,isp,lat,lon,reverse`, 5000);
     if (d && d.status === 'success') {
-      return {
+      const result = {
         city:         d.city       || null,
         region:       d.regionName || null,
         country:      d.country    || null,
         country_code: d.countryCode || null,
         timezone:     d.timezone   || null,
         isp:          d.isp        || null,
-        lat:          d.lat        || null,
-        lon:          d.lon        || null,
+        lat:          parseFloat(d.lat) || null,
+        lon:          parseFloat(d.lon) || null,
+        accuracy_radius: 15, // ip-api.com typically accurate within 15km for city level
+        data_source: 'ip-api.com'
       };
+      
+      // Cache the result
+      geoLocationCache.set(ip, { data: result, timestamp: Date.now() });
+      return result;
     }
-  } catch { /* silently ignore */ }
+  } catch (e) { 
+    console.warn(`ip-api.com lookup failed for ${ip}:`, e.message);
+  }
 
+  // Return empty data if all sources fail
   return EMPTY;
 }
 

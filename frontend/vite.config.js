@@ -1,8 +1,9 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import cesium from 'vite-plugin-cesium';
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), cesium()],
   define: {
     'import.meta.env.VITE_GOOGLE_CLIENT_ID': JSON.stringify(
       process.env.VITE_GOOGLE_CLIENT_ID ||
