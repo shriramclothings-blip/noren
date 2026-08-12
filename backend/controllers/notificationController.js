@@ -2,14 +2,20 @@ const webpush = require('web-push');
 const { pool } = require('../config/db');
 const { sendMail } = require('../services/mailService');
 
-webpush.setVapidDetails(
-  process.env.VAPID_EMAIL || 'mailto:support@norenfashion.in',
-  process.env.VAPID_PUBLIC_KEY,
-  process.env.VAPID_PRIVATE_KEY
-);
+const vapidEmail = process.env.VAPID_EMAIL || 'mailto:support@norenfashion.in';
+const vapidPublicKey = process.env.VAPID_PUBLIC_KEY;
+const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY;
+const vapidEnabled = Boolean(vapidPublicKey && vapidPrivateKey);
+
+if (vapidEnabled) {
+  webpush.setVapidDetails(vapidEmail, vapidPublicKey, vapidPrivateKey);
+} else {
+  console.warn('⚠️  VAPID keys missing; push notifications are disabled until VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY are configured.');
+}
 
 // ── Helper: send push to a subscription ──────────────────────────────────────
 const sendPush = async (subscription, payload) => {
+  if (!vapidEnabled) return false;
   try {
     await webpush.sendNotification(subscription, JSON.stringify(payload));
     return true;
@@ -24,7 +30,7 @@ const sendPush = async (subscription, payload) => {
 
 // ── Get VAPID public key ──────────────────────────────────────────────────────
 const getVapidKey = (req, res) => {
-  res.json({ publicKey: process.env.VAPID_PUBLIC_KEY });
+  res.json({ publicKey: vapidPublicKey || null });
 };
 
 // ── Subscribe user ────────────────────────────────────────────────────────────
