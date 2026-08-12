@@ -102,12 +102,12 @@ const getVisitorLocations = async (req, res) => {
     let query = `
       SELECT
         country,
+        city,
         COUNT(*) as visitor_count,
         COUNT(DISTINCT ip_address) as unique_visitors,
-        COALESCE(MAX(latitude), 0) as lat,
-        COALESCE(MAX(longitude), 0) as lon,
-        ARRAY_AGG(DISTINCT city) FILTER (WHERE city IS NOT NULL) as cities,
-        AVG(EXTRACT(EPOCH FROM (MAX(clicked_at) - MIN(clicked_at)))) as avg_session_duration
+        COALESCE(MAX(latitude), 0) as latitude,
+        COALESCE(MAX(longitude), 0) as longitude,
+        MAX(clicked_at) as last_activity
       FROM src_utm_clicks
       WHERE 1=1
     `;
@@ -155,7 +155,7 @@ const getVisitorLocations = async (req, res) => {
     }
 
     query += ` AND country IS NOT NULL
-      GROUP BY country
+      GROUP BY country, city
       ORDER BY visitor_count DESC`;
 
     const result = await pool.query(query, params);
