@@ -276,6 +276,13 @@ httpServer.listen(PORT, '0.0.0.0', () => console.log(`🚀 NOREN API running on 
     transports: ['websocket', 'polling'],
   });
 
+  // Expose io to controllers via runtime helper
+  try {
+    require('./realtime').set(io);
+  } catch (err) {
+    console.warn('Failed to set realtime io instance:', err.message);
+  }
+
   // Authenticate socket connections via JWT
   io.use(async (socket, next) => {
     try {

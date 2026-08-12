@@ -1,8 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { RefreshCw, Download } from 'lucide-react';
+import { io } from 'socket.io-client';
 import api from '../../../../utils/api';
 import toast from 'react-hot-toast';
-import Globe from './Globe';
+import Globe from './Globe.jsx';
 import VisitorStats from './VisitorStats';
 import MapFilters from './MapFilters';
 import LiveVisitorTable from './LiveVisitorTable';
@@ -12,6 +13,7 @@ import { useVisitorLocations } from './hooks/useVisitorLocations';
 export default function LiveVisitorMap() {
   const [loading, setLoading] = useState(true);
   const [selectedVisitor, setSelectedVisitor] = useState(null);
+  const [socketConnected, setSocketConnected] = useState(false);
   const [filters, setFilters] = useState({
     startDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     endDate: new Date().toISOString().split('T')[0],
@@ -20,17 +22,21 @@ export default function LiveVisitorMap() {
     medium: '',
     country: '',
     device: '',
+    status: '',
   });
 
   const [stats, setStats] = useState({
     total: 0,
     unique: 0,
     countries: 0,
+    liveVisitors: 0,
     totalClicks: 0,
     conversionRate: 0,
   });
 
   const [visitors, setVisitors] = useState([]);
+  const socketRef = useRef(null);
+  const refreshTimer = useRef(null);
 
   const { locations: geoLocations } = useVisitorLocations(filters);
 
@@ -39,18 +45,18 @@ export default function LiveVisitorMap() {
     try {
       setLoading(true);
 
-      // Fetch live visitors
       const visitorsRes = await api.get('/erp/utm/live-visitors', { params: filters });
       setVisitors(visitorsRes.data.visitors || []);
 
-      // Fetch analytics
       const analyticsRes = await api.get('/erp/utm/analytics', { params: filters });
-
-      // Fetch geo summary
       const geoRes = await api.get('/erp/utm/geo-summary', {
         params: {
           startDate: filters.startDate,
           endDate: filters.endDate,
+          campaign: filters.campaign,
+          source: filters.source,
+          medium: filters.medium,
+          status: filters.status,
         },
       });
 
@@ -58,8 +64,9 @@ export default function LiveVisitorMap() {
         total: analyticsRes.data.total || 0,
         unique: analyticsRes.data.unique || 0,
         countries: geoRes.data.unique_countries || 0,
+        liveVisitors: analyticsRes.data.liveVisitors || 0,
         totalClicks: analyticsRes.data.total || 0,
-        conversionRate: 3.24,
+        conversionRate: analyticsRes.data.conversionRate || 0,
       });
     } catch (err) {
       toast.error('Failed to load analytics');
@@ -71,6 +78,37 @@ export default function LiveVisitorMap() {
 
   useEffect(() => {
     fetchAnalytics();
+  }, [fetchAnalytics]);
+
+  useEffect(() => {
+    const token = localStorage.getItem('noren_token');
+    if (!token) return;
+
+    const baseURL = import.meta.env.VITE_API_URL?.replace('/api', '') || window.location.origin;
+    const socket = io(baseURL, {
+      auth: { token },
+      transports: ['websocket', 'polling'],
+      reconnectionAttempts: 5,
+      reconnectionDelay: 2000,
+    });
+    socketRef.current = socket;
+
+    socket.on('connect', () => setSocketConnected(true));
+    socket.on('disconnect', () => setSocketConnected(false));
+    socket.on('connect_error', () => setSocketConnected(false));
+
+    const scheduleRefresh = () => {
+      if (refreshTimer.current) clearTimeout(refreshTimer.current);
+      refreshTimer.current = setTimeout(() => fetchAnalytics(), 500);
+    };
+
+    socket.on('utm:click', scheduleRefresh);
+
+    return () => {
+      socket.off('utm:click', scheduleRefresh);
+      socket.disconnect();
+      socketRef.current = null;
+    };
   }, [fetchAnalytics]);
 
   const handleRefresh = () => {
@@ -186,6 +224,10 @@ export default function LiveVisitorMap() {
         loading={loading}
         onVisitorSelect={handleVisitorSelect}
       />
+      <div style={{ position: 'fixed', bottom: 20, right: 20, padding: 12, borderRadius: 16, background: 'rgba(14, 29, 64, 0.92)', color: '#fff', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 8, border: '1px solid rgba(99,102,241,0.2)' }}>
+        <span style={{ width: 8, height: 8, borderRadius: '50%', background: socketConnected ? '#34d399' : '#9ca3af' }} />
+        {socketConnected ? 'Realtime connected' : 'Realtime disconnected' }
+      </div>
     </div>
   );
 }

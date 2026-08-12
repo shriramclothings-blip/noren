@@ -18,6 +18,9 @@
     "react-hot-toast": "^2.6.0",
     "react-router-dom": "^7.14.0",
     "socket.io-client": "^4.8.3",
+    "three": "^0.164.1",
+    "@react-three/fiber": "^9.0.0",
+    "@react-three/drei": "^10.7.8",
     "tailwindcss": "^4.2.2"
   },
   "devDependencies": {

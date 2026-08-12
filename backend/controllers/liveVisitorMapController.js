@@ -17,15 +17,21 @@ const getLiveVisitors = async (req, res) => {
       medium,
       country,
       device,
+      status,
       limit = 100,
       offset = 0,
     } = req.query;
 
-    let query = `SELECT * FROM src_utm_clicks WHERE 1=1`;
+    let query = `
+      SELECT c.*, l.campaign AS utm_campaign, l.source AS utm_source, l.medium AS utm_medium,
+             l.destination AS landing_page
+      FROM src_utm_clicks c
+      LEFT JOIN src_utm_links l ON l.id = c.link_id
+      WHERE 1=1
+    `;
     const params = [];
     let paramCount = 1;
 
-    // Date range filter
     if (startDate) {
       query += ` AND clicked_at >= $${paramCount++}`;
       params.push(new Date(startDate));
@@ -35,58 +41,48 @@ const getLiveVisitors = async (req, res) => {
       params.push(new Date(endDate));
     }
 
-    // Campaign filter
     if (campaign) {
       query += ` AND link_id IN (SELECT id FROM src_utm_links WHERE campaign = $${paramCount++})`;
       params.push(campaign);
     }
 
-    // Source filter
     if (source) {
       query += ` AND link_id IN (SELECT id FROM src_utm_links WHERE source = $${paramCount++})`;
       params.push(source);
     }
 
-    // Medium filter
     if (medium) {
       query += ` AND link_id IN (SELECT id FROM src_utm_links WHERE medium = $${paramCount++})`;
       params.push(medium);
     }
 
-    // Location filter
     if (country) {
       query += ` AND country = $${paramCount++}`;
       params.push(country);
     }
 
-    // Device filter
     if (device) {
       query += ` AND device_type = $${paramCount++}`;
       params.push(device);
     }
 
-    // Order and pagination
+    if (status === 'live') {
+      query += ` AND clicked_at >= NOW() - INTERVAL '5 minutes'`;
+    } else if (status === 'offline') {
+      query += ` AND clicked_at < NOW() - INTERVAL '5 minutes'`;
+    }
+
     query += ` ORDER BY clicked_at DESC LIMIT $${paramCount++} OFFSET $${paramCount++}`;
     params.push(parseInt(limit), parseInt(offset));
 
     const result = await pool.query(query, params);
 
-    // Fetch enriched data with link info
-    const visitors = await Promise.all(
-      result.rows.map(async (click) => {
-        const linkRes = await pool.query(
-          `SELECT campaign, source, medium FROM src_utm_links WHERE id = $1`,
-          [click.link_id]
-        );
-        const link = linkRes.rows[0] || {};
-        return {
-          ...click,
-          utm_campaign: link.campaign,
-          utm_source: link.source,
-          utm_medium: link.medium,
-        };
-      })
-    );
+    const liveThreshold = new Date(Date.now() - 5 * 60 * 1000);
+    const visitors = result.rows.map((click) => ({
+      ...click,
+      status: new Date(click.clicked_at) >= liveThreshold ? 'live' : 'offline',
+      time_on_site: null,
+    }));
 
     res.json({ visitors, total: result.rows.length });
   } catch (err) {
@@ -101,7 +97,7 @@ const getLiveVisitors = async (req, res) => {
  */
 const getVisitorLocations = async (req, res) => {
   try {
-    const { startDate, endDate, campaign, source, medium, country, device } = req.query;
+    const { startDate, endDate, campaign, source, medium, country, device, status } = req.query;
 
     let query = `
       SELECT
@@ -152,6 +148,12 @@ const getVisitorLocations = async (req, res) => {
       params.push(device);
     }
 
+    if (status === 'live') {
+      query += ` AND clicked_at >= NOW() - INTERVAL '5 minutes'`;
+    } else if (status === 'offline') {
+      query += ` AND clicked_at < NOW() - INTERVAL '5 minutes'`;
+    }
+
     query += ` AND country IS NOT NULL AND latitude IS NOT NULL AND longitude IS NOT NULL
       GROUP BY country
       ORDER BY visitor_count DESC`;
@@ -170,7 +172,7 @@ const getVisitorLocations = async (req, res) => {
  */
 const getAnalytics = async (req, res) => {
   try {
-    const { startDate, endDate, campaign, source, medium } = req.query;
+    const { startDate, endDate, campaign, source, medium, status } = req.query;
 
     let filter = `WHERE 1=1`;
     const params = [];
@@ -200,6 +202,12 @@ const getAnalytics = async (req, res) => {
       params.push(medium);
     }
 
+    if (status === 'live') {
+      filter += ` AND clicked_at >= NOW() - INTERVAL '5 minutes'`;
+    } else if (status === 'offline') {
+      filter += ` AND clicked_at < NOW() - INTERVAL '5 minutes'`;
+    }
+
     // Total visitors
     const totalRes = await pool.query(
       `SELECT COUNT(*) as total, COUNT(DISTINCT ip_address) as unique FROM src_utm_clicks ${filter}`,
@@ -207,6 +215,13 @@ const getAnalytics = async (req, res) => {
     );
     const total = parseInt(totalRes.rows[0]?.total || 0);
     const unique = parseInt(totalRes.rows[0]?.unique || 0);
+
+    // Live visitors (last 5 minutes)
+    const liveRes = await pool.query(
+      `SELECT COUNT(DISTINCT ip_address) as live_visitors FROM src_utm_clicks ${filter} AND clicked_at >= NOW() - INTERVAL '5 minutes'`,
+      params
+    );
+    const liveVisitors = parseInt(liveRes.rows[0]?.live_visitors || 0);
 
     // Countries
     const countriesRes = await pool.query(
@@ -234,9 +249,13 @@ const getAnalytics = async (req, res) => {
       params
     );
 
+    const conversionRate = total > 0 ? Number(((unique / total) * 100).toFixed(2)) : 0;
+
     res.json({
       total,
       unique,
+      liveVisitors,
+      conversionRate,
       countries: countriesRes.rows,
       devices: devicesRes.rows,
       browsers: browsersRes.rows,
@@ -254,7 +273,7 @@ const getAnalytics = async (req, res) => {
  */
 const getGeoSummary = async (req, res) => {
   try {
-    const { startDate, endDate } = req.query;
+    const { startDate, endDate, campaign, source, medium, status } = req.query;
 
     let filter = `WHERE 1=1`;
     const params = [];

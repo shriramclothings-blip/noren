@@ -115,14 +115,35 @@ const trackRedirect = async (req, res) => {
     // Geo lookup in background — update the click row
     fetchGeoLocation(ip).then(geo => {
       pool.query(
-        `UPDATE src_utm_clicks SET city=$1, region=$2, country=$3
-         WHERE link_id=$4 AND ip_address=$5 AND clicked_at=(
+        `UPDATE src_utm_clicks SET city=$1, region=$2, country=$3, latitude=$4, longitude=$5
+         WHERE link_id=$6 AND ip_address=$7 AND clicked_at=(
            SELECT clicked_at FROM src_utm_clicks
-           WHERE link_id=$4 AND ip_address=$5
+           WHERE link_id=$6 AND ip_address=$7
            ORDER BY clicked_at DESC LIMIT 1
          )`,
-        [geo.city, geo.region, geo.country, link.id, ip]
+        [geo.city, geo.region, geo.country, geo.lat || null, geo.lon || null, link.id, ip]
       ).catch(() => {});
+
+      // Emit real-time event to admin clients (non-blocking)
+      try {
+        const realtime = require('../realtime');
+        const io = realtime.get();
+        if (io) {
+          const payload = {
+            link_id: link.id,
+            city: geo.city || null,
+            region: geo.region || null,
+            country: geo.country || null,
+            latitude: geo.lat || null,
+            longitude: geo.lon || null,
+            ip_address: ip ? ip.replace(/\.(\d+)$/, '.xxx') : null,
+            clicked_at: new Date().toISOString(),
+          };
+          io.emit('utm:click', payload);
+        }
+      } catch (err) {
+        console.warn('Failed to emit realtime utm click:', err.message);
+      }
     });
 
   } catch (err) {
