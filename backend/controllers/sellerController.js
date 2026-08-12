@@ -624,6 +624,7 @@ const requestProductRemoval = async (req, res) => {
 };
 
 module.exports = {
+  sendRegistrationOTP, verifyRegistrationOTP,
   registerSeller, getSellerProfile, updateSellerProfile, submitKYC,
   getSellerDashboard, createSellerProduct, getSellerProducts, getSellerProductById,
   updateSellerProduct, submitProductForReview, deleteSellerProduct,
