@@ -314,9 +314,16 @@ const createSellerProduct = async (req, res) => {
 // ─── Get Seller's Products ───────────────────────────────────────────────────
 const getSellerProducts = async (req, res) => {
   try {
+    console.log('🔍 getSellerProducts called by user:', req.user?.id);
     const sp = await pool.query('SELECT id FROM src_seller_profiles WHERE user_id=$1', [req.user.id]);
-    if (!sp.rows.length) return res.status(404).json({ message: 'Seller profile not found' });
+    if (!sp.rows.length) {
+      console.warn('⚠️ Seller profile not found for user:', req.user.id);
+      return res.status(404).json({ message: 'Seller profile not found' });
+    }
+    
     const sellerId = sp.rows[0].id;
+    console.log('✅ Seller ID:', sellerId);
+    
     const page  = parseInt(req.query.page)  || 1;
     const limit = parseInt(req.query.limit) || 20;
     const offset = (page - 1) * limit;
@@ -325,6 +332,8 @@ const getSellerProducts = async (req, res) => {
     let where = `WHERE spp.seller_id=$1 AND spp.deleted_at IS NULL`;
     const params = [sellerId];
     if (status) { params.push(status); where += ` AND spp.status=$${params.length}`; }
+
+    console.log('📝 Query params:', { sellerId, page, limit, offset, status, where });
 
     const [products, count] = await Promise.all([
       pool.query(
@@ -343,8 +352,20 @@ const getSellerProducts = async (req, res) => {
       pool.query(`SELECT COUNT(*) FROM src_seller_products spp ${where}`, params),
     ]);
 
+    console.log('✅ Products fetched:', products.rows.length, 'Total count:', count.rows[0].count);
+    
+    // Log product statuses for debugging
+    if (products.rows.length > 0) {
+      const statusCounts = products.rows.reduce((acc, p) => {
+        acc[p.status] = (acc[p.status] || 0) + 1;
+        return acc;
+      }, {});
+      console.log('📊 Product status breakdown:', statusCounts);
+    }
+
     res.json({ data: products.rows, total: parseInt(count.rows[0].count), page, limit });
   } catch (err) {
+    console.error('❌ Error in getSellerProducts:', err);
     res.status(500).json({ message: err.message });
   }
 };

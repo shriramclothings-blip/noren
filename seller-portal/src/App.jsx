@@ -17,6 +17,7 @@ const Orders       = lazy(() => import('./pages/Orders'));
 const Payouts      = lazy(() => import('./pages/Payouts'));
 const KYC          = lazy(() => import('./pages/KYC'));
 const Profile      = lazy(() => import('./pages/Profile'));
+const Debug        = lazy(() => import('./pages/Debug'));
 
 function Loader() {
   return (
@@ -51,6 +52,7 @@ export default function App() {
             <Route path="/payouts"        element={<SellerProtectedRoute requireProfile><Payouts /></SellerProtectedRoute>} />
             <Route path="/kyc"            element={<SellerProtectedRoute><KYC /></SellerProtectedRoute>} />
             <Route path="/profile"        element={<SellerProtectedRoute><Profile /></SellerProtectedRoute>} />
+            <Route path="/debug"          element={<SellerProtectedRoute><Debug /></SellerProtectedRoute>} />
 
             {/* Default */}
             <Route path="/"               element={<Navigate to="/dashboard" replace />} />

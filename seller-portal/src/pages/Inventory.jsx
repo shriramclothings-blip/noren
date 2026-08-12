@@ -44,11 +44,15 @@ export default function Inventory() {
   const fetchInventory = async () => {
     setLoading(true);
     try {
+      console.log('🔄 Fetching inventory from /seller/products...');
       const res = await api.get('/seller/products?limit=500');
+      console.log('✅ Inventory API Response:', res.data);
       const productsData = res.data.data || [];
+      console.log('📦 Inventory products count:', productsData.length);
       setProducts(productsData);
       calculateStats(productsData);
     } catch (err) {
+      console.error('❌ Error fetching inventory:', err);
       toast.error(err.response?.data?.message || 'Failed to load inventory');
     } finally {
       setLoading(false);

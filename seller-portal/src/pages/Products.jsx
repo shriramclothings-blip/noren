@@ -35,10 +35,26 @@ export default function Products() {
   const fetchProducts = async () => {
     setLoading(true);
     try {
+      console.log('🔄 Fetching products from /seller/products...');
       const res = await api.get('/seller/products?limit=100');
-      setProducts(res.data.data || []);
-      calculateStats(res.data.data || []);
+      console.log('✅ API Response:', res.data);
+      console.log('📦 Products array:', res.data.data);
+      console.log('📊 Total products:', res.data.data?.length || 0);
+      
+      const productsData = res.data.data || [];
+      setProducts(productsData);
+      calculateStats(productsData);
+      
+      if (productsData.length === 0) {
+        console.warn('⚠️ No products found in response');
+      } else {
+        console.log('✅ Products loaded successfully:', productsData.length);
+        // Log first product for debugging
+        console.log('📝 Sample product:', productsData[0]);
+      }
     } catch (err) {
+      console.error('❌ Error fetching products:', err);
+      console.error('Error response:', err.response?.data);
       toast.error(err.response?.data?.message || 'Failed to load products');
     } finally {
       setLoading(false);
@@ -46,13 +62,16 @@ export default function Products() {
   };
 
   const calculateStats = (data) => {
-    setStats({
+    console.log('📊 Calculating stats for products:', data.length);
+    const statsData = {
       total: data.length,
       draft: data.filter(p => p.status === 'draft').length,
       pending_review: data.filter(p => p.status === 'pending_review').length,
       approved: data.filter(p => p.status === 'approved').length,
       rejected: data.filter(p => p.status === 'rejected').length,
-    });
+    };
+    console.log('📊 Stats calculated:', statsData);
+    setStats(statsData);
   };
 
   const handleDelete = async (product) => {
@@ -123,6 +142,8 @@ export default function Products() {
     const matchesSearch = !search || p.title.toLowerCase().includes(search.toLowerCase());
     return matchesFilter && matchesSearch;
   });
+
+  console.log('🔍 Filter:', filter, '| Search:', search, '| Filtered count:', filteredProducts.length);
 
   const card = { background: '#fff', borderRadius: 12, border: '1px solid #e5e7eb', padding: 20 };
 
