@@ -30,6 +30,7 @@ import AdminPaymentSettings from './AdminPaymentSettings';
 import AdminOrders from './AdminOrders';
 import AdminLoginSessions from './AdminLoginSessions';
 const AdminUTMTracker          = lazy(() => import('./erp/AdminUTMTracker'));
+const AdminLiveVisitorMap      = lazy(() => import('./erp/LiveVisitorMap/LiveVisitorMap.jsx'));
 const AdminAIAssistant         = lazy(() => import('./erp/AdminAIAssistant'));
 const AdminInfluencers         = lazy(() => import('./erp/AdminInfluencers'));
 const AdminInfluencerCampaigns = lazy(() => import('./erp/AdminInfluencerCampaigns'));
@@ -170,6 +171,7 @@ function renderSection(section, user, navigate) {
     case 'orders':            return <AdminOrders />;
     case 'login-sessions':    return <AdminLoginSessions />;
     case 'utm-tracker':       return <AdminUTMTracker />;
+    case 'utm-live-map':      return <AdminLiveVisitorMap />;
     case 'ai-assistant':      return <AdminAIAssistant />;
     case 'influencers':       return <AdminInfluencers />;
     case 'inf-campaigns':     return <AdminInfluencerCampaigns />;

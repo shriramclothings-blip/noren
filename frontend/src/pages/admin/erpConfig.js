@@ -77,7 +77,8 @@ export const ERP_NAV_GROUPS = [
     label: 'Security & Audit',
     items: [
       { key: 'login-sessions', label: 'Login Sessions', icon: 'ShieldCheck', componentKey: 'login-sessions', roles: ['admin', 'super_admin'], description: 'Full login audit — IP, location, device, browser, and session status for every user.' },
-      { key: 'utm-tracker',    label: 'UTM Link Tracker', icon: 'Link2',       componentKey: 'utm-tracker',    roles: ['admin', 'super_admin'], description: 'Generate tracking links for WhatsApp, Instagram & more. See clicks, location and device for every visitor.' },
+      { key: 'utm-tracker',    label: 'UTM Tracking', icon: 'Link2',       componentKey: 'utm-tracker',    roles: ['admin', 'super_admin'], description: 'UTM link management, analytics, and tracking.' },
+      { key: 'utm-live-map',   label: 'Live Visitor Map', icon: 'MapPinned', componentKey: 'utm-live-map',  roles: ['admin', 'super_admin'], description: '3D globe visualization of real-time visitor locations and traffic.' },
       { key: 'ai-assistant',   label: 'AI Assistant',     icon: 'Sparkles',    componentKey: 'ai-assistant',   roles: ['admin', 'super_admin'], description: 'Gemini AI — live business briefings, revenue, users, inventory alerts by voice or text.' },
       { key: 'audit-logs',     label: 'Audit Logs',     icon: 'FileClock',   componentKey: 'audit-logs',     permissions: ['erp.view_audit_logs'], description: 'Immutable log of every admin action taken in the system.' },
       { key: 'role-management',label: 'Role Management',icon: 'KeyRound',    componentKey: 'role-management',roles: ['super_admin'], description: 'Define permissions and role access across all modules.' },
@@ -115,6 +116,9 @@ export const ADMIN_ROUTE_ALIASES = {
   orders: 'orders',
   'sales-orders': 'sales',
   users: 'user-management',
+  // UTM module aliases
+  'utm-tracker': 'utm-tracker',
+  'utm-live-map': 'utm-live-map',
   // Seller module aliases
   'seller-overview':  'seller-overview',
   'seller-accounts':  'seller-accounts',

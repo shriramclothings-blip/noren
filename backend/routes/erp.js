@@ -86,10 +86,16 @@ router.post('/sessions/backfill-geo',     ...superAdminGuard, sysCtrl.backfillSe
 
 // ── UTM Link Tracker ──────────────────────────────────────────────────────────
 const utmCtrl = require('../controllers/utmController');
+const liveVisitorCtrl = require('../controllers/liveVisitorMapController');
 router.get('/utm/links',           ...adminGuard,      utmCtrl.listLinks);
 router.post('/utm/links',          ...adminGuard,      utmCtrl.createLink);
 router.delete('/utm/links/:id',    ...adminGuard,      utmCtrl.deleteLink);
 router.get('/utm/links/:id/clicks',...adminGuard,      utmCtrl.getLinkClicks);
+// Live Visitor Map
+router.get('/utm/live-visitors',   ...adminGuard,      liveVisitorCtrl.getLiveVisitors);
+router.get('/utm/visitor-locations',...adminGuard,     liveVisitorCtrl.getVisitorLocations);
+router.get('/utm/analytics',       ...adminGuard,      liveVisitorCtrl.getAnalytics);
+router.get('/utm/geo-summary',     ...adminGuard,      liveVisitorCtrl.getGeoSummary);
 
 // ── AI Assistant ──────────────────────────────────────────────────────────────
 const aiCtrl = require('../controllers/aiController');
