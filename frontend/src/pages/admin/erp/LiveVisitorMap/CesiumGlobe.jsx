@@ -20,113 +20,144 @@ export default function CesiumGlobe({ locations = [], selectedVisitor, onLocatio
   useEffect(() => {
     if (!cesiumContainer.current) return;
 
-    try {
-      // Initialize Cesium Viewer with production-grade real data
-      const viewer = new Cesium.Viewer(cesiumContainer.current, {
-        // Base layer: OpenStreetMap (real, open-source map tiles)
-        imageryProvider: new Cesium.OpenStreetMapImageryProvider({
-          url: 'https://tile.openstreetmap.org/',
-        }),
-        // Terrain: USGS National Elevation Dataset (free, real elevation data)
-        terrainProvider: new Cesium.ArcGISTiledElevationTerrainProvider.fromUrl(
-          'https://elevation3d.arcgis.com/arcgis/rest/services/WorldElevation3D/WorldElevation3D/ImageServer'
-        ),
-        viewerWidget: false,
-        animation: false,
-        baseLayerPicker: false,
-        fullscreenButton: false,
-        geocoder: false,
-        homeButton: false,
-        infoBox: false,
-        sceneModePicker: false,
-        selectionIndicator: true,
-        timeline: false,
-        navigationHelpButton: false,
-        clockViewModel: new Cesium.ClockViewModel(),
-        contextOptions: {
-          webgl: {
-            preserveDrawingBuffer: true,
-            antialias: true,
+    let viewer = null;
+    let rotationInterval = null;
+
+    const initializeGlobe = async () => {
+      try {
+        // Ensure Cesium assets are available
+        if (typeof Cesium !== 'undefined' && Cesium.Ion) {
+          Cesium.Ion.defaultAccessToken = Cesium.Ion.defaultAccessToken || '';
+        }
+
+        // Create Cesium Viewer with production-grade real data
+        viewer = new Cesium.Viewer(cesiumContainer.current, {
+          // Base layer: OpenStreetMap (real, open-source map tiles)
+          imageryProvider: new Cesium.OpenStreetMapImageryProvider({
+            url: 'https://tile.openstreetmap.org/',
+          }),
+          // Terrain: Try to use USGS, but don't fail if unavailable
+          terrainProvider: await Cesium.ArcGISTiledElevationTerrainProvider.fromUrl(
+            'https://elevation3d.arcgis.com/arcgis/rest/services/WorldElevation3D/WorldElevation3D/ImageServer',
+            { 
+              requestVertexNormals: true,
+              requestWaterMask: true,
+            }
+          ).catch((err) => {
+            console.warn('Terrain provider failed, using flat map:', err);
+            return undefined; // Fall back to flat map
+          }),
+          viewerWidget: false,
+          animation: false,
+          baseLayerPicker: false,
+          fullscreenButton: false,
+          geocoder: false,
+          homeButton: false,
+          infoBox: false,
+          sceneModePicker: false,
+          selectionIndicator: true,
+          timeline: false,
+          navigationHelpButton: false,
+          contextOptions: {
+            webgl: {
+              preserveDrawingBuffer: true,
+              antialias: true,
+            },
           },
-        },
-      });
+        });
 
-      // Configure for production viewing
-      viewer.scene.globe.enableLighting = true;
-      viewer.scene.globe.showGroundAtmosphere = true;
-      viewer.scene.globe.depthTestAgainstTerrain = true;
-      viewer.scene.shadowMap.enabled = true;
-      viewer.scene.backgroundColor = Cesium.Color.BLACK;
-      viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString('#1a1a2e');
+        // Configure for production viewing
+        viewer.scene.globe.enableLighting = true;
+        viewer.scene.globe.showGroundAtmosphere = true;
+        viewer.scene.globe.depthTestAgainstTerrain = true;
+        viewer.scene.shadowMap.enabled = true;
+        viewer.scene.backgroundColor = Cesium.Color.BLACK;
+        viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString('#1a1a2e');
 
-      // Set world view position
-      viewer.camera.setView({
-        destination: Cesium.Cartesian3.fromDegrees(0, 20, 30000000),
-        orientation: {
-          heading: 0,
-          pitch: -Math.PI / 2.8,
-          roll: 0,
-        },
-      });
+        // Set world view position
+        viewer.camera.setView({
+          destination: Cesium.Cartesian3.fromDegrees(0, 20, 30000000),
+          orientation: {
+            heading: 0,
+            pitch: -Math.PI / 2.8,
+            roll: 0,
+          },
+        });
 
-      // Mouse interaction: Click to select visitor locations
-      viewer.screenSpaceEventHandler.setInputAction((event) => {
-        const pickedObject = viewer.scene.pick(event.position);
-        if (Cesium.defined(pickedObject) && pickedObject.id?.locationData) {
-          onLocationSelect(pickedObject.id.locationData);
-        }
-      }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
-
-      // Hover for info
-      let previousHovered = null;
-      viewer.screenSpaceEventHandler.setInputAction((event) => {
-        const pickedObject = viewer.scene.pick(event.endPosition);
-        if (previousHovered) {
-          previousHovered.showLabel = false;
-          previousHovered = null;
-        }
-        if (Cesium.defined(pickedObject) && pickedObject.id?.locationData) {
-          pickedObject.id.showLabel = true;
-          previousHovered = pickedObject.id;
-        }
-      }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
-
-      // Auto-rotate globe
-      let rotationSpeed = 0.0001;
-      const rotationInterval = setInterval(() => {
-        if (autoRotate && viewerRef.current?.camera) {
-          try {
-            const camera = viewer.camera;
-            camera.setView({
-              destination: camera.position,
-              orientation: {
-                heading: camera.heading + rotationSpeed,
-                pitch: camera.pitch,
-                roll: camera.roll,
-              },
-              duration: 0,
-            });
-          } catch (e) {
-            // Handle camera errors silently
+        // Mouse interaction: Click to select visitor locations
+        viewer.screenSpaceEventHandler.setInputAction((event) => {
+          const pickedObject = viewer.scene.pick(event.position);
+          if (Cesium.defined(pickedObject) && pickedObject.id?.locationData) {
+            onLocationSelect(pickedObject.id.locationData);
           }
-        }
-      }, 100);
+        }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
-      viewerRef.current = viewer;
-      viewerRef.current._mapStyle = 'osm';
+        // Hover for info
+        let previousHovered = null;
+        viewer.screenSpaceEventHandler.setInputAction((event) => {
+          const pickedObject = viewer.scene.pick(event.endPosition);
+          if (previousHovered) {
+            previousHovered.showLabel = false;
+            previousHovered = null;
+          }
+          if (Cesium.defined(pickedObject) && pickedObject.id?.locationData) {
+            pickedObject.id.showLabel = true;
+            previousHovered = pickedObject.id;
+          }
+        }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
 
-      return () => {
-        clearInterval(rotationInterval);
-        if (viewerRef.current && !viewerRef.current.isDestroyed()) {
+        // Auto-rotate globe
+        let rotationSpeed = 0.0001;
+        rotationInterval = setInterval(() => {
+          if (autoRotate && viewer?.camera) {
+            try {
+              const camera = viewer.camera;
+              camera.setView({
+                destination: camera.position,
+                orientation: {
+                  heading: camera.heading + rotationSpeed,
+                  pitch: camera.pitch,
+                  roll: camera.roll,
+                },
+                duration: 0,
+              });
+            } catch (e) {
+              // Handle camera errors silently
+            }
+          }
+        }, 100);
+
+        viewerRef.current = viewer;
+        viewerRef.current._mapStyle = 'osm';
+        
+        toast.success('Globe initialized successfully');
+      } catch (error) {
+        console.error('Error initializing Cesium viewer:', error);
+        toast.error('Failed to initialize globe - retrying...');
+        
+        // Retry once
+        setTimeout(() => {
+          if (cesiumContainer.current && !viewerRef.current) {
+            initializeGlobe();
+          }
+        }, 2000);
+      }
+    };
+
+    initializeGlobe();
+
+    return () => {
+      if (rotationInterval) clearInterval(rotationInterval);
+      if (viewerRef.current && !viewerRef.current.isDestroyed()) {
+        try {
           viewerRef.current.destroy();
           viewerRef.current = null;
+        } catch (e) {
+          console.warn('Error destroying viewer:', e);
         }
-      };
-    } catch (error) {
-      console.error('Error initializing Cesium viewer:', error);
-      toast.error('Failed to initialize globe');
-    }
-  }, [onLocationSelect]);
+      }
+    };
+  }, [onLocationSelect, autoRotate]);
 
   // Update markers when locations change
   useEffect(() => {
@@ -246,8 +277,11 @@ export default function CesiumGlobe({ locations = [], selectedVisitor, onLocatio
   }, [locations, selectedId, showHeatmap]);
 
   // Switch map style (OSM, Satellite, Hybrid)
-  const switchMapStyle = (style) => {
-    if (!viewerRef.current || viewerRef.current.isDestroyed()) return;
+  const switchMapStyle = async (style) => {
+    if (!viewerRef.current || viewerRef.current.isDestroyed()) {
+      toast.error('Globe not ready yet');
+      return;
+    }
 
     const viewer = viewerRef.current;
     
@@ -262,12 +296,21 @@ export default function CesiumGlobe({ locations = [], selectedVisitor, onLocatio
       } else if (style === 'satellite') {
         // USGS Landsat 8 satellite imagery (real satellite data)
         viewer.imageryLayers.removeAll();
-        viewer.imageryLayers.addImageryProvider(
-          Cesium.IonImageryProvider.fromAssetId(3812)
-        );
-        viewerRef.current._mapStyle = 'satellite';
+        try {
+          const imageryProvider = await Cesium.IonImageryProvider.fromAssetId(3812);
+          viewer.imageryLayers.addImageryProvider(imageryProvider);
+          viewerRef.current._mapStyle = 'satellite';
+        } catch (ionError) {
+          console.warn('Ion provider failed, falling back to ArcGIS:', ionError);
+          viewer.imageryLayers.addImageryProvider(
+            new Cesium.ArcGisMapServerImageryProvider({
+              url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer',
+            })
+          );
+          viewerRef.current._mapStyle = 'satellite';
+        }
       } else if (style === 'hybrid') {
-        // Hybrid: Satellite + labels from Bing
+        // Hybrid: Satellite + labels from ArcGIS
         viewer.imageryLayers.removeAll();
         viewer.imageryLayers.addImageryProvider(
           new Cesium.ArcGisMapServerImageryProvider({
@@ -280,7 +323,17 @@ export default function CesiumGlobe({ locations = [], selectedVisitor, onLocatio
       toast.success(`Switched to ${style.toUpperCase()} view`);
     } catch (error) {
       console.error('Error switching map style:', error);
-      toast.error(`Failed to switch to ${style} view`);
+      toast.error(`Failed to switch to ${style} view - using OSM`);
+      // Fallback to OSM
+      try {
+        viewer.imageryLayers.removeAll();
+        viewer.imageryLayers.addImageryProvider(
+          new Cesium.OpenStreetMapImageryProvider({ url: 'https://tile.openstreetmap.org/' })
+        );
+        setMapStyle('osm');
+      } catch (fallbackError) {
+        console.error('Even fallback failed:', fallbackError);
+      }
     }
   };
 
