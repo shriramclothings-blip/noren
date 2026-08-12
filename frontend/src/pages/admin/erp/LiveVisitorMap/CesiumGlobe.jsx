@@ -22,6 +22,8 @@ export default function CesiumGlobe({ locations = [], selectedVisitor, onLocatio
 
     let viewer = null;
     let rotationInterval = null;
+    let retryCount = 0;
+    const MAX_RETRIES = 2;
 
     const initializeGlobe = async () => {
       try {
@@ -30,23 +32,14 @@ export default function CesiumGlobe({ locations = [], selectedVisitor, onLocatio
           Cesium.Ion.defaultAccessToken = Cesium.Ion.defaultAccessToken || '';
         }
 
-        // Create Cesium Viewer with production-grade real data
+        // Create Cesium Viewer with MINIMAL config (OpenStreetMap only - proven to work)
         viewer = new Cesium.Viewer(cesiumContainer.current, {
           // Base layer: OpenStreetMap (real, open-source map tiles)
           imageryProvider: new Cesium.OpenStreetMapImageryProvider({
             url: 'https://tile.openstreetmap.org/',
           }),
-          // Terrain: Try to use USGS, but don't fail if unavailable
-          terrainProvider: await Cesium.ArcGISTiledElevationTerrainProvider.fromUrl(
-            'https://elevation3d.arcgis.com/arcgis/rest/services/WorldElevation3D/WorldElevation3D/ImageServer',
-            { 
-              requestVertexNormals: true,
-              requestWaterMask: true,
-            }
-          ).catch((err) => {
-            console.warn('Terrain provider failed, using flat map:', err);
-            return undefined; // Fall back to flat map
-          }),
+          // NO terrain provider initially - optional enhancement added later
+          terrainProvider: undefined,
           viewerWidget: false,
           animation: false,
           baseLayerPicker: false,
@@ -69,7 +62,7 @@ export default function CesiumGlobe({ locations = [], selectedVisitor, onLocatio
         // Configure for production viewing
         viewer.scene.globe.enableLighting = true;
         viewer.scene.globe.showGroundAtmosphere = true;
-        viewer.scene.globe.depthTestAgainstTerrain = true;
+        viewer.scene.globe.depthTestAgainstTerrain = false; // False when no terrain provider
         viewer.scene.shadowMap.enabled = true;
         viewer.scene.backgroundColor = Cesium.Color.BLACK;
         viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString('#1a1a2e');
@@ -83,6 +76,23 @@ export default function CesiumGlobe({ locations = [], selectedVisitor, onLocatio
             roll: 0,
           },
         });
+
+        // Try to add terrain AFTER viewer is created (non-blocking)
+        try {
+          const terrainProvider = await Promise.race([
+            Cesium.ArcGISTiledElevationTerrainProvider.fromUrl(
+              'https://elevation3d.arcgis.com/arcgis/rest/services/WorldElevation3D/WorldElevation3D/ImageServer',
+              { requestVertexNormals: true }
+            ),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('Terrain timeout')), 5000))
+          ]);
+          viewer.terrainProvider = terrainProvider;
+          viewer.scene.globe.depthTestAgainstTerrain = true;
+          console.log('✅ Terrain provider loaded successfully');
+        } catch (terrainError) {
+          console.warn('⚠️ Terrain provider skipped (optional):', terrainError.message);
+          // Continue without terrain - globe still works fine
+        }
 
         // Mouse interaction: Click to select visitor locations
         viewer.screenSpaceEventHandler.setInputAction((event) => {
@@ -130,17 +140,33 @@ export default function CesiumGlobe({ locations = [], selectedVisitor, onLocatio
         viewerRef.current = viewer;
         viewerRef.current._mapStyle = 'osm';
         
-        toast.success('Globe initialized successfully');
+        toast.success('🌍 Globe ready!');
+        retryCount = 0; // Reset on success
       } catch (error) {
-        console.error('Error initializing Cesium viewer:', error);
-        toast.error('Failed to initialize globe - retrying...');
+        console.error('❌ Globe initialization error:', error.message);
         
-        // Retry once
-        setTimeout(() => {
-          if (cesiumContainer.current && !viewerRef.current) {
-            initializeGlobe();
+        // Clean up failed viewer
+        if (viewer && !viewer.isDestroyed()) {
+          try {
+            viewer.destroy();
+          } catch (e) {
+            console.warn('Failed to destroy viewer:', e);
           }
-        }, 2000);
+        }
+        
+        // Only retry a limited number of times
+        if (retryCount < MAX_RETRIES) {
+          retryCount++;
+          console.warn(`⏳ Retry ${retryCount}/${MAX_RETRIES} in 2 seconds...`);
+          setTimeout(() => {
+            if (cesiumContainer.current && !cesiumContainer.current.children.length) {
+              initializeGlobe();
+            }
+          }, 2000);
+        } else {
+          console.error('❌ Failed to initialize globe after max retries');
+          toast.error('Failed to initialize globe - please refresh page');
+        }
       }
     };
 
