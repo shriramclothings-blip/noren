@@ -408,32 +408,7 @@ export default function CesiumGlobe({ locations = [], selectedVisitor, onLocatio
   };
 
   if (!webglSupported) {
-    return (
-      <div
-        style={{
-          width: '100%',
-          height: '100%',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          background: 'radial-gradient(circle at top, rgba(15,23,42,0.95), rgba(2,6,23,1))',
-          color: '#e2e8f0',
-          borderRadius: 18,
-          border: '1px solid rgba(148,163,184,0.25)',
-          fontFamily: 'Inter, sans-serif',
-          padding: 24,
-        }}
-      >
-        <div style={{ textAlign: 'center', maxWidth: 420 }}>
-          <div style={{ fontSize: 28, marginBottom: 12 }}>🌍</div>
-          <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 10 }}>3D globe unavailable</div>
-          <div style={{ fontSize: 14, lineHeight: 1.6, color: '#cbd5e1' }}>
-            This browser does not support WebGL, or hardware acceleration is disabled.
-            Please use a modern browser like Chrome, Edge, or Firefox with WebGL enabled.
-          </div>
-        </div>
-      </div>
-    );
+    return <WebGLFallbackMap locations={locations} selectedVisitor={selectedVisitor} onLocationSelect={onLocationSelect} />;
   }
 
   return (
@@ -588,6 +563,98 @@ export default function CesiumGlobe({ locations = [], selectedVisitor, onLocatio
           <div>✓ USGS Elevation Data</div>
           <div>✓ USGS Landsat Satellite</div>
           <div>✓ Real Geographic Coordinates</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function WebGLFallbackMap({ locations = [], selectedVisitor, onLocationSelect }) {
+  const selectedId = selectedVisitor?.id;
+
+  const markers = (locations || []).slice(0, 24).map((location) => {
+    const lat = Number(location.latitude);
+    const lon = Number(location.longitude);
+    if (Number.isNaN(lat) || Number.isNaN(lon)) return null;
+
+    const x = ((lon + 180) / 360) * 100;
+    const y = ((90 - lat) / 180) * 100;
+
+    const isSelected = selectedId === location.id;
+
+    return {
+      ...location,
+      x,
+      y,
+      isSelected,
+    };
+  }).filter(Boolean);
+
+  return (
+    <div
+      style={{
+        width: '100%',
+        height: '100%',
+        position: 'relative',
+        overflow: 'hidden',
+        background: 'radial-gradient(circle at top, rgba(15,23,42,0.95), rgba(2,6,23,1))',
+        borderRadius: 18,
+        border: '1px solid rgba(148,163,184,0.25)',
+        color: '#e2e8f0',
+        fontFamily: 'Inter, sans-serif',
+      }}
+    >
+      <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet" style={{ width: '100%', height: '100%' }}>
+        <defs>
+          <linearGradient id="fallbackOcean" x1="0" x2="1">
+            <stop offset="0%" stopColor="#07111f" />
+            <stop offset="100%" stopColor="#0f172a" />
+          </linearGradient>
+        </defs>
+
+        <rect x="0" y="0" width="100" height="100" fill="url(#fallbackOcean)" />
+
+        <g opacity="0.8" fill="#1e293b" stroke="#334155" strokeWidth="0.4">
+          <path d="M24 24 L32 18 L38 20 L42 26 L38 33 L31 32 Z" />
+          <path d="M55 22 L61 18 L67 22 L70 30 L64 34 L58 31 Z" />
+          <path d="M50 43 L56 39 L62 41 L64 48 L60 54 L53 53 L48 47 Z" />
+          <path d="M28 44 L35 40 L42 43 L41 51 L35 56 L28 53 Z" />
+          <path d="M70 57 L78 52 L85 56 L82 63 L73 66 Z" />
+          <path d="M18 62 L25 60 L30 65 L28 72 L20 74 L15 68 Z" />
+        </g>
+
+        {markers.map((marker) => (
+          <g key={`${marker.id}-${marker.city || 'marker'}`} onClick={() => onLocationSelect?.(marker)} style={{ cursor: 'pointer' }}>
+            <circle
+              cx={marker.x}
+              cy={marker.y}
+              r={marker.isSelected ? 2.4 : 1.6}
+              fill={marker.isSelected ? '#facc15' : '#22d3ee'}
+              stroke="#f8fafc"
+              strokeWidth="0.25"
+            />
+            {marker.isSelected && (
+              <circle cx={marker.x} cy={marker.y} r="4" fill="none" stroke="#facc15" strokeWidth="0.35" opacity="0.9" />
+            )}
+          </g>
+        ))}
+      </svg>
+
+      <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'linear-gradient(180deg, rgba(15,23,42,0.12), rgba(15,23,42,0.52))' }} />
+
+      <div style={{ position: 'absolute', left: 18, top: 18, right: 18, zIndex: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div style={{ background: 'rgba(8,12,28,0.8)', border: '1px solid rgba(148,163,184,0.25)', borderRadius: 12, padding: '12px 14px' }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: '#7dd3fc', marginBottom: 6 }}>🌍 Browser-safe globe view</div>
+          <div style={{ fontSize: 11, color: '#cbd5e1', lineHeight: 1.5 }}>
+            WebGL is unavailable in this browser, so the 3D globe is automatically switched to a compatible 2D world view.
+          </div>
+        </div>
+      </div>
+
+      <div style={{ position: 'absolute', left: 18, bottom: 18, zIndex: 2, background: 'rgba(8,12,28,0.85)', border: '1px solid rgba(34,211,238,0.25)', borderRadius: 12, padding: '10px 12px', width: 240 }}>
+        <div style={{ fontSize: 11, color: '#7dd3fc', fontWeight: 700, marginBottom: 6 }}>Visitor locations</div>
+        <div style={{ fontSize: 11, color: '#e2e8f0' }}>
+          {locations?.length ? `${locations.length} real locations available` : 'No visitor data available'}
         </div>
       </div>
     </div>
