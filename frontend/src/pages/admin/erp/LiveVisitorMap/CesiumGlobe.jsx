@@ -8,6 +8,18 @@ import toast from 'react-hot-toast';
 // - USGS Elevation: Terrain data
 // - Natural Earth GIS: Political boundaries
 
+function supportsWebGL() {
+  try {
+    const canvas = document.createElement('canvas');
+    return !!(
+      window.WebGLRenderingContext &&
+      (canvas.getContext('webgl') || canvas.getContext('experimental-webgl'))
+    );
+  } catch (error) {
+    return false;
+  }
+}
+
 export default function CesiumGlobe({ locations = [], selectedVisitor, onLocationSelect }) {
   const cesiumContainer = useRef(null);
   const viewerRef = useRef(null);
@@ -15,10 +27,17 @@ export default function CesiumGlobe({ locations = [], selectedVisitor, onLocatio
   const [autoRotate, setAutoRotate] = useState(true);
   const [mapStyle, setMapStyle] = useState('osm'); // osm, satellite, hybrid
   const [showHeatmap, setShowHeatmap] = useState(false);
+  const [webglSupported, setWebglSupported] = useState(true);
   const selectedId = selectedVisitor?.id;
 
   useEffect(() => {
     if (!cesiumContainer.current) return;
+
+    if (!supportsWebGL()) {
+      setWebglSupported(false);
+      toast.error('WebGL is not available in this browser. Please use a modern browser with hardware acceleration enabled.');
+      return;
+    }
 
     let viewer = null;
     let rotationInterval = null;
@@ -143,7 +162,15 @@ export default function CesiumGlobe({ locations = [], selectedVisitor, onLocatio
         toast.success('🌍 Globe ready!');
         retryCount = 0; // Reset on success
       } catch (error) {
-        console.error('❌ Globe initialization error:', error.message);
+        const message = error?.message || String(error || 'Unknown error');
+        console.error('❌ Globe initialization error:', message);
+
+        const isWebGLIssue = /webgl|webgl2|CesiumWidget|Error constructing CesiumWidget/i.test(message);
+        if (isWebGLIssue) {
+          setWebglSupported(false);
+          toast.error('WebGL is unavailable or blocked. Please use a browser with WebGL enabled.');
+          return;
+        }
         
         // Clean up failed viewer
         if (viewer && !viewer.isDestroyed()) {
@@ -362,6 +389,35 @@ export default function CesiumGlobe({ locations = [], selectedVisitor, onLocatio
       }
     }
   };
+
+  if (!webglSupported) {
+    return (
+      <div
+        style={{
+          width: '100%',
+          height: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: 'radial-gradient(circle at top, rgba(15,23,42,0.95), rgba(2,6,23,1))',
+          color: '#e2e8f0',
+          borderRadius: 18,
+          border: '1px solid rgba(148,163,184,0.25)',
+          fontFamily: 'Inter, sans-serif',
+          padding: 24,
+        }}
+      >
+        <div style={{ textAlign: 'center', maxWidth: 420 }}>
+          <div style={{ fontSize: 28, marginBottom: 12 }}>🌍</div>
+          <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 10 }}>3D globe unavailable</div>
+          <div style={{ fontSize: 14, lineHeight: 1.6, color: '#cbd5e1' }}>
+            This browser does not support WebGL, or hardware acceleration is disabled.
+            Please use a modern browser like Chrome, Edge, or Firefox with WebGL enabled.
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div

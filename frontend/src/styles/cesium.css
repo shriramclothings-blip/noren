@@ -1,0 +1,107 @@
+/* Cesium Globe Styles */
+.cesium-container {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.cesium-viewer {
+  width: 100%;
+  height: 100%;
+  font-family: 'Lucida Grande', 'Arial', 'sans-serif';
+}
+
+/* Hide default Cesium UI elements */
+.cesium-viewer .cesium-viewer-bottom {
+  display: none;
+}
+
+.cesium-viewer .cesium-performance-container {
+  display: none;
+}
+
+/* Tooltip styling */
+.cesium-infoBox {
+  border-radius: 12px;
+  background: rgba(10, 20, 40, 0.95) !important;
+  border: 1px solid rgba(0, 212, 255, 0.3) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.cesium-infoBox-title {
+  background: rgba(0, 212, 255, 0.1) !important;
+  color: #00d4ff !important;
+  border-bottom: 1px solid rgba(0, 212, 255, 0.2) !important;
+}
+
+.cesium-infoBox-description {
+  color: #cbd5e1 !important;
+  font-size: 12px;
+}
+
+/* Credit styling */
+.cesium-credit-container {
+  background: rgba(10, 20, 40, 0.85) !important;
+  border-top: 1px solid rgba(0, 212, 255, 0.1) !important;
+}
+
+.cesium-credit-credit {
+  color: rgba(255, 255, 255, 0.6) !important;
+  font-size: 10px !important;
+}
+
+/* Animation container */
+.cesium-animation-container {
+  bottom: 50px !important;
+}
+
+/* Navigation help */
+.cesium-navigation-help {
+  background: rgba(10, 20, 40, 0.9) !important;
+  border-radius: 8px;
+}
+
+/* Selection indicator */
+.cesium-selection-indicator {
+  border-color: #00d4ff !important;
+  box-shadow: 0 0 10px rgba(0, 212, 255, 0.5) !important;
+}
+
+/* Cesium viewer container customization */
+.cesium-viewer .cesium-viewer-cesiumWidgetContainer {
+  border-radius: 18px;
+  overflow: hidden;
+}
+
+/* Remove widget backgrounds */
+.cesium-widget-credits {
+  display: none !important;
+}
+
+/* Timeline styling */
+.cesium-timeline-container {
+  background: rgba(10, 20, 40, 0.85) !important;
+  border-top: 1px solid rgba(0, 212, 255, 0.1) !important;
+}
+
+/* Custom scrollbar for Cesium panels */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(10, 20, 40, 0.5);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 212, 255, 0.4);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 212, 255, 0.6);
+}
