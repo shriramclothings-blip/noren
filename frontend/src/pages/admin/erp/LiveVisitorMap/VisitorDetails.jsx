@@ -32,13 +32,14 @@ export default function VisitorDetails({ visitor, onClose }) {
   return (
     <div
       style={{
-        background: '#fff',
-        borderRadius: 14,
-        border: '1px solid #f3f4f6',
+        background: 'linear-gradient(180deg, rgba(15,23,42,0.98), rgba(8,12,28,1))',
+        borderRadius: 18,
+        border: '1px solid rgba(148,163,184,0.18)',
         display: 'flex',
         flexDirection: 'column',
         height: '100%',
         overflow: 'hidden',
+        boxShadow: '0 20px 30px rgba(2, 6, 23, 0.35)',
       }}
     >
       {/* Header */}
@@ -48,15 +49,15 @@ export default function VisitorDetails({ visitor, onClose }) {
           alignItems: 'center',
           justifyContent: 'space-between',
           padding: '14px 16px',
-          borderBottom: '1px solid #f3f4f6',
+          borderBottom: '1px solid rgba(148,163,184,0.14)',
           flexShrink: 0,
         }}
       >
         <div>
-          <h3 style={{ fontSize: 13, fontWeight: 700, color: '#111827', margin: 0 }}>
+          <h3 style={{ fontSize: 14, fontWeight: 700, color: '#f8fafc', margin: 0 }}>
             Live Visitor
           </h3>
-          <p style={{ fontSize: 11, color: '#9ca3af', margin: '2px 0 0' }}>
+          <p style={{ fontSize: 11, color: '#94a3b8', margin: '2px 0 0' }}>
             {visitor?.city}, {visitor?.country}
           </p>
         </div>
@@ -67,15 +68,16 @@ export default function VisitorDetails({ visitor, onClose }) {
             height: 28,
             borderRadius: 6,
             border: 'none',
-            background: '#f3f4f6',
+            background: 'rgba(148,163,184,0.12)',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             flexShrink: 0,
+            border: '1px solid rgba(148,163,184,0.2)',
           }}
         >
-          <X size={14} color="#374151" />
+          <X size={14} color="#e2e8f0" />
         </button>
       </div>
 
@@ -101,7 +103,7 @@ export default function VisitorDetails({ visitor, onClose }) {
               borderBottom: idx < details.length - 1 ? '1px solid #f3f4f6' : 'none',
             }}
           >
-            <label style={{ fontSize: 10, fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+            <label style={{ fontSize: 10, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
               {detail.label}
             </label>
             <div
@@ -111,7 +113,7 @@ export default function VisitorDetails({ visitor, onClose }) {
                 gap: 6,
               }}
             >
-              <span style={{ fontSize: 12, color: '#374151', wordBreak: 'break-all' }}>
+              <span style={{ fontSize: 12, color: '#e2e8f0', wordBreak: 'break-all' }}>
                 {detail.value}
               </span>
               {detail.copyable && (
@@ -158,11 +160,12 @@ export default function VisitorDetails({ visitor, onClose }) {
             padding: '8px 12px',
             borderRadius: 8,
             border: 'none',
-            background: '#c9a96e',
+            background: 'linear-gradient(135deg, #4f46e5, #7c3aed)',
             color: '#fff',
             fontSize: 12,
-            fontWeight: 600,
+            fontWeight: 700,
             cursor: 'pointer',
+            boxShadow: '0 12px 24px rgba(79, 70, 229, 0.25)',
           }}
         >
           View Details

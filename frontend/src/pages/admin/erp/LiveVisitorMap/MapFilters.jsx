@@ -26,21 +26,21 @@ export default function MapFilters({ filters, onFilterChange }) {
     width: '100%',
     padding: '8px 12px',
     fontSize: 13,
-    border: '1.5px solid #e5e7eb',
+    border: '1.5px solid rgba(148,163,184,0.2)',
     borderRadius: 8,
     outline: 'none',
     fontFamily: 'inherit',
-    color: '#111827',
-    background: '#fff',
+    color: '#e2e8f0',
+    background: 'rgba(15, 23, 42, 0.9)',
     boxSizing: 'border-box',
   };
 
   return (
     <div
       style={{
-        background: '#fff',
+        background: 'rgba(15, 23, 42, 0.78)',
         borderRadius: 14,
-        border: '1px solid #f3f4f6',
+        border: '1px solid rgba(148, 163, 184, 0.18)',
         overflow: 'hidden',
       }}
     >
@@ -57,11 +57,11 @@ export default function MapFilters({ filters, onFilterChange }) {
           border: 'none',
           background: 'transparent',
           cursor: 'pointer',
-          borderBottom: expanded ? '1px solid #f3f4f6' : 'none',
+          borderBottom: expanded ? '1px solid rgba(148,163,184,0.18)' : 'none',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 13, fontWeight: 600, color: '#111827' }}>Filters</span>
+          <span style={{ fontSize: 13, fontWeight: 600, color: '#e2e8f0' }}>Filters</span>
           {activeFilterCount > 0 && (
             <span
               style={{
@@ -71,7 +71,7 @@ export default function MapFilters({ filters, onFilterChange }) {
                 width: 20,
                 height: 20,
                 borderRadius: '50%',
-                background: '#c9a96e',
+                background: 'linear-gradient(135deg, #4f46e5, #7c3aed)',
                 color: '#fff',
                 fontSize: 11,
                 fontWeight: 700,
@@ -84,7 +84,7 @@ export default function MapFilters({ filters, onFilterChange }) {
         <ChevronDown
           size={16}
           style={{
-            color: '#9ca3af',
+            color: '#94a3b8',
             transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)',
             transition: 'transform 0.2s',
           }}
@@ -96,7 +96,7 @@ export default function MapFilters({ filters, onFilterChange }) {
         <div style={{ padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 }}>
             <div>
-              <label style={{ fontSize: 11, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 4 }}>
+              <label style={{ fontSize: 11, fontWeight: 600, color: '#cbd5e1', display: 'block', marginBottom: 4 }}>
                 Start Date
               </label>
               <input
@@ -107,7 +107,7 @@ export default function MapFilters({ filters, onFilterChange }) {
               />
             </div>
             <div>
-              <label style={{ fontSize: 11, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 4 }}>
+              <label style={{ fontSize: 11, fontWeight: 600, color: '#cbd5e1', display: 'block', marginBottom: 4 }}>
                 End Date
               </label>
               <input
@@ -118,7 +118,7 @@ export default function MapFilters({ filters, onFilterChange }) {
               />
             </div>
             <div>
-              <label style={{ fontSize: 11, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 4 }}>
+              <label style={{ fontSize: 11, fontWeight: 600, color: '#cbd5e1', display: 'block', marginBottom: 4 }}>
                 Campaign
               </label>
               <input
@@ -130,7 +130,7 @@ export default function MapFilters({ filters, onFilterChange }) {
               />
             </div>
             <div>
-              <label style={{ fontSize: 11, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 4 }}>
+              <label style={{ fontSize: 11, fontWeight: 600, color: '#cbd5e1', display: 'block', marginBottom: 4 }}>
                 Source
               </label>
               <select
@@ -148,7 +148,7 @@ export default function MapFilters({ filters, onFilterChange }) {
               </select>
             </div>
             <div>
-              <label style={{ fontSize: 11, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 4 }}>
+              <label style={{ fontSize: 11, fontWeight: 600, color: '#cbd5e1', display: 'block', marginBottom: 4 }}>
                 Medium
               </label>
               <select
@@ -164,7 +164,7 @@ export default function MapFilters({ filters, onFilterChange }) {
               </select>
             </div>
             <div>
-              <label style={{ fontSize: 11, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 4 }}>
+              <label style={{ fontSize: 11, fontWeight: 600, color: '#cbd5e1', display: 'block', marginBottom: 4 }}>
                 Country
               </label>
               <input
@@ -176,7 +176,7 @@ export default function MapFilters({ filters, onFilterChange }) {
               />
             </div>
             <div>
-              <label style={{ fontSize: 11, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 4 }}>
+              <label style={{ fontSize: 11, fontWeight: 600, color: '#cbd5e1', display: 'block', marginBottom: 4 }}>
                 Device
               </label>
               <select

@@ -125,30 +125,30 @@ export default function LiveVisitorMap() {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 18, padding: '8px 0 12px', background: '#050f1d', minHeight: '100vh' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', padding: '10px 0 2px' }}>
         <div>
-          <h2 style={{ fontSize: 18, fontWeight: 800, color: '#111827', margin: 0 }}>Live Visitor Map</h2>
-          <p style={{ fontSize: 13, color: '#9ca3af', margin: '4px 0 0' }}>
+          <h2 style={{ fontSize: 16, fontWeight: 800, color: '#f8fafc', margin: 0, letterSpacing: '-0.02em' }}>Live Visitor Map</h2>
+          <p style={{ fontSize: 12, color: '#94a3b8', margin: '4px 0 0' }}>
             Real-time visitor locations and journey visualization
           </p>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
           <button
             onClick={handleRefresh}
             style={{
               display: 'inline-flex',
               alignItems: 'center',
               gap: 6,
-              padding: '9px 16px',
+              padding: '9px 14px',
               borderRadius: 10,
-              border: '1.5px solid #e5e7eb',
-              background: '#fff',
-              color: '#374151',
-              fontSize: 13,
+              border: '1px solid rgba(148, 163, 184, 0.22)',
+              background: 'rgba(15, 23, 42, 0.9)',
+              color: '#e2e8f0',
+              fontSize: 12,
               fontWeight: 600,
               cursor: 'pointer',
+              boxShadow: 'inset 0 0 0 1px rgba(148,163,184,0.08)',
             }}
           >
             <RefreshCw size={14} /> Refresh
@@ -158,14 +158,15 @@ export default function LiveVisitorMap() {
               display: 'inline-flex',
               alignItems: 'center',
               gap: 6,
-              padding: '9px 16px',
+              padding: '9px 14px',
               borderRadius: 10,
               border: 'none',
-              background: '#1a1a18',
-              color: '#faf9f7',
-              fontSize: 13,
-              fontWeight: 600,
+              background: 'linear-gradient(135deg, #4f46e5, #7c3aed)',
+              color: '#fff',
+              fontSize: 12,
+              fontWeight: 700,
               cursor: 'pointer',
+              boxShadow: '0 10px 20px rgba(79,70,229,0.28)',
             }}
           >
             <Download size={14} /> Export
@@ -173,24 +174,25 @@ export default function LiveVisitorMap() {
         </div>
       </div>
 
-      {/* Stats Cards */}
       <VisitorStats stats={stats} loading={loading} />
 
-      {/* Filters */}
-      <MapFilters filters={filters} onFilterChange={handleFilterChange} />
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+        <div style={{ flex: 1 }}>
+          <MapFilters filters={filters} onFilterChange={handleFilterChange} />
+        </div>
+      </div>
 
-      {/* Globe + Details */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 16, minHeight: 600 }}>
-        {/* Globe */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 290px', gap: 16, minHeight: 560 }}>
         <div
           style={{
-            background: '#fff',
-            borderRadius: 14,
-            border: '1px solid #f3f4f6',
+            background: 'linear-gradient(180deg, rgba(12, 18, 31, 0.92), rgba(5, 11, 20, 1))',
+            borderRadius: 18,
+            border: '1px solid rgba(148, 163, 184, 0.18)',
             overflow: 'hidden',
             display: 'flex',
             flexDirection: 'column',
             position: 'relative',
+            boxShadow: '0 20px 45px rgba(2, 6, 23, 0.45)',
           }}
         >
           <CesiumGlobe 
@@ -200,21 +202,26 @@ export default function LiveVisitorMap() {
           />
         </div>
 
-        {/* Right Panel - Selected Visitor or Info */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {selectedVisitor ? (
             <VisitorDetails visitor={selectedVisitor} onClose={() => setSelectedVisitor(null)} />
           ) : (
             <div
               style={{
-                background: '#fff',
-                borderRadius: 14,
-                border: '1px solid #f3f4f6',
+                background: 'linear-gradient(180deg, rgba(15,23,42,0.95), rgba(8,12,28,0.98))',
+                borderRadius: 18,
+                border: '1px solid rgba(148, 163, 184, 0.18)',
                 padding: 20,
                 textAlign: 'center',
+                minHeight: 180,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#cbd5e1',
+                boxShadow: '0 20px 30px rgba(2, 6, 23, 0.35)',
               }}
             >
-              <div style={{ fontSize: 13, color: '#9ca3af' }}>
+              <div style={{ fontSize: 13, color: '#cbd5e1' }}>
                 Click on a marker or select a visitor to view details
               </div>
             </div>
@@ -222,13 +229,14 @@ export default function LiveVisitorMap() {
         </div>
       </div>
 
-      {/* Live Visitors Table */}
-      <LiveVisitorTable
-        visitors={visitors}
-        loading={loading}
-        onVisitorSelect={handleVisitorSelect}
-      />
-      <div style={{ position: 'fixed', bottom: 20, right: 20, padding: 12, borderRadius: 16, background: 'rgba(14, 29, 64, 0.92)', color: '#fff', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 8, border: '1px solid rgba(99,102,241,0.2)' }}>
+      <div style={{ background: 'linear-gradient(180deg, rgba(10,16,28,0.94), rgba(7,12,23,1))', borderRadius: 18, border: '1px solid rgba(148,163,184,0.18)', overflow: 'hidden', boxShadow: '0 18px 40px rgba(2,6,23,0.32)' }}>
+        <LiveVisitorTable
+          visitors={visitors}
+          loading={loading}
+          onVisitorSelect={handleVisitorSelect}
+        />
+      </div>
+      <div style={{ position: 'fixed', bottom: 20, right: 20, padding: 12, borderRadius: 16, background: 'rgba(14, 29, 64, 0.92)', color: '#fff', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 8, border: '1px solid rgba(99,102,241,0.2)', boxShadow: '0 12px 24px rgba(15, 23, 42, 0.45)' }}>
         <span style={{ width: 8, height: 8, borderRadius: '50%', background: socketConnected ? '#34d399' : '#9ca3af' }} />
         {socketConnected ? 'Realtime connected' : 'Realtime disconnected' }
       </div>

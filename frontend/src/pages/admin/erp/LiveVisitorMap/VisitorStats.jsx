@@ -6,16 +6,16 @@ export default function VisitorStats({ stats, loading }) {
       label: 'Total Visitors',
       value: stats.total,
       icon: Users,
-      color: '#3b82f6',
-      bgColor: '#dbeafe',
+      color: '#8ab4ff',
+      bgColor: 'rgba(59,130,246,0.14)',
       trend: '+12.6%',
     },
     {
       label: 'Live Visitors',
       value: 156,
       icon: Users,
-      color: '#10b981',
-      bgColor: '#dcfce7',
+      color: '#8ef1d1',
+      bgColor: 'rgba(16,185,129,0.12)',
       trend: '+8.3%',
       live: true,
     },
@@ -23,61 +23,63 @@ export default function VisitorStats({ stats, loading }) {
       label: 'Countries',
       value: stats.countries,
       icon: Globe,
-      color: '#8b5cf6',
-      bgColor: '#f3e8ff',
+      color: '#d4b5ff',
+      bgColor: 'rgba(168,85,247,0.12)',
       trend: '+1',
     },
     {
       label: 'Total Clicks',
       value: stats.totalClicks,
       icon: BarChart3,
-      color: '#f59e0b',
-      bgColor: '#fef3c7',
+      color: '#ffd27a',
+      bgColor: 'rgba(245,158,11,0.12)',
       trend: '+13.7%',
     },
     {
       label: 'Conversion Rate',
       value: `${stats.conversionRate}%`,
       icon: TrendingUp,
-      color: '#ec4899',
-      bgColor: '#fce7f3',
+      color: '#ff8ecf',
+      bgColor: 'rgba(236,72,153,0.12)',
       trend: '+0.8%',
     },
   ];
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 12 }}>
       {cards.map((card, idx) => {
         const Icon = card.icon;
         return (
           <div
             key={idx}
             style={{
-              background: '#fff',
-              borderRadius: 12,
-              border: '1px solid #f3f4f6',
+              background: 'linear-gradient(180deg, rgba(15,23,42,0.9), rgba(15,23,42,0.75))',
+              borderRadius: 16,
+              border: '1px solid rgba(148,163,184,0.16)',
               padding: '16px 18px',
               display: 'flex',
               alignItems: 'flex-start',
               gap: 12,
+              boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.03)',
             }}
           >
             <div
               style={{
                 width: 44,
                 height: 44,
-                borderRadius: 10,
+                borderRadius: 12,
                 background: card.bgColor,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 flexShrink: 0,
+                border: '1px solid rgba(148,163,184,0.14)',
               }}
             >
-              <Icon size={20} color={card.color} />
+              <Icon size={18} color={card.color} />
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 11, fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: '#9fb2d1', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>
                 {card.label}
               </div>
               <div
@@ -87,7 +89,7 @@ export default function VisitorStats({ stats, loading }) {
                   gap: 8,
                 }}
               >
-                <div style={{ fontSize: 24, fontWeight: 800, color: '#111827', lineHeight: 1 }}>
+                <div style={{ fontSize: 26, fontWeight: 800, color: '#f8fafc', lineHeight: 1.1 }}>
                   {loading ? '—' : card.value}
                 </div>
                 {card.live && (
@@ -98,18 +100,19 @@ export default function VisitorStats({ stats, loading }) {
                       gap: 3,
                       fontSize: 10,
                       fontWeight: 600,
-                      color: '#10b981',
-                      background: '#dcfce7',
-                      padding: '2px 6px',
-                      borderRadius: 4,
+                      color: '#8ef1d1',
+                      background: 'rgba(16,185,129,0.12)',
+                      padding: '3px 6px',
+                      borderRadius: 6,
+                      border: '1px solid rgba(16,185,129,0.18)',
                     }}
                   >
-                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981', animation: 'pulse 2s infinite' }} />
+                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#4ade80', animation: 'pulse 2s infinite' }} />
                     Live
                   </div>
                 )}
               </div>
-              <div style={{ fontSize: 11, color: '#6b7280', marginTop: 4 }}>
+              <div style={{ fontSize: 11, color: '#7dd3fc', marginTop: 6 }}>
                 {card.trend}
               </div>
             </div>
