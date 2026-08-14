@@ -11,10 +11,15 @@ import toast from 'react-hot-toast';
 function supportsWebGL() {
   try {
     const canvas = document.createElement('canvas');
-    return !!(
-      window.WebGLRenderingContext &&
-      (canvas.getContext('webgl') || canvas.getContext('experimental-webgl'))
-    );
+    const context =
+      canvas.getContext('webgl2', { antialias: true, alpha: false, powerPreference: 'high-performance' }) ||
+      canvas.getContext('webgl', { antialias: true, alpha: false, powerPreference: 'high-performance' }) ||
+      canvas.getContext('experimental-webgl', { antialias: true, alpha: false, powerPreference: 'high-performance' });
+
+    if (!context) return false;
+
+    const version = context.getParameter(context.VERSION || 0x1F02);
+    return !!version;
   } catch (error) {
     return false;
   }
@@ -33,10 +38,9 @@ export default function CesiumGlobe({ locations = [], selectedVisitor, onLocatio
   useEffect(() => {
     if (!cesiumContainer.current) return;
 
-    if (!supportsWebGL()) {
-      setWebglSupported(false);
-      toast.error('WebGL is not available in this browser. Please use a modern browser with hardware acceleration enabled.');
-      return;
+    const browserHasWebGL = supportsWebGL();
+    if (!browserHasWebGL) {
+      console.warn('WebGL check failed at startup. Attempting actual Cesium initialization anyway.');
     }
 
     let viewer = null;
