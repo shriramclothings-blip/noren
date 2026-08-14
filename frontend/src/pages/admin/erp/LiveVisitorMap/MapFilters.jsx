@@ -1,7 +1,7 @@
 import { ChevronDown, X } from 'lucide-react';
 import { useState } from 'react';
 
-export default function MapFilters({ filters, onFilterChange }) {
+export default function MapFilters({ filters, onFilterChange, theme }) {
   const [expanded, setExpanded] = useState(false);
 
   const handleChange = (field, value) => {
@@ -30,18 +30,19 @@ export default function MapFilters({ filters, onFilterChange }) {
     borderRadius: 8,
     outline: 'none',
     fontFamily: 'inherit',
-    color: '#e2e8f0',
-    background: 'rgba(15, 23, 42, 0.9)',
+    color: theme.text,
+    background: theme.inputBg,
     boxSizing: 'border-box',
   };
 
   return (
     <div
       style={{
-        background: 'rgba(15, 23, 42, 0.78)',
-        borderRadius: 14,
-        border: '1px solid rgba(148, 163, 184, 0.18)',
+        background: theme.panel,
+        borderRadius: 20,
+        border: `1px solid ${theme.border}`,
         overflow: 'hidden',
+        boxShadow: theme.shadow,
       }}
     >
       {/* Header */}
@@ -61,7 +62,7 @@ export default function MapFilters({ filters, onFilterChange }) {
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 13, fontWeight: 600, color: '#e2e8f0' }}>Filters</span>
+          <span style={{ fontSize: 13, fontWeight: 600, color: theme.text }}>Filters</span>
           {activeFilterCount > 0 && (
             <span
               style={{

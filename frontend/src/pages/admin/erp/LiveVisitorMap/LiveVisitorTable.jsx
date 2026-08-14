@@ -1,6 +1,6 @@
 import { MapPin, Monitor, Smartphone, Tablet } from 'lucide-react';
 
-export default function LiveVisitorTable({ visitors, loading, onVisitorSelect }) {
+export default function LiveVisitorTable({ visitors, loading, onVisitorSelect, theme }) {
   const deviceIcon = (type) => {
     if (type === 'mobile') return <Smartphone size={13} color="#6b7280" />;
     if (type === 'tablet') return <Tablet size={13} color="#6b7280" />;
@@ -24,16 +24,17 @@ export default function LiveVisitorTable({ visitors, loading, onVisitorSelect })
   return (
     <div
       style={{
-        background: 'linear-gradient(180deg, rgba(10,16,28,0.94), rgba(8,12,28,1))',
-        borderRadius: 18,
-        border: '1px solid rgba(148,163,184,0.14)',
+        background: theme.panelStrong,
+        borderRadius: 24,
+        border: `1px solid ${theme.border}`,
         overflow: 'hidden',
         display: 'flex',
         flexDirection: 'column',
+        boxShadow: theme.shadow,
       }}
     >
       <div style={{ padding: '14px 18px', borderBottom: '1px solid rgba(148,163,184,0.14)', flexShrink: 0, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h3 style={{ fontSize: 14, fontWeight: 700, color: '#f8fafc', margin: 0 }}>
+        <h3 style={{ fontSize: 14, fontWeight: 700, color: theme.text, margin: 0 }}>
           Live Visitors
         </h3>
         <button style={{ fontSize: 11, color: '#7dd3fc', background: 'rgba(15, 23, 42, 0.75)', border: '1px solid rgba(125,211,252,0.2)', borderRadius: 8, padding: '6px 10px', cursor: 'pointer' }}>

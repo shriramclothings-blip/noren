@@ -1,6 +1,6 @@
 import { Users, Globe, BarChart3, TrendingUp } from 'lucide-react';
 
-export default function VisitorStats({ stats, loading }) {
+export default function VisitorStats({ stats, loading, theme }) {
   const cards = [
     {
       label: 'Total Visitors',
@@ -53,14 +53,14 @@ export default function VisitorStats({ stats, loading }) {
           <div
             key={idx}
             style={{
-              background: 'linear-gradient(180deg, rgba(15,23,42,0.9), rgba(15,23,42,0.75))',
-              borderRadius: 16,
-              border: '1px solid rgba(148,163,184,0.16)',
+              background: theme.panelStrong,
+              borderRadius: 20,
+              border: `1px solid ${theme.border}`,
               padding: '16px 18px',
               display: 'flex',
               alignItems: 'flex-start',
               gap: 12,
-              boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.03)',
+              boxShadow: theme.shadow,
             }}
           >
             <div
@@ -79,7 +79,7 @@ export default function VisitorStats({ stats, loading }) {
               <Icon size={18} color={card.color} />
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 11, fontWeight: 600, color: '#9fb2d1', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>
                 {card.label}
               </div>
               <div
@@ -89,7 +89,7 @@ export default function VisitorStats({ stats, loading }) {
                   gap: 8,
                 }}
               >
-                <div style={{ fontSize: 26, fontWeight: 800, color: '#f8fafc', lineHeight: 1.1 }}>
+                <div style={{ fontSize: 26, fontWeight: 800, color: theme.text, lineHeight: 1.1 }}>
                   {loading ? '—' : card.value}
                 </div>
                 {card.live && (

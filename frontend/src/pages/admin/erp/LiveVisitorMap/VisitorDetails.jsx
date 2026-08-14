@@ -2,7 +2,7 @@ import { X, Copy, Check } from 'lucide-react';
 import { useState } from 'react';
 import toast from 'react-hot-toast';
 
-export default function VisitorDetails({ visitor, onClose }) {
+export default function VisitorDetails({ visitor, onClose, theme }) {
   const [copied, setCopied] = useState(false);
 
   const copyToClipboard = (text) => {
@@ -32,14 +32,14 @@ export default function VisitorDetails({ visitor, onClose }) {
   return (
     <div
       style={{
-        background: 'linear-gradient(180deg, rgba(15,23,42,0.98), rgba(8,12,28,1))',
-        borderRadius: 18,
-        border: '1px solid rgba(148,163,184,0.18)',
+        background: theme.panelStrong,
+        borderRadius: 24,
+        border: `1px solid ${theme.border}`,
         display: 'flex',
         flexDirection: 'column',
         height: '100%',
         overflow: 'hidden',
-        boxShadow: '0 20px 30px rgba(2, 6, 23, 0.35)',
+        boxShadow: theme.shadow,
       }}
     >
       {/* Header */}
@@ -54,10 +54,10 @@ export default function VisitorDetails({ visitor, onClose }) {
         }}
       >
         <div>
-          <h3 style={{ fontSize: 14, fontWeight: 700, color: '#f8fafc', margin: 0 }}>
+          <h3 style={{ fontSize: 14, fontWeight: 700, color: theme.text, margin: 0 }}>
             Live Visitor
           </h3>
-          <p style={{ fontSize: 11, color: '#94a3b8', margin: '2px 0 0' }}>
+          <p style={{ fontSize: 11, color: theme.textMuted, margin: '2px 0 0' }}>
             {visitor?.city}, {visitor?.country}
           </p>
         </div>
@@ -68,13 +68,13 @@ export default function VisitorDetails({ visitor, onClose }) {
             height: 28,
             borderRadius: 6,
             border: 'none',
-            background: 'rgba(148,163,184,0.12)',
+            background: theme.buttonBg,
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             flexShrink: 0,
-            border: '1px solid rgba(148,163,184,0.2)',
+            border: `1px solid ${theme.border}`,
           }}
         >
           <X size={14} color="#e2e8f0" />
