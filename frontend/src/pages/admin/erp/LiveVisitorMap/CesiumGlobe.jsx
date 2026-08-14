@@ -10,18 +10,31 @@ import toast from 'react-hot-toast';
 
 function supportsWebGL() {
   try {
+    const hasWebGLAPIs = !!(window.WebGLRenderingContext || window.WebGL2RenderingContext);
+    if (!hasWebGLAPIs) return false;
+
     const canvas = document.createElement('canvas');
     const context =
       canvas.getContext('webgl2', { antialias: true, alpha: false, powerPreference: 'high-performance' }) ||
       canvas.getContext('webgl', { antialias: true, alpha: false, powerPreference: 'high-performance' }) ||
       canvas.getContext('experimental-webgl', { antialias: true, alpha: false, powerPreference: 'high-performance' });
 
-    if (!context) return false;
+    if (!context) {
+      // Some browsers expose WebGL APIs but still fail on a real canvas context in specific
+      // environments (embedded browsers, remote desktops, restricted GPU contexts).
+      // We do not hard-block the globe here because a real Cesium initialization attempt may
+      // still succeed in supported browsers.
+      return true;
+    }
 
-    const version = context.getParameter(context.VERSION || 0x1F02);
-    return !!version;
+    try {
+      const version = context.getParameter(context.VERSION || 0x1F02);
+      return !!version;
+    } catch (error) {
+      return true;
+    }
   } catch (error) {
-    return false;
+    return true;
   }
 }
 
@@ -40,7 +53,7 @@ export default function CesiumGlobe({ locations = [], selectedVisitor, onLocatio
 
     const browserHasWebGL = supportsWebGL();
     if (!browserHasWebGL) {
-      console.warn('WebGL check failed at startup. Attempting actual Cesium initialization anyway.');
+      console.warn('WebGL check failed at startup. Still attempting initialization because some browsers expose partial support.');
     }
 
     let viewer = null;
