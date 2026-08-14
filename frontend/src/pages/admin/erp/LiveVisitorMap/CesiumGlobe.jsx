@@ -570,25 +570,134 @@ export default function CesiumGlobe({ locations = [], selectedVisitor, onLocatio
 }
 
 function WebGLFallbackMap({ locations = [], selectedVisitor, onLocationSelect }) {
+  const mapRef = useRef(null);
+  const mapInstanceRef = useRef(null);
   const selectedId = selectedVisitor?.id;
 
-  const markers = (locations || []).slice(0, 24).map((location) => {
-    const lat = Number(location.latitude);
-    const lon = Number(location.longitude);
-    if (Number.isNaN(lat) || Number.isNaN(lon)) return null;
+  useEffect(() => {
+    if (!mapRef.current) return;
 
-    const x = ((lon + 180) / 360) * 100;
-    const y = ((90 - lat) / 180) * 100;
+    let cancelled = false;
 
-    const isSelected = selectedId === location.id;
+    const ensureLeaflet = () =>
+      new Promise((resolve, reject) => {
+        if (window.L) {
+          resolve(window.L);
+          return;
+        }
 
-    return {
-      ...location,
-      x,
-      y,
-      isSelected,
+        const existingCss = document.querySelector('link[data-leaflet-fallback="true"]');
+        if (!existingCss) {
+          const css = document.createElement('link');
+          css.rel = 'stylesheet';
+          css.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+          css.setAttribute('data-leaflet-fallback', 'true');
+          document.head.appendChild(css);
+        }
+
+        const existingScript = document.querySelector('script[data-leaflet-fallback="true"]');
+        if (existingScript) {
+          existingScript.addEventListener('load', () => resolve(window.L), { once: true });
+          existingScript.addEventListener('error', () => reject(new Error('Leaflet failed to load')), { once: true });
+          return;
+        }
+
+        const script = document.createElement('script');
+        script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+        script.async = true;
+        script.setAttribute('data-leaflet-fallback', 'true');
+        script.onload = () => resolve(window.L);
+        script.onerror = () => reject(new Error('Leaflet failed to load'));
+        document.body.appendChild(script);
+      });
+
+    const initMap = async () => {
+      try {
+        const L = await ensureLeaflet();
+        if (cancelled || !mapRef.current) return;
+
+        if (mapInstanceRef.current) {
+          mapInstanceRef.current.remove();
+          mapInstanceRef.current = null;
+        }
+
+        const map = L.map(mapRef.current, {
+          attributionControl: true,
+          zoomControl: true,
+          scrollWheelZoom: true,
+          doubleClickZoom: true,
+          dragging: true,
+          worldCopyJump: true,
+        }).setView([20, 0], 2);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          maxZoom: 19,
+          attribution: '&copy; OpenStreetMap contributors',
+        }).addTo(map);
+
+        const validLocations = (locations || []).filter((location) => {
+          const lat = Number(location.latitude);
+          const lon = Number(location.longitude);
+          return !Number.isNaN(lat) && !Number.isNaN(lon);
+        });
+
+        const markersLayer = L.layerGroup().addTo(map);
+
+        validLocations.forEach((location) => {
+          const lat = Number(location.latitude);
+          const lon = Number(location.longitude);
+          const isSelected = selectedId === location.id;
+
+          const marker = L.circleMarker([lat, lon], {
+            radius: isSelected ? 9 : 6,
+            color: isSelected ? '#facc15' : '#22d3ee',
+            weight: 2,
+            fillColor: isSelected ? '#facc15' : '#22d3ee',
+            fillOpacity: isSelected ? 0.95 : 0.8,
+          }).addTo(markersLayer);
+
+          marker.bindPopup(`
+            <div style="font-family: Arial, sans-serif; min-width: 140px;">
+              <strong>${location.city || 'Unknown city'}</strong><br/>
+              ${location.country || 'Unknown country'}<br/>
+              Visitors: ${location.visitor_count || 0}
+            </div>
+          `);
+
+          marker.on('click', () => onLocationSelect?.(location));
+        });
+
+        if (selectedVisitor) {
+          const selLat = Number(selectedVisitor.latitude);
+          const selLon = Number(selectedVisitor.longitude);
+          if (!Number.isNaN(selLat) && !Number.isNaN(selLon)) {
+            map.flyTo([selLat, selLon], 4, { duration: 0.8 });
+          }
+        } else if (validLocations.length) {
+          const bounds = L.latLngBounds(
+            validLocations.map((location) => [Number(location.latitude), Number(location.longitude)])
+          );
+          map.fitBounds(bounds.pad(0.35));
+        } else {
+          map.setView([20, 0], 2);
+        }
+
+        mapInstanceRef.current = map;
+      } catch (error) {
+        console.error('Leaflet fallback failed to initialize:', error);
+      }
     };
-  }).filter(Boolean);
+
+    initMap();
+
+    return () => {
+      cancelled = true;
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+      }
+    };
+  }, [locations, selectedId, onLocationSelect]);
 
   return (
     <div
@@ -597,64 +706,24 @@ function WebGLFallbackMap({ locations = [], selectedVisitor, onLocationSelect })
         height: '100%',
         position: 'relative',
         overflow: 'hidden',
-        background: 'radial-gradient(circle at top, rgba(15,23,42,0.95), rgba(2,6,23,1))',
         borderRadius: 18,
         border: '1px solid rgba(148,163,184,0.25)',
-        color: '#e2e8f0',
-        fontFamily: 'Inter, sans-serif',
+        background: 'radial-gradient(circle at top, rgba(15,23,42,0.95), rgba(2,6,23,1))',
       }}
     >
-      <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet" style={{ width: '100%', height: '100%' }}>
-        <defs>
-          <linearGradient id="fallbackOcean" x1="0" x2="1">
-            <stop offset="0%" stopColor="#07111f" />
-            <stop offset="100%" stopColor="#0f172a" />
-          </linearGradient>
-        </defs>
+      <div ref={mapRef} style={{ width: '100%', height: '100%', borderRadius: 18 }} />
 
-        <rect x="0" y="0" width="100" height="100" fill="url(#fallbackOcean)" />
-
-        <g opacity="0.8" fill="#1e293b" stroke="#334155" strokeWidth="0.4">
-          <path d="M24 24 L32 18 L38 20 L42 26 L38 33 L31 32 Z" />
-          <path d="M55 22 L61 18 L67 22 L70 30 L64 34 L58 31 Z" />
-          <path d="M50 43 L56 39 L62 41 L64 48 L60 54 L53 53 L48 47 Z" />
-          <path d="M28 44 L35 40 L42 43 L41 51 L35 56 L28 53 Z" />
-          <path d="M70 57 L78 52 L85 56 L82 63 L73 66 Z" />
-          <path d="M18 62 L25 60 L30 65 L28 72 L20 74 L15 68 Z" />
-        </g>
-
-        {markers.map((marker) => (
-          <g key={`${marker.id}-${marker.city || 'marker'}`} onClick={() => onLocationSelect?.(marker)} style={{ cursor: 'pointer' }}>
-            <circle
-              cx={marker.x}
-              cy={marker.y}
-              r={marker.isSelected ? 2.4 : 1.6}
-              fill={marker.isSelected ? '#facc15' : '#22d3ee'}
-              stroke="#f8fafc"
-              strokeWidth="0.25"
-            />
-            {marker.isSelected && (
-              <circle cx={marker.x} cy={marker.y} r="4" fill="none" stroke="#facc15" strokeWidth="0.35" opacity="0.9" />
-            )}
-          </g>
-        ))}
-      </svg>
-
-      <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'linear-gradient(180deg, rgba(15,23,42,0.12), rgba(15,23,42,0.52))' }} />
-
-      <div style={{ position: 'absolute', left: 18, top: 18, right: 18, zIndex: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <div style={{ background: 'rgba(8,12,28,0.8)', border: '1px solid rgba(148,163,184,0.25)', borderRadius: 12, padding: '12px 14px' }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: '#7dd3fc', marginBottom: 6 }}>🌍 Browser-safe globe view</div>
-          <div style={{ fontSize: 11, color: '#cbd5e1', lineHeight: 1.5 }}>
-            WebGL is unavailable in this browser, so the 3D globe is automatically switched to a compatible 2D world view.
-          </div>
+      <div style={{ position: 'absolute', left: 18, top: 18, zIndex: 500, background: 'rgba(8, 12, 28, 0.82)', border: '1px solid rgba(125, 211, 252, 0.3)', borderRadius: 12, padding: '12px 14px', maxWidth: 310 }}>
+        <div style={{ fontSize: 12, fontWeight: 700, color: '#7dd3fc', marginBottom: 6 }}>🌍 Real map fallback</div>
+        <div style={{ fontSize: 11, color: '#cbd5e1', lineHeight: 1.5 }}>
+          WebGL is unavailable in this browser, so the app is showing the live OpenStreetMap view with real visitor coordinates.
         </div>
       </div>
 
-      <div style={{ position: 'absolute', left: 18, bottom: 18, zIndex: 2, background: 'rgba(8,12,28,0.85)', border: '1px solid rgba(34,211,238,0.25)', borderRadius: 12, padding: '10px 12px', width: 240 }}>
-        <div style={{ fontSize: 11, color: '#7dd3fc', fontWeight: 700, marginBottom: 6 }}>Visitor locations</div>
+      <div style={{ position: 'absolute', left: 18, bottom: 18, zIndex: 500, background: 'rgba(8, 12, 28, 0.82)', border: '1px solid rgba(34,211,238,0.25)', borderRadius: 12, padding: '10px 12px', width: 240 }}>
+        <div style={{ fontSize: 11, color: '#7dd3fc', fontWeight: 700, marginBottom: 6 }}>Visitor data</div>
         <div style={{ fontSize: 11, color: '#e2e8f0' }}>
-          {locations?.length ? `${locations.length} real locations available` : 'No visitor data available'}
+          {locations?.length ? `${locations.length} real-world locations` : 'No visitor data available'}
         </div>
       </div>
     </div>
