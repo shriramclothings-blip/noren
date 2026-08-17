@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Link2, Plus, Trash2, BarChart2, Copy, Check, RefreshCw, X, Monitor, Smartphone, Tablet, MapPin, Globe, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react';
+import { Link2, Plus, Trash2, BarChart2, Copy, Check, RefreshCw, X, Monitor, Smartphone, Tablet, MapPin, Globe, ChevronDown, ChevronUp, ExternalLink, MapPinned } from 'lucide-react';
 import api from '../../../utils/api';
 import toast from 'react-hot-toast';
+import LiveVisitorMap from './LiveVisitorMap/LiveVisitorMap.jsx';
 
 const BACKEND = import.meta.env.VITE_API_URL?.replace('/api', '') || 'https://noren-iqk3.onrender.com';
 const SITE    = 'https://www.norenfastion.shop';
@@ -141,6 +142,7 @@ function ClicksDrawer({ link, onClose }) {
 }
 
 export default function AdminUTMTracker() {
+  const [activeTab, setActiveTab] = useState('links');
   const [links,     setLinks]     = useState([]);
   const [loading,   setLoading]   = useState(true);
   const [showForm,  setShowForm]  = useState(false);
@@ -201,21 +203,65 @@ export default function AdminUTMTracker() {
   }[src] || { bg: '#f3f4f6', color: '#374151' });
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
 
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-        <div>
-          <h2 style={{ fontSize: 18, fontWeight: 800, color: '#111827', margin: 0 }}>UTM Link Tracker</h2>
-          <p style={{ fontSize: 13, color: '#9ca3af', margin: '4px 0 0' }}>
-            Generate tracking links for WhatsApp, Instagram, etc. See who clicked, from where, and on what device.
-          </p>
+      {/* Module Navigation Tabs */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', borderBottom: '1px solid #e5e7eb', pb: 8 }}>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button
+            onClick={() => setActiveTab('links')}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '8px 16px',
+              borderRadius: 8,
+              border: 'none',
+              background: activeTab === 'links' ? '#111827' : '#f3f4f6',
+              color: activeTab === 'links' ? '#fff' : '#4b5563',
+              fontSize: 13,
+              fontWeight: 700,
+              cursor: 'pointer',
+            }}
+          >
+            <Link2 size={15} /> Tracking Links
+          </button>
+
+          <button
+            onClick={() => setActiveTab('map')}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '8px 16px',
+              borderRadius: 8,
+              border: 'none',
+              background: activeTab === 'map' ? 'linear-gradient(135deg, #4f46e5, #7c3aed)' : '#f3f4f6',
+              color: activeTab === 'map' ? '#fff' : '#4b5563',
+              fontSize: 13,
+              fontWeight: 700,
+              cursor: 'pointer',
+              boxShadow: activeTab === 'map' ? '0 4px 12px rgba(124, 58, 237, 0.3)' : 'none',
+            }}
+          >
+            <MapPinned size={15} /> Live Visitor Map 3D
+          </button>
         </div>
-        <button onClick={() => setShowForm(s => !s)}
-          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 10, border: 'none', background: showForm ? '#f3f4f6' : '#1a1a18', color: showForm ? '#374151' : '#faf9f7', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-          {showForm ? <><X size={14} /> Cancel</> : <><Plus size={14} /> New Link</>}
-        </button>
+
+        {activeTab === 'links' && (
+          <button onClick={() => setShowForm(s => !s)}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 10, border: 'none', background: showForm ? '#f3f4f6' : '#1a1a18', color: showForm ? '#374151' : '#faf9f7', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+            {showForm ? <><X size={14} /> Cancel</> : <><Plus size={14} /> New Link</>}
+          </button>
+        )}
       </div>
+
+      {/* Render Active Tab */}
+      {activeTab === 'map' ? (
+        <LiveVisitorMap />
+      ) : (
+        <>
+
 
       {/* Create form */}
       {showForm && (
@@ -353,6 +399,9 @@ export default function AdminUTMTracker() {
       {selected && <ClicksDrawer link={selected} onClose={() => setSelected(null)} />}
 
       <style>{`@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}`}</style>
+        </>
+      )}
     </div>
   );
 }
+

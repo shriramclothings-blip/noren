@@ -1,52 +1,52 @@
-import { Users, Globe, BarChart3, TrendingUp } from 'lucide-react';
+import { Users, Globe, BarChart3, TrendingUp, Activity } from 'lucide-react';
 
 export default function VisitorStats({ stats, loading, theme }) {
   const cards = [
     {
       label: 'Total Visitors',
-      value: stats.total,
+      value: stats.total?.toLocaleString() ?? 0,
       icon: Users,
-      color: '#8ab4ff',
-      bgColor: 'rgba(59,130,246,0.14)',
-      trend: '+12.6%',
+      color: '#38bdf8',
+      bgColor: 'rgba(56,189,248,0.12)',
+      subtext: 'Tracked period',
     },
     {
       label: 'Live Visitors',
-      value: 156,
-      icon: Users,
-      color: '#8ef1d1',
-      bgColor: 'rgba(16,185,129,0.12)',
-      trend: '+8.3%',
+      value: stats.liveVisitors?.toLocaleString() ?? 0,
+      icon: Activity,
+      color: '#34d399',
+      bgColor: 'rgba(52,211,153,0.12)',
       live: true,
+      subtext: 'Active right now',
     },
     {
       label: 'Countries',
-      value: stats.countries,
+      value: stats.countries?.toLocaleString() ?? 0,
       icon: Globe,
-      color: '#d4b5ff',
-      bgColor: 'rgba(168,85,247,0.12)',
-      trend: '+1',
+      color: '#c084fc',
+      bgColor: 'rgba(192,132,252,0.12)',
+      subtext: 'Unique origins',
     },
     {
       label: 'Total Clicks',
-      value: stats.totalClicks,
+      value: (stats.totalClicks || stats.total)?.toLocaleString() ?? 0,
       icon: BarChart3,
-      color: '#ffd27a',
-      bgColor: 'rgba(245,158,11,0.12)',
-      trend: '+13.7%',
+      color: '#fbbf24',
+      bgColor: 'rgba(251,191,36,0.12)',
+      subtext: 'UTM link clicks',
     },
     {
       label: 'Conversion Rate',
-      value: `${stats.conversionRate}%`,
+      value: `${stats.conversionRate ?? 0}%`,
       icon: TrendingUp,
-      color: '#ff8ecf',
-      bgColor: 'rgba(236,72,153,0.12)',
-      trend: '+0.8%',
+      color: '#f43f5e',
+      bgColor: 'rgba(244,63,94,0.12)',
+      subtext: 'Goal conversions',
     },
   ];
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 12 }}>
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
       {cards.map((card, idx) => {
         const Icon = card.icon;
         return (
@@ -54,7 +54,7 @@ export default function VisitorStats({ stats, loading, theme }) {
             key={idx}
             style={{
               background: theme.panelStrong,
-              borderRadius: 20,
+              borderRadius: 18,
               border: `1px solid ${theme.border}`,
               padding: '16px 18px',
               display: 'flex',
@@ -65,31 +65,25 @@ export default function VisitorStats({ stats, loading, theme }) {
           >
             <div
               style={{
-                width: 44,
-                height: 44,
+                width: 42,
+                height: 42,
                 borderRadius: 12,
                 background: card.bgColor,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 flexShrink: 0,
-                border: '1px solid rgba(148,163,184,0.14)',
+                border: '1px solid rgba(148,163,184,0.12)',
               }}
             >
               <Icon size={18} color={card.color} />
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 11, fontWeight: 600, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>
                 {card.label}
               </div>
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'baseline',
-                  gap: 8,
-                }}
-              >
-                <div style={{ fontSize: 26, fontWeight: 800, color: theme.text, lineHeight: 1.1 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ fontSize: 24, fontWeight: 800, color: theme.text, lineHeight: 1.1 }}>
                   {loading ? '—' : card.value}
                 </div>
                 {card.live && (
@@ -97,29 +91,29 @@ export default function VisitorStats({ stats, loading, theme }) {
                     style={{
                       display: 'inline-flex',
                       alignItems: 'center',
-                      gap: 3,
+                      gap: 4,
                       fontSize: 10,
-                      fontWeight: 600,
-                      color: '#8ef1d1',
-                      background: 'rgba(16,185,129,0.12)',
-                      padding: '3px 6px',
+                      fontWeight: 700,
+                      color: '#34d399',
+                      background: 'rgba(52,211,153,0.12)',
+                      padding: '2px 6px',
                       borderRadius: 6,
-                      border: '1px solid rgba(16,185,129,0.18)',
+                      border: '1px solid rgba(52,211,153,0.25)',
                     }}
                   >
-                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#4ade80', animation: 'pulse 2s infinite' }} />
+                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#34d399', animation: 'livePulse 2s infinite' }} />
                     Live
                   </div>
                 )}
               </div>
-              <div style={{ fontSize: 11, color: '#7dd3fc', marginTop: 6 }}>
-                {card.trend}
+              <div style={{ fontSize: 10, color: theme.textMuted, marginTop: 4 }}>
+                {card.subtext}
               </div>
             </div>
           </div>
         );
       })}
-      <style>{`@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }`}</style>
+      <style>{`@keyframes livePulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(1.2); } }`}</style>
     </div>
   );
 }
