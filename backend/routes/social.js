@@ -35,7 +35,7 @@ const upload = multer({
 
 // Home Feed & Media Upload
 router.get('/feed', optionalAuth, socialCtrl.getFeed);
-router.post('/upload', optionalAuth, upload.array('files', 10), socialCtrl.uploadMedia);
+router.post('/upload', optionalAuth, upload.any(), socialCtrl.uploadMedia);
 
 // Posts
 router.post('/posts', auth, socialCtrl.createPost);

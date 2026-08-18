@@ -1010,6 +1010,8 @@ const markNotificationsRead = async (req, res) => {
   } catch (err) {
     res.status(500).json({ message: 'Failed to update notifications' });
   }
+};
+
 const uploadMedia = async (req, res) => {
   try {
     const files = req.files || (req.file ? [req.file] : []);

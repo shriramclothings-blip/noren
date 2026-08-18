@@ -45,10 +45,33 @@ app.use(cors({
 }));
 
 const path = require('path');
+const fs = require('fs');
+const multer = require('multer');
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use(require('./middleware/tenant').tenant);
+
+const sysUploadsDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(sysUploadsDir)) fs.mkdirSync(sysUploadsDir, { recursive: true });
+const sysStorage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, sysUploadsDir),
+  filename: (req, file, cb) => cb(null, `media_${Date.now()}_${Math.random().toString(36).slice(2, 9)}${path.extname(file.originalname)}`)
+});
+const sysUpload = multer({ storage: sysStorage, limits: { fileSize: 100 * 1024 * 1024 } });
+
+app.post('/api/upload', sysUpload.any(), (req, res) => {
+  const files = req.files || (req.file ? [req.file] : []);
+  if (!files.length) return res.status(400).json({ message: 'No media file provided' });
+  const host = req.get('host');
+  const protocol = req.protocol;
+  const uploaded = files.map(f => ({
+    media_type: f.mimetype.startsWith('video/') ? 'video' : 'image',
+    media_url: `${protocol}://${host}/uploads/${f.filename}`,
+    filename: f.filename
+  }));
+  res.json({ message: 'Upload successful', files: uploaded, url: uploaded[0].media_url });
+});
 
 // ── HTTP request logger (4xx / 5xx) ────────────────────────────────────────
 app.use((req, res, next) => {

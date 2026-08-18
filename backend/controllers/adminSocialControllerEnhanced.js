@@ -42,13 +42,13 @@ const getSocialDashboardMetrics = async (req, res) => {
       storageRes
     ] = await Promise.all([
       pool.query('SELECT COUNT(*) as count FROM src_users WHERE is_banned = FALSE'),
-      pool.query(`SELECT COUNT(DISTINCT user_id) as count FROM src_social_notifications ${dateRangeQuery}`),
+      pool.query(`SELECT COUNT(DISTINCT user_id) as count FROM src_notifications ${dateRangeQuery}`),
       pool.query(`SELECT COUNT(*) as count FROM src_users WHERE is_banned = FALSE AND created_at > NOW() - INTERVAL '30 days'`),
       pool.query('SELECT COUNT(*) as count FROM src_social_posts'),
       pool.query('SELECT COUNT(*) as count FROM src_social_reels'),
       pool.query('SELECT COUNT(*) as count FROM src_social_stories WHERE expires_at > NOW()'),
-      pool.query('SELECT COUNT(*) as count FROM src_social_messages'),
-      pool.query('SELECT COUNT(*) as count FROM src_social_calls'),
+      pool.query('SELECT COUNT(*) as count FROM src_private_chat_messages'),
+      pool.query('SELECT COUNT(*) as count FROM src_private_chat_threads'),
       pool.query("SELECT COUNT(*) as count FROM src_social_reports WHERE status = 'pending'"),
       pool.query('SELECT COUNT(*) as count FROM src_users WHERE is_banned = TRUE'),
       pool.query(`
@@ -360,7 +360,7 @@ const listReports = async (req, res) => {
 
     let query = `
       SELECT r.id, r.reporter_id, r.target_type, r.target_id, r.category, r.reason,
-             r.status, r.moderator_id, r.action_taken, r.moderator_note, r.created_at, r.resolved_at,
+             r.status, r.moderator_id, r.action_taken, r.moderator_note, r.created_at, r.updated_at AS resolved_at,
              u.name AS reporter_name, u.email AS reporter_email,
              mod.name AS moderator_name,
              COUNT(*) OVER() as total_count
