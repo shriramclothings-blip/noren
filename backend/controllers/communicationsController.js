@@ -229,13 +229,12 @@ const sendPrivateMessage = async (req, res) => {
 
     const messageRecord = insertRes.rows[0];
     const senderRes = await pool.query('SELECT name, avatar_url FROM src_users WHERE id = $1', [req.user.id]);
-    res.status(201).json({
-      message: {
-        ...messageRecord,
-        sender_name: senderRes.rows[0]?.name,
-        avatar_url: senderRes.rows[0]?.avatar_url,
-      },
-    });
+    const createdMsg = {
+      ...messageRecord,
+      sender_name: senderRes.rows[0]?.name,
+      avatar_url: senderRes.rows[0]?.avatar_url,
+    };
+    res.status(201).json(createdMsg);
   } catch (err) {
     console.error('sendPrivateMessage error:', err.message);
     res.status(500).json({ message: 'Failed to send message' });

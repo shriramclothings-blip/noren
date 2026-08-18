@@ -114,28 +114,35 @@ export default function DirectMessages({ onInitiateCall }) {
     if (!messageInput.trim() || !activeThread) return;
 
     const clientMsgId = `client-${Date.now()}`;
+    const textVal = messageInput.trim();
     const tempMsg = {
       id: clientMsgId,
       thread_id: activeThread.id,
       sender_user_id: user.id,
-      message: messageInput.trim(),
+      message: textVal,
       status: 'sending',
       created_at: new Date().toISOString(),
     };
 
-    setMessages(prev => [...prev, tempMsg]);
+    setMessages(prev => [...(Array.isArray(prev) ? prev : []), tempMsg]);
     setMessageInput('');
     scrollToBottom();
 
     try {
       const res = await api.post(`/erp/communications/private/threads/${activeThread.id}/messages`, {
-        message: tempMsg.message,
+        message: textVal,
         client_msg_id: clientMsgId,
       });
 
-      setMessages(prev => prev.map(m => m.id === clientMsgId ? { ...res.data, status: 'sent' } : m));
+      const returnedMsg = res.data?.message?.message ? res.data.message : (res.data?.message || res.data);
+
+      setMessages(prev => (Array.isArray(prev) ? prev : []).map(m =>
+        m.id === clientMsgId ? { ...returnedMsg, message: returnedMsg.message || textVal, status: 'sent' } : m
+      ));
     } catch {
-      setMessages(prev => prev.map(m => m.id === clientMsgId ? { ...m, status: 'failed' } : m));
+      setMessages(prev => (Array.isArray(prev) ? prev : []).map(m =>
+        m.id === clientMsgId ? { ...m, status: 'failed' } : m
+      ));
       toast.error('Failed to send message');
     }
   };
@@ -302,7 +309,9 @@ export default function DirectMessages({ onInitiateCall }) {
                           )}
                         </div>
                       )}
-                      <p className="leading-relaxed font-medium">{m.message}</p>
+                      <p className="leading-relaxed font-medium">
+                        {typeof m.message === 'object' ? String(m.message?.message || '') : String(m.message || '')}
+                      </p>
                       <div className="flex items-center justify-end gap-1 text-[10px] opacity-75">
                         <span>{new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                         {isMine && (
