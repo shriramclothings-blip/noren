@@ -223,6 +223,8 @@ function MainLayout() {
   );
 }
 
+import VesperLandingView from './components/VesperLandingView';
+
 export default function App() {
   return (
     <AuthProvider>
@@ -230,6 +232,8 @@ export default function App() {
         <Router>
           <Toaster position="top-center" />
           <Routes>
+            <Route path="/" element={<VesperLandingView />} />
+            <Route path="/landing" element={<VesperLandingView />} />
             <Route path="/login" element={<LoginView />} />
             <Route path="/*" element={<MainLayout />} />
           </Routes>
