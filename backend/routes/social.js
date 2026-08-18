@@ -39,6 +39,7 @@ router.post('/upload', optionalAuth, upload.any(), socialCtrl.uploadMedia);
 
 // Posts
 router.post('/posts', auth, socialCtrl.createPost);
+router.post('/posts/bulk-upload', auth, upload.any(), socialCtrl.bulkUploadPosts);
 router.get('/posts/:id', optionalAuth, socialCtrl.getPostById);
 router.put('/posts/:id', auth, socialCtrl.updatePost);
 router.delete('/posts/:id', auth, socialCtrl.deletePost);

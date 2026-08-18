@@ -1236,9 +1236,116 @@ const getExploreFeed = async (req, res) => {
   }
 };
 
+const bulkUploadPosts = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const files = req.files || (req.file ? [req.file] : []);
+    const { caption, location, mode = 'carousel' } = req.body;
+
+    if (!files.length) {
+      return res.status(400).json({ message: 'No media files uploaded' });
+    }
+
+    const host = req.get('host');
+    const protocol = req.protocol;
+
+    const filteredCaption = caption ? await applyContentFilters(userId, caption) : null;
+    const createdPosts = [];
+
+    const uploadedMediaList = [];
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const isVideo = file.mimetype.startsWith('video/');
+      const fileUrl = `${protocol}://${host}/uploads/${file.filename}`;
+
+      if (file.path && fs.existsSync(file.path)) {
+        try {
+          const buffer = fs.readFileSync(file.path);
+          await pool.query(
+            `INSERT INTO src_social_media_blobs (filename, mimetype, data)
+             VALUES ($1, $2, $3)
+             ON CONFLICT (filename) DO UPDATE SET data = EXCLUDED.data`,
+            [file.filename, file.mimetype, buffer]
+          );
+        } catch (bErr) {
+          console.warn('PostgreSQL media blob insert warning:', bErr.message);
+        }
+      }
+
+      // If video, auto-sync to Reels feed!
+      if (isVideo || file.filename.match(/\.(mp4|webm|mov)$/i)) {
+        await pool.query(
+          `INSERT INTO src_social_reels (user_id, video_url, thumbnail_url, caption, audio_title, is_hidden)
+           VALUES ($1, $2, $3, $4, 'Original Audio', FALSE)`,
+          [userId, fileUrl, null, filteredCaption || '✨ New Video Reel']
+        ).catch(() => {});
+      }
+
+      uploadedMediaList.push({
+        media_type: isVideo ? 'video' : 'image',
+        media_url: fileUrl,
+        filename: file.filename,
+        sort_order: i,
+      });
+    }
+
+    if (mode === 'individual') {
+      for (let i = 0; i < uploadedMediaList.length; i++) {
+        const item = uploadedMediaList[i];
+        const postRes = await pool.query(
+          `INSERT INTO src_social_posts (user_id, caption, location, privacy)
+           VALUES ($1, $2, $3, 'public')
+           RETURNING *`,
+          [userId, filteredCaption || `✨ Post #${i + 1}`, location || null]
+        );
+        const post = postRes.rows[0];
+
+        await pool.query(
+          `INSERT INTO src_social_post_media (post_id, media_type, media_url, aspect_ratio, sort_order)
+           VALUES ($1, $2, $3, '1:1', 0)`,
+          [post.id, item.media_type, item.media_url]
+        );
+
+        createdPosts.push({ ...post, media: [item] });
+      }
+    } else {
+      const postRes = await pool.query(
+        `INSERT INTO src_social_posts (user_id, caption, location, privacy)
+         VALUES ($1, $2, $3, 'public')
+         RETURNING *`,
+        [userId, filteredCaption, location || null]
+      );
+      const post = postRes.rows[0];
+
+      for (let i = 0; i < uploadedMediaList.length; i++) {
+        const item = uploadedMediaList[i];
+        await pool.query(
+          `INSERT INTO src_social_post_media (post_id, media_type, media_url, aspect_ratio, sort_order)
+           VALUES ($1, $2, $3, '1:1', $4)`,
+          [post.id, item.media_type, item.media_url, i]
+        );
+      }
+
+      createdPosts.push({ ...post, media: uploadedMediaList });
+    }
+
+    await pool.query('UPDATE src_users SET posts_count = posts_count + $1 WHERE id = $2', [createdPosts.length, userId]);
+
+    res.status(201).json({
+      message: `Successfully published ${uploadedMediaList.length} media files!`,
+      count: createdPosts.length,
+      posts: createdPosts,
+    });
+  } catch (err) {
+    console.error('bulkUploadPosts error:', err.message);
+    res.status(500).json({ message: 'Failed to bulk upload posts' });
+  }
+};
+
 module.exports = {
   getFeed,
   createPost,
+  bulkUploadPosts,
   getPostById,
   updatePost,
   deletePost,
