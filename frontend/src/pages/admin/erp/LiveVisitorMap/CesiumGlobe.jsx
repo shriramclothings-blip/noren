@@ -513,17 +513,18 @@ export default function CesiumGlobe({ locations = [], selectedVisitor, onLocatio
           </button>
           <button
             onClick={() => {
-              if (viewerRef.current && !viewerRef.current.isDestroyed()) {
-                const el = viewerRef.current.container;
-                if (el?.requestFullscreen) {
-                  el.requestFullscreen().catch(() => {
-                    toast.error('Fullscreen not available');
-                  });
-                }
+              const el = cesiumContainer.current || document.documentElement;
+              const fsEl = document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement;
+              if (!fsEl) {
+                if (el?.requestFullscreen) el.requestFullscreen().catch(() => {});
+                else if (el?.webkitRequestFullscreen) el.webkitRequestFullscreen();
+              } else {
+                if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
+                else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
               }
             }}
             style={controlButtonStyle}
-            title="Fullscreen mode"
+            title="Toggle Fullscreen mode"
           >
             ⛶ FULL
           </button>

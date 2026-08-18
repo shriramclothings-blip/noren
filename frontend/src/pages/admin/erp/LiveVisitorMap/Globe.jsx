@@ -501,12 +501,56 @@ export default function Globe({ locations = [], selectedVisitor, onLocationSelec
     }
   }, [selectedVisitor]);
 
-  const toggleFullscreen = () => {
-    if (!containerRef.current) return;
-    if (!document.fullscreenElement) {
-      containerRef.current.requestFullscreen().then(() => setIsFullscreen(true)).catch(() => {});
+  // Synchronize fullscreen state across escape key and browser events
+  useEffect(() => {
+    const handleFSChange = () => {
+      const fsEl = document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement;
+      setIsFullscreen(!!fsEl);
+    };
+
+    document.addEventListener('fullscreenchange', handleFSChange);
+    document.addEventListener('webkitfullscreenchange', handleFSChange);
+    document.addEventListener('mozfullscreenchange', handleFSChange);
+    document.addEventListener('MSFullscreenChange', handleFSChange);
+
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFSChange);
+      document.removeEventListener('webkitfullscreenchange', handleFSChange);
+      document.removeEventListener('mozfullscreenchange', handleFSChange);
+      document.removeEventListener('MSFullscreenChange', handleFSChange);
+    };
+  }, []);
+
+  const toggleFullscreen = (e) => {
+    if (e) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
+    const elem = containerRef.current;
+    if (!elem) return;
+
+    const fsEl = document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement;
+
+    if (!fsEl) {
+      if (elem.requestFullscreen) {
+        elem.requestFullscreen().then(() => setIsFullscreen(true)).catch((err) => console.error('FS error:', err));
+      } else if (elem.webkitRequestFullscreen) {
+        elem.webkitRequestFullscreen();
+      } else if (elem.mozRequestFullScreen) {
+        elem.mozRequestFullScreen();
+      } else if (elem.msRequestFullscreen) {
+        elem.msRequestFullscreen();
+      }
     } else {
-      document.exitFullscreen().then(() => setIsFullscreen(false)).catch(() => {});
+      if (document.exitFullscreen) {
+        document.exitFullscreen().then(() => setIsFullscreen(false)).catch((err) => console.error('Exit FS error:', err));
+      } else if (document.webkitExitFullscreen) {
+        document.webkitExitFullscreen();
+      } else if (document.mozCancelFullScreen) {
+        document.mozCancelFullScreen();
+      } else if (document.msExitFullscreen) {
+        document.msExitFullscreen();
+      }
     }
   };
 
@@ -637,7 +681,8 @@ export default function Globe({ locations = [], selectedVisitor, onLocationSelec
           display: 'flex',
           flexDirection: 'column',
           gap: 8,
-          zIndex: 10,
+          zIndex: 9999,
+          pointerEvents: 'auto',
         }}
       >
         <button onClick={handleZoomIn} style={btnStyle} title="Zoom In">
@@ -671,8 +716,8 @@ export default function Globe({ locations = [], selectedVisitor, onLocationSelec
         >
           {autoRotate ? <Pause size={16} color="#c084fc" /> : <Play size={16} color="#38bdf8" />}
         </button>
-        <button onClick={toggleFullscreen} style={btnStyle} title="Toggle Fullscreen">
-          {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+        <button onClick={toggleFullscreen} style={btnStyle} title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}>
+          {isFullscreen ? <Minimize2 size={16} color="#f43f5e" /> : <Maximize2 size={16} color="#38bdf8" />}
         </button>
       </div>
 
@@ -690,7 +735,8 @@ export default function Globe({ locations = [], selectedVisitor, onLocationSelec
           fontSize: 11,
           backdropFilter: 'blur(12px)',
           boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
-          zIndex: 10,
+          zIndex: 9999,
+          pointerEvents: 'auto',
           display: 'flex',
           flexDirection: 'column',
           gap: 8,
@@ -739,4 +785,6 @@ const btnStyle = {
   backdropFilter: 'blur(10px)',
   transition: 'all 0.2s',
   boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+  pointerEvents: 'auto',
+  userSelect: 'none',
 };
