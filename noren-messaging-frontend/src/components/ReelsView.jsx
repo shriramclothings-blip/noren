@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import api from '../utils/api';
-import { Heart, MessageCircle, Share2, Volume2, VolumeX, Trash2 } from 'lucide-react';
+import { Heart, MessageCircle, Share2, Volume2, VolumeX, Trash2, UploadCloud, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 
@@ -9,6 +9,8 @@ export default function ReelsView() {
   const [reels, setReels] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isMuted, setIsMuted] = useState(true);
+  const [bulkUploading, setBulkUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const videoRefs = useRef({});
 
   useEffect(() => {
@@ -24,6 +26,37 @@ export default function ReelsView() {
       toast.error('Failed to load reels');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleBulkFileSelect = async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+
+    setBulkUploading(true);
+    setUploadProgress(10);
+    toast.loading(`Uploading ${files.length} video reels...`, { id: 'bulkUpload' });
+
+    const formData = new FormData();
+    files.forEach((file) => {
+      formData.append('files', file);
+    });
+
+    try {
+      const res = await api.post('/social/reels/bulk-upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        onUploadProgress: (progressEvent) => {
+          const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          setUploadProgress(percent);
+        },
+      });
+      toast.success(`🎉 ${res.data.message || 'Bulk Reels uploaded!'}`, { id: 'bulkUpload' });
+      fetchReels();
+    } catch {
+      toast.error('Failed to upload bulk reels', { id: 'bulkUpload' });
+    } finally {
+      setBulkUploading(false);
+      setUploadProgress(0);
     }
   };
 
@@ -52,6 +85,39 @@ export default function ReelsView() {
 
   return (
     <div className="w-full max-w-md mx-auto h-[calc(100vh-6rem)] overflow-y-snap space-y-4 py-2">
+      {/* Top Controls Header */}
+      <div className="flex items-center justify-between px-2 mb-2">
+        <h2 className="text-lg font-black text-white flex items-center gap-2">
+          <span>🎬 Reels</span>
+        </h2>
+        <div className="flex items-center gap-2">
+          <input
+            type="file"
+            id="bulkReelsInput"
+            accept="video/*"
+            multiple
+            onChange={handleBulkFileSelect}
+            className="hidden"
+          />
+          <button
+            onClick={() => document.getElementById('bulkReelsInput')?.click()}
+            disabled={bulkUploading}
+            className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-full btn-liquid-solid text-black shadow-lg"
+          >
+            {bulkUploading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Uploading {uploadProgress}%</span>
+              </>
+            ) : (
+              <>
+                <UploadCloud className="w-4 h-4" />
+                <span>Bulk Upload Reels</span>
+              </>
+            )}
+          </button>
+        </div>
+      </div>
       {loading ? (
         <div className="h-full flex items-center justify-center text-neutral-400 font-medium">Loading Reels...</div>
       ) : !reels.length ? (

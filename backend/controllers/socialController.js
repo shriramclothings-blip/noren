@@ -1083,6 +1083,159 @@ const uploadMedia = async (req, res) => {
   }
 };
 
+const bulkUploadReels = async (req, res) => {
+  try {
+    const enabled = await isFeatureEnabled('reels_enabled');
+    if (!enabled) return res.status(403).json({ message: 'Reels feature is currently disabled' });
+
+    const userId = req.user.id;
+    const files = req.files || (req.file ? [req.file] : []);
+    const { video_urls = [], captions = [], audio_titles = [] } = req.body;
+
+    const host = req.get('host');
+    const protocol = req.protocol;
+
+    const createdReels = [];
+
+    if (files.length > 0) {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const isVideo = file.mimetype.startsWith('video/');
+        let fileUrl = `${protocol}://${host}/uploads/${file.filename}`;
+
+        if (file.path && fs.existsSync(file.path)) {
+          try {
+            const buffer = fs.readFileSync(file.path);
+            await pool.query(
+              `INSERT INTO src_social_media_blobs (filename, mimetype, data)
+               VALUES ($1, $2, $3)
+               ON CONFLICT (filename) DO UPDATE SET data = EXCLUDED.data`,
+              [file.filename, file.mimetype, buffer]
+            );
+          } catch (bErr) {
+            console.warn('PostgreSQL media blob insert warning:', bErr.message);
+          }
+        }
+
+        const rawCaption = Array.isArray(captions) ? captions[i] : (req.body.caption || null);
+        const rawAudio = Array.isArray(audio_titles) ? audio_titles[i] : (req.body.audio_title || 'Original Audio');
+        const filteredCaption = rawCaption ? await applyContentFilters(userId, rawCaption) : null;
+
+        const reelRes = await pool.query(
+          `INSERT INTO src_social_reels (user_id, video_url, thumbnail_url, caption, audio_title, is_hidden)
+           VALUES ($1, $2, $3, $4, $5, FALSE)
+           RETURNING *`,
+          [userId, fileUrl, null, filteredCaption, rawAudio]
+        );
+        const reel = reelRes.rows[0];
+
+        const postRes = await pool.query(
+          `INSERT INTO src_social_posts (user_id, caption, privacy)
+           VALUES ($1, $2, 'public')
+           RETURNING id`,
+          [userId, filteredCaption || '✨ New Reel']
+        );
+        await pool.query(
+          `INSERT INTO src_social_post_media (post_id, media_type, media_url, aspect_ratio, sort_order)
+           VALUES ($1, $2, $3, '9:16', 0)`,
+          [postRes.rows[0].id, isVideo ? 'video' : 'image', fileUrl]
+        );
+
+        createdReels.push(reel);
+      }
+    } else if (Array.isArray(video_urls) && video_urls.length > 0) {
+      for (let i = 0; i < video_urls.length; i++) {
+        const url = video_urls[i];
+        const rawCaption = captions[i] || null;
+        const rawAudio = audio_titles[i] || 'Original Audio';
+        const filteredCaption = rawCaption ? await applyContentFilters(userId, rawCaption) : null;
+
+        const reelRes = await pool.query(
+          `INSERT INTO src_social_reels (user_id, video_url, thumbnail_url, caption, audio_title, is_hidden)
+           VALUES ($1, $2, $3, $4, $5, FALSE)
+           RETURNING *`,
+          [userId, url, null, filteredCaption, rawAudio]
+        );
+
+        const postRes = await pool.query(
+          `INSERT INTO src_social_posts (user_id, caption, privacy)
+           VALUES ($1, $2, 'public')
+           RETURNING id`,
+          [userId, filteredCaption || '✨ New Reel']
+        );
+        await pool.query(
+          `INSERT INTO src_social_post_media (post_id, media_type, media_url, aspect_ratio, sort_order)
+           VALUES ($1, 'video', $2, '9:16', 0)`,
+          [postRes.rows[0].id, url]
+        );
+
+        createdReels.push(reelRes.rows[0]);
+      }
+    } else {
+      return res.status(400).json({ message: 'No video files uploaded' });
+    }
+
+    await pool.query('UPDATE src_users SET posts_count = posts_count + $1 WHERE id = $2', [createdReels.length, userId]);
+
+    res.status(201).json({
+      message: `Successfully uploaded ${createdReels.length} reels!`,
+      count: createdReels.length,
+      reels: createdReels,
+    });
+  } catch (err) {
+    console.error('bulkUploadReels error:', err.message);
+    res.status(500).json({ message: 'Failed to bulk upload reels' });
+  }
+};
+
+const getExploreFeed = async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 30;
+
+    const postsRes = await pool.query(
+      `SELECT p.id, p.user_id, p.caption, p.likes_count, p.comments_count, p.created_at,
+              'post' AS item_type,
+              u.name AS author_name, u.username AS author_username, u.avatar_url AS author_avatar,
+              COALESCE(json_agg(
+                json_build_object(
+                  'id', m.id,
+                  'media_type', m.media_type,
+                  'media_url', m.media_url,
+                  'thumbnail_url', m.thumbnail_url
+                ) ORDER BY m.sort_order ASC
+              ) FILTER (WHERE m.id IS NOT NULL), '[]') AS media
+       FROM src_social_posts p
+       JOIN src_users u ON u.id = p.user_id
+       LEFT JOIN src_social_post_media m ON m.post_id = p.id
+       WHERE p.privacy = 'public' OR COALESCE(u.is_private, FALSE) = FALSE
+       GROUP BY p.id, u.id
+       ORDER BY p.likes_count DESC, p.created_at DESC
+       LIMIT $1`,
+      [limit]
+    );
+
+    const reelsRes = await pool.query(
+      `SELECT r.id, r.user_id, r.video_url, r.thumbnail_url, r.caption, r.views_count, r.likes_count, r.created_at,
+              'reel' AS item_type,
+              u.name AS author_name, u.username AS author_username, u.avatar_url AS author_avatar
+       FROM src_social_reels r
+       JOIN src_users u ON u.id = r.user_id
+       WHERE COALESCE(r.is_hidden, FALSE) = FALSE
+       ORDER BY r.views_count DESC, r.created_at DESC
+       LIMIT $1`,
+      [limit]
+    );
+
+    res.json({
+      posts: postsRes.rows,
+      reels: reelsRes.rows,
+    });
+  } catch (err) {
+    console.error('getExploreFeed error:', err.message);
+    res.status(500).json({ message: 'Failed to fetch explore feed' });
+  }
+};
+
 module.exports = {
   getFeed,
   createPost,
@@ -1099,8 +1252,10 @@ module.exports = {
   deleteComment,
   getReels,
   createReel,
+  bulkUploadReels,
   deleteReel,
   recordReelView,
+  getExploreFeed,
   getActiveStories,
   createStory,
   recordStoryView,

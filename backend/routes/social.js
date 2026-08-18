@@ -56,8 +56,10 @@ router.delete('/comments/:id', auth, socialCtrl.deleteComment);
 // Reels
 router.get('/reels', optionalAuth, socialCtrl.getReels);
 router.post('/reels', auth, socialCtrl.createReel);
+router.post('/reels/bulk-upload', auth, upload.any(), socialCtrl.bulkUploadReels);
 router.delete('/reels/:id', auth, socialCtrl.deleteReel);
 router.post('/reels/:id/view', optionalAuth, socialCtrl.recordReelView);
+router.get('/explore', optionalAuth, socialCtrl.getExploreFeed);
 
 // Stories
 router.get('/stories', optionalAuth, socialCtrl.getActiveStories);
