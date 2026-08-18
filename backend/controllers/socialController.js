@@ -40,11 +40,11 @@ const isFeatureEnabled = async (flagKey) => {
 // ─── HOME FEED ─────────────────────────────────────────────────────────────
 const getFeed = async (req, res) => {
   try {
-    const userId = req.user.id;
-    const limit = parseInt(req.query.limit) || 10;
+    const userId = req.user?.id || 0;
+    const limit = parseInt(req.query.limit) || 20;
     const cursor = req.query.cursor ? new Date(req.query.cursor) : new Date();
 
-    // Query posts from followed users + public user posts
+    // Query public posts + posts from followed users + own posts
     const postsRes = await pool.query(
       `SELECT p.id, p.user_id, p.caption, p.location, p.alt_text,
               p.is_comments_disabled, p.is_likes_hidden, p.privacy,
@@ -67,13 +67,15 @@ const getFeed = async (req, res) => {
        FROM src_social_posts p
        JOIN src_users u ON u.id = p.user_id
        LEFT JOIN src_social_post_media m ON m.post_id = p.id
-       WHERE p.created_at < $2
-         AND p.user_id NOT IN (SELECT blocked_id FROM src_social_blocks WHERE blocker_id = $1)
-         AND p.user_id NOT IN (SELECT blocker_id FROM src_social_blocks WHERE blocked_id = $1)
+       WHERE p.created_at <= $2
+         AND ($1 = 0 OR p.user_id NOT IN (SELECT blocked_id FROM src_social_blocks WHERE blocker_id = $1))
+         AND ($1 = 0 OR p.user_id NOT IN (SELECT blocker_id FROM src_social_blocks WHERE blocked_id = $1))
          AND (
-           p.user_id = $1
+           $1 = 0
+           OR p.user_id = $1
            OR p.user_id IN (SELECT following_id FROM src_social_follows WHERE follower_id = $1 AND status = 'accepted')
-           OR u.is_private = FALSE
+           OR COALESCE(u.is_private, FALSE) = FALSE
+           OR p.privacy = 'public'
          )
        GROUP BY p.id, u.id
        ORDER BY p.created_at DESC
