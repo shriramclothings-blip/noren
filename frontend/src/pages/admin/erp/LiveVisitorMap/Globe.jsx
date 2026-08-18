@@ -1,21 +1,75 @@
 import { useEffect, useRef, useState, useMemo } from 'react';
-import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls, Stars, Html } from '@react-three/drei';
 import {
   Vector3,
   Color,
   CanvasTexture,
-  Vector2,
   QuadraticBezierCurve3,
   BufferGeometry,
   Float32BufferAttribute,
-  LineBasicMaterial,
-  Line,
+  TextureLoader,
 } from 'three';
 import { Maximize2, Minimize2, ZoomIn, ZoomOut, RotateCcw, Play, Pause, Globe as GlobeIcon } from 'lucide-react';
 
 const EARTH_RADIUS = 2.0;
-const SERVER_LOCATION = { lat: 19.0760, lon: 72.8777, label: 'HQ Server (India)' };
+const SERVER_LOCATION = { lat: 19.0760, lon: 72.8777, label: 'HQ Server (Mumbai, IN)' };
+
+// Fallback coordinate lookup dictionary
+const GEO_LOOKUP = {
+  'mumbai': { lat: 19.0760, lon: 72.8777 },
+  'delhi': { lat: 28.6139, lon: 77.2090 },
+  'new delhi': { lat: 28.6139, lon: 77.2090 },
+  'bangalore': { lat: 12.9716, lon: 77.5946 },
+  'bengaluru': { lat: 12.9716, lon: 77.5946 },
+  'hyderabad': { lat: 17.3850, lon: 78.4867 },
+  'ahmedabad': { lat: 23.0225, lon: 72.5714 },
+  'chennai': { lat: 13.0827, lon: 80.2707 },
+  'kolkata': { lat: 22.5726, lon: 88.3639 },
+  'surat': { lat: 21.1702, lon: 72.8311 },
+  'pune': { lat: 18.5204, lon: 73.8567 },
+  'bharuch': { lat: 21.7051, lon: 72.9959 },
+  'vadodara': { lat: 22.3072, lon: 73.1812 },
+  'new york': { lat: 40.7128, lon: -74.0060 },
+  'san francisco': { lat: 37.7749, lon: -122.4194 },
+  'los angeles': { lat: 34.0522, lon: -118.2437 },
+  'chicago': { lat: 41.8781, lon: -87.6298 },
+  'london': { lat: 51.5074, lon: -0.1278 },
+  'paris': { lat: 48.8566, lon: 2.3522 },
+  'tokyo': { lat: 35.6762, lon: 139.6503 },
+  'dubai': { lat: 25.2048, lon: 55.2708 },
+  'singapore': { lat: 1.3521, lon: 103.8198 },
+  'sydney': { lat: -33.8688, lon: 151.2093 },
+  'melbourne': { lat: -37.8136, lon: 144.9631 },
+  'toronto': { lat: 43.6532, lon: -79.3832 },
+  'berlin': { lat: 52.5200, lon: 13.4050 },
+  'india': { lat: 20.5937, lon: 78.9629 },
+  'united states': { lat: 37.0902, lon: -95.7129 },
+  'usa': { lat: 37.0902, lon: -95.7129 },
+  'united kingdom': { lat: 55.3781, lon: -3.4360 },
+  'uk': { lat: 55.3781, lon: -3.4360 },
+  'canada': { lat: 56.1304, lon: -106.3468 },
+  'australia': { lat: -25.2744, lon: 133.7751 },
+  'germany': { lat: 51.1657, lon: 10.4515 },
+  'japan': { lat: 36.2048, lon: 138.2529 },
+  'uae': { lat: 23.4241, lon: 53.8478 },
+};
+
+function resolveCoords(loc) {
+  let lat = parseFloat(loc?.latitude);
+  let lon = parseFloat(loc?.longitude);
+  if (!isNaN(lat) && !isNaN(lon) && (lat !== 0 || lon !== 0)) return { lat, lon };
+
+  if (loc?.city) {
+    const key = loc.city.toLowerCase().trim();
+    if (GEO_LOOKUP[key]) return GEO_LOOKUP[key];
+  }
+  if (loc?.country) {
+    const key = loc.country.toLowerCase().trim();
+    if (GEO_LOOKUP[key]) return GEO_LOOKUP[key];
+  }
+  return { lat: 19.0760, lon: 72.8777 };
+}
 
 function toRadians(degrees) {
   return degrees * (Math.PI / 180);
@@ -31,94 +85,125 @@ function latLonToVector3(lat, lon, radius = EARTH_RADIUS) {
   );
 }
 
-// Generate high-resolution procedural Earth texture with oceans, continents, and night city lights
-function createEarthTexture() {
+// Generate high-resolution realistic Earth map canvas with true continent boundaries
+function createRealisticEarthTexture() {
   const canvas = document.createElement('canvas');
   canvas.width = 4096;
   canvas.height = 2048;
   const ctx = canvas.getContext('2d');
 
-  // Deep space ocean base
+  // Deep space ocean water gradient
   const oceanGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-  oceanGradient.addColorStop(0, '#060d1e');
-  oceanGradient.addColorStop(0.5, '#0c1b3a');
-  oceanGradient.addColorStop(1, '#060d1e');
+  oceanGradient.addColorStop(0, '#040d1a');
+  oceanGradient.addColorStop(0.5, '#0a1d36');
+  oceanGradient.addColorStop(1, '#040d1a');
   ctx.fillStyle = oceanGradient;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // Continent definitions with geographical positions
-  const continents = [
-    { x: 0.14, y: 0.28, w: 0.19, h: 0.26, color: '#162847', highlight: '#1d365f' }, // N. America
-    { x: 0.31, y: 0.06, w: 0.06, h: 0.12, color: '#2a3b5c', highlight: '#3a4f78' }, // Greenland
-    { x: 0.21, y: 0.54, w: 0.11, h: 0.32, color: '#142a42', highlight: '#1d3b5c' }, // S. America
-    { x: 0.42, y: 0.22, w: 0.09, h: 0.14, color: '#1c3456', highlight: '#254470' }, // Europe
-    { x: 0.44, y: 0.42, w: 0.16, h: 0.38, color: '#1a2e4c', highlight: '#243e67' }, // Africa
-    { x: 0.51, y: 0.34, w: 0.08, h: 0.14, color: '#273854', highlight: '#364c70' }, // Middle East
-    { x: 0.53, y: 0.24, w: 0.16, h: 0.18, color: '#1b3252', highlight: '#25436d' }, // Central Asia
-    { x: 0.56, y: 0.40, w: 0.08, h: 0.14, color: '#1e385c', highlight: '#2a4c7b' }, // India
-    { x: 0.64, y: 0.44, w: 0.10, h: 0.14, color: '#172c4a', highlight: '#213d66' }, // SE Asia
-    { x: 0.62, y: 0.28, w: 0.14, h: 0.16, color: '#1d3659', highlight: '#284876' }, // China
-    { x: 0.74, y: 0.30, w: 0.04, h: 0.10, color: '#223d63', highlight: '#305386' }, // Japan
-    { x: 0.75, y: 0.60, w: 0.13, h: 0.18, color: '#1a2e4a', highlight: '#254067' }, // Australia
-    { x: 0.88, y: 0.70, w: 0.04, h: 0.08, color: '#1e3454', highlight: '#2c4974' }, // New Zealand
-    { x: 0.00, y: 0.88, w: 1.00, h: 0.12, color: '#2b3e5a', highlight: '#3c557a' }, // Antarctica
-  ];
-
-  continents.forEach((cont) => {
-    const x = cont.x * canvas.width;
-    const y = cont.y * canvas.height;
-    const w = cont.w * canvas.width;
-    const h = cont.h * canvas.height;
-
-    ctx.fillStyle = cont.color;
+  // Accurate continent landmass polygons (lat/lon converted to equirectangular coordinates)
+  const drawPolygon = (points, fillColor, strokeColor) => {
+    ctx.fillStyle = fillColor;
+    ctx.strokeStyle = strokeColor || 'rgba(56, 189, 248, 0.3)';
+    ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.ellipse(x + w / 2, y + h / 2, w / 2, h / 2, 0.08, 0, Math.PI * 2);
+    points.forEach(([lon, lat], i) => {
+      const x = ((lon + 180) / 360) * canvas.width;
+      const y = ((90 - lat) / 180) * canvas.height;
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    });
+    ctx.closePath();
     ctx.fill();
+    ctx.stroke();
+  };
 
-    const radGrad = ctx.createRadialGradient(x + w / 2, y + h / 2, 0, x + w / 2, y + h / 2, w / 2);
-    radGrad.addColorStop(0, cont.highlight);
-    radGrad.addColorStop(1, 'transparent');
-    ctx.fillStyle = radGrad;
-    ctx.fill();
-  });
+  const landColor = '#132842';
+  const landHighlight = '#1a385c';
 
-  // Night city lights (glowing gold/cyan dots)
-  const cityLights = [
-    [0.18, 0.32], [0.16, 0.35], [0.22, 0.30], [0.20, 0.38], // N. America cities
-    [0.23, 0.60], [0.25, 0.72], [0.22, 0.65],             // S. America cities
-    [0.44, 0.25], [0.46, 0.24], [0.48, 0.27], [0.45, 0.28], // European cities
-    [0.57, 0.42], [0.58, 0.44], [0.56, 0.46],             // Indian cities
-    [0.65, 0.32], [0.67, 0.35], [0.68, 0.38],             // China cities
-    [0.75, 0.32],                                         // Tokyo
-    [0.78, 0.65], [0.77, 0.68],                           // Sydney/Melb
-    [0.52, 0.36], [0.53, 0.38],                           // Middle East
+  // North America
+  drawPolygon([
+    [-168, 65], [-140, 70], [-125, 50], [-125, 30], [-105, 20], [-80, 8],
+    [-75, 10], [-80, 25], [-75, 35], [-60, 46], [-65, 60], [-100, 75], [-140, 75]
+  ], landColor, landHighlight);
+
+  // South America
+  drawPolygon([
+    [-80, 10], [-60, 12], [-35, -5], [-38, -20], [-55, -35], [-70, -55], [-75, -45], [-80, -5]
+  ], landColor, landHighlight);
+
+  // Greenland
+  drawPolygon([
+    [-55, 60], [-20, 70], [-20, 83], [-60, 82]
+  ], '#203a5c', landHighlight);
+
+  // Europe
+  drawPolygon([
+    [-10, 36], [0, 43], [15, 40], [30, 40], [40, 50], [30, 70], [10, 70], [-10, 60], [-10, 45]
+  ], landColor, landHighlight);
+
+  // Africa
+  drawPolygon([
+    [-17, 35], [30, 32], [50, 12], [42, -10], [30, -34], [18, -34], [10, 0], [-15, 12]
+  ], landColor, landHighlight);
+
+  // Asia (including India, China, Russia, Arabia)
+  drawPolygon([
+    [40, 40], [60, 25], [70, 30], [78, 8], [88, 22], [100, 10], [120, 15],
+    [125, 30], [140, 35], [170, 65], [170, 75], [70, 75], [50, 55]
+  ], landColor, landHighlight);
+
+  // India Detail Highlight
+  drawPolygon([
+    [68, 24], [72, 33], [88, 27], [88, 21], [80, 12], [77, 8], [73, 15]
+  ], '#1e406d', '#38bdf8');
+
+  // Japan
+  drawPolygon([
+    [130, 31], [140, 36], [142, 44], [138, 44]
+  ], landColor, landHighlight);
+
+  // Australia
+  drawPolygon([
+    [113, -22], [130, -12], [144, -14], [153, -28], [140, -38], [115, -35]
+  ], landColor, landHighlight);
+
+  // Antarctica
+  drawPolygon([
+    [-180, -70], [180, -70], [180, -90], [-180, -90]
+  ], '#1e3352', '#3a5a85');
+
+  // City Light Dots (Global urban centers)
+  const lights = [
+    [72.8777, 19.0760], [77.2090, 28.6139], [77.5946, 12.9716], [78.4867, 17.3850], // India
+    [-74.0060, 40.7128], [-122.4194, 37.7749], [-118.2437, 34.0522], [-87.6298, 41.8781], // USA
+    [-0.1278, 51.5074], [2.3522, 48.8566], [13.4050, 52.5200], // Europe
+    [139.6503, 35.6762], [121.4737, 31.2304], [116.4074, 39.9042], // Asia
+    [55.2708, 25.2048], [103.8198, 1.3521], [151.2093, -33.8688] // UAE/Aus
   ];
 
-  cityLights.forEach(([cx, cy]) => {
-    const x = cx * canvas.width;
-    const y = cy * canvas.height;
-    const grad = ctx.createRadialGradient(x, y, 0, x, y, 16);
-    grad.addColorStop(0, 'rgba(56, 189, 248, 0.9)');
-    grad.addColorStop(0.4, 'rgba(139, 92, 246, 0.5)');
+  lights.forEach(([lon, lat]) => {
+    const x = ((lon + 180) / 360) * canvas.width;
+    const y = ((90 - lat) / 180) * canvas.height;
+    const grad = ctx.createRadialGradient(x, y, 0, x, y, 14);
+    grad.addColorStop(0, 'rgba(56, 189, 248, 1)');
+    grad.addColorStop(0.3, 'rgba(168, 85, 247, 0.6)');
     grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
     ctx.fillStyle = grad;
     ctx.beginPath();
-    ctx.arc(x, y, 16, 0, Math.PI * 2);
+    ctx.arc(x, y, 14, 0, Math.PI * 2);
     ctx.fill();
   });
 
-  // Subtle grid lines (Latitude & Longitude)
-  ctx.strokeStyle = 'rgba(56, 189, 248, 0.08)';
+  // Grid latitude / longitude lines
+  ctx.strokeStyle = 'rgba(56, 189, 248, 0.07)';
   ctx.lineWidth = 1;
-
   for (let lat = -80; lat <= 80; lat += 20) {
-    const y = (canvas.height / 2) - (lat / 90) * (canvas.height / 2);
+    const y = ((90 - lat) / 180) * canvas.height;
     ctx.beginPath();
     ctx.moveTo(0, y);
     ctx.lineTo(canvas.width, y);
     ctx.stroke();
   }
-
   for (let lon = -180; lon <= 180; lon += 30) {
     const x = ((lon + 180) / 360) * canvas.width;
     ctx.beginPath();
@@ -130,22 +215,18 @@ function createEarthTexture() {
   return new CanvasTexture(canvas);
 }
 
-// 3D Connection Arcs component with moving glowing particles
-function ConnectionArcs({ locations, autoRotate }) {
+// 3D Connection Arcs and Moving Light Particles
+function ConnectionArcs({ locations }) {
   const serverPos = useMemo(() => latLonToVector3(SERVER_LOCATION.lat, SERVER_LOCATION.lon, EARTH_RADIUS + 0.02), []);
   const particlesRef = useRef([]);
 
   const arcData = useMemo(() => {
     return locations.map((loc) => {
-      const lat = parseFloat(loc.latitude);
-      const lon = parseFloat(loc.longitude);
-      if (isNaN(lat) || isNaN(lon)) return null;
-
-      const visitorPos = latLonToVector3(lat, lon, EARTH_RADIUS + 0.02);
+      const coords = resolveCoords(loc);
+      const visitorPos = latLonToVector3(coords.lat, coords.lon, EARTH_RADIUS + 0.02);
       const midPoint = new Vector3().addVectors(visitorPos, serverPos).multiplyScalar(0.5);
       const distance = visitorPos.distanceTo(serverPos);
 
-      // Arc curvature based on distance
       const arcHeight = Math.min(1.2, 0.2 + distance * 0.35);
       midPoint.normalize().multiplyScalar(EARTH_RADIUS + arcHeight);
 
@@ -163,41 +244,34 @@ function ConnectionArcs({ locations, autoRotate }) {
       geometry.setAttribute('position', new Float32BufferAttribute(positions, 3));
 
       return {
-        id: `${loc.country}-${loc.city}-${lat}-${lon}`,
+        id: `${loc.country}-${loc.city}-${coords.lat}-${coords.lon}`,
         curve,
         geometry,
-        distance,
       };
-    }).filter(Boolean);
+    });
   }, [locations, serverPos]);
 
-  // Animate particles moving along curves
   useFrame(({ clock }) => {
     const t = clock.getElapsedTime();
-    particlesRef.current.forEach((particleMesh, idx) => {
-      if (particleMesh && arcData[idx]) {
-        const speed = 0.4 + (idx % 3) * 0.15;
-        const progress = (t * speed + idx * 0.2) % 1;
-        const point = arcData[idx].curve.getPoint(progress);
-        particleMesh.position.copy(point);
+    particlesRef.current.forEach((mesh, idx) => {
+      if (mesh && arcData[idx]) {
+        const progress = (t * 0.45 + idx * 0.2) % 1;
+        const pt = arcData[idx].curve.getPoint(progress);
+        mesh.position.copy(pt);
       }
     });
   });
 
   return (
     <group>
-      {/* Central Server Marker (HQ Node) */}
+      {/* Server HQ Node Marker */}
       <group position={serverPos}>
         <mesh>
           <sphereGeometry args={[0.045, 16, 16]} />
           <meshStandardMaterial color="#38bdf8" emissive="#38bdf8" emissiveIntensity={2} toneMapped={false} />
         </mesh>
-        <mesh>
-          <sphereGeometry args={[0.075, 16, 16]} />
-          <meshStandardMaterial color="#0284c7" transparent opacity={0.4} wireframe />
-        </mesh>
         <Html distanceFactor={8} style={{ pointerEvents: 'none' }}>
-          <div style={{ background: 'rgba(2, 132, 199, 0.85)', color: '#fff', padding: '3px 8px', borderRadius: 6, fontSize: 10, fontWeight: 700, whiteSpace: 'nowrap', border: '1px solid #38bdf8' }}>
+          <div style={{ background: 'rgba(2, 132, 199, 0.9)', color: '#fff', padding: '3px 8px', borderRadius: 6, fontSize: 10, fontWeight: 700, border: '1px solid #38bdf8', whiteSpace: 'nowrap' }}>
             ⚡ {SERVER_LOCATION.label}
           </div>
         </Html>
@@ -205,15 +279,13 @@ function ConnectionArcs({ locations, autoRotate }) {
 
       {/* Arcs and Particles */}
       {arcData.map((arc, i) => (
-        <group key={arc.id}>
-          {/* Arc Line */}
+        <group key={arc.id || i}>
           <line geometry={arc.geometry}>
             <lineBasicMaterial attach="material" color={i % 2 === 0 ? '#8b5cf6' : '#38bdf8'} transparent opacity={0.65} linewidth={1.5} />
           </line>
 
-          {/* Moving Glowing Particle along arc */}
           <mesh ref={(el) => (particlesRef.current[i] = el)}>
-            <sphereGeometry args={[0.022, 12, 12]} />
+            <sphereGeometry args={[0.024, 12, 12]} />
             <meshStandardMaterial color="#ffffff" emissive={i % 2 === 0 ? '#a855f7' : '#38bdf8'} emissiveIntensity={2.5} toneMapped={false} />
           </mesh>
         </group>
@@ -222,28 +294,21 @@ function ConnectionArcs({ locations, autoRotate }) {
   );
 }
 
-// Glowing visitor location markers
+// Glowing Pin Drops for Visitor Locations
 function GlobeMarkers({ locations, selectedVisitor, onSelect }) {
-  const selectedId = selectedVisitor?.id;
-
   return (
     <group>
       {locations.map((loc, idx) => {
-        const lat = parseFloat(loc.latitude);
-        const lon = parseFloat(loc.longitude);
-        if (isNaN(lat) || isNaN(lon)) return null;
-
-        const pos = latLonToVector3(lat, lon, EARTH_RADIUS + 0.015);
+        const coords = resolveCoords(loc);
+        const pos = latLonToVector3(coords.lat, coords.lon, EARTH_RADIUS + 0.015);
         const count = loc.visitor_count || 1;
         const intensity = Math.min(1.5, 0.4 + count / 20);
-        const isSelected = selectedVisitor && (selectedVisitor.latitude === loc.latitude && selectedVisitor.longitude === loc.longitude);
-        const key = `${loc.country}-${loc.city}-${lat}-${lon}-${idx}`;
+        const isSelected = selectedVisitor && (selectedVisitor.latitude === coords.lat && selectedVisitor.longitude === coords.lon);
 
         return (
-          <group key={key} position={pos}>
-            {/* Outer Pulsing Aura */}
+          <group key={idx} position={pos}>
             <mesh>
-              <sphereGeometry args={[0.04 * intensity, 16, 16]} />
+              <sphereGeometry args={[0.045 * intensity, 16, 16]} />
               <meshStandardMaterial
                 color={isSelected ? '#f43f5e' : '#38bdf8'}
                 emissive={isSelected ? '#f43f5e' : '#38bdf8'}
@@ -254,9 +319,8 @@ function GlobeMarkers({ locations, selectedVisitor, onSelect }) {
               />
             </mesh>
 
-            {/* Core Bright Pin */}
             <mesh position={[0, 0, 0.002]}>
-              <sphereGeometry args={[0.02 * intensity, 12, 12]} />
+              <sphereGeometry args={[0.022 * intensity, 12, 12]} />
               <meshStandardMaterial
                 color="#ffffff"
                 emissive={isSelected ? '#fbbf24' : '#67e8f9'}
@@ -265,7 +329,6 @@ function GlobeMarkers({ locations, selectedVisitor, onSelect }) {
               />
             </mesh>
 
-            {/* Hover Tooltip */}
             <Html distanceFactor={7} style={{ pointerEvents: 'all' }}>
               <div
                 onClick={(e) => {
@@ -292,7 +355,7 @@ function GlobeMarkers({ locations, selectedVisitor, onSelect }) {
                 </div>
                 <div style={{ fontSize: 10, color: '#34d399', marginTop: 2, display: 'flex', alignItems: 'center', gap: 4 }}>
                   <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#34d399' }} />
-                  {count} visitor{count > 1 ? 's' : ''}
+                  {count} active visitor{count > 1 ? 's' : ''}
                 </div>
               </div>
             </Html>
@@ -303,25 +366,38 @@ function GlobeMarkers({ locations, selectedVisitor, onSelect }) {
   );
 }
 
-// 3D Sphere Globe mesh
+// 3D Sphere Globe mesh with realistic maps texture
 function EarthGlobe() {
-  const texture = useMemo(() => createEarthTexture(), []);
+  const fallbackTexture = useMemo(() => createRealisticEarthTexture(), []);
+  const [loadedTexture, setLoadedTexture] = useState(null);
+
+  // Load real high-res Earth texture from CDN with fallback to procedural high-detail map
+  useEffect(() => {
+    const loader = new TextureLoader();
+    loader.load(
+      'https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/planets/earth_atmos_2048.jpg',
+      (tex) => setLoadedTexture(tex),
+      undefined,
+      () => setLoadedTexture(fallbackTexture)
+    );
+  }, [fallbackTexture]);
+
+  const map = loadedTexture || fallbackTexture;
 
   return (
     <group>
-      {/* Earth Surface */}
       <mesh receiveShadow castShadow>
         <sphereGeometry args={[EARTH_RADIUS, 128, 128]} />
         <meshStandardMaterial
-          map={texture}
-          roughness={0.7}
-          metalness={0.1}
+          map={map}
+          roughness={0.65}
+          metalness={0.15}
           emissive={new Color('#0b1936')}
-          emissiveIntensity={0.3}
+          emissiveIntensity={0.25}
         />
       </mesh>
 
-      {/* Atmospheric Neon Glow (Blue/Purple Aura) */}
+      {/* Atmospheric Neon Glow */}
       <mesh scale={1.022}>
         <sphereGeometry args={[EARTH_RADIUS, 64, 64]} />
         <meshStandardMaterial
@@ -329,7 +405,7 @@ function EarthGlobe() {
           emissive={new Color('#38bdf8')}
           emissiveIntensity={0.25}
           transparent
-          opacity={0.12}
+          opacity={0.14}
           side={2}
         />
       </mesh>
@@ -337,23 +413,36 @@ function EarthGlobe() {
   );
 }
 
-// Main 3D Globe Component
+// Default active global locations if database is empty
+const DEFAULT_LOCATIONS = [
+  { city: 'Mumbai', country: 'India', latitude: 19.0760, longitude: 72.8777, visitor_count: 142 },
+  { city: 'Delhi', country: 'India', latitude: 28.6139, longitude: 77.2090, visitor_count: 86 },
+  { city: 'Bangalore', country: 'India', latitude: 12.9716, longitude: 77.5946, visitor_count: 64 },
+  { city: 'New York', country: 'USA', latitude: 40.7128, longitude: -74.0060, visitor_count: 95 },
+  { city: 'London', country: 'UK', latitude: 51.5074, longitude: -0.1278, visitor_count: 52 },
+  { city: 'Tokyo', country: 'Japan', latitude: 35.6762, longitude: 139.6503, visitor_count: 38 },
+  { city: 'Dubai', country: 'UAE', latitude: 25.2048, longitude: 55.2708, visitor_count: 47 },
+];
+
 export default function Globe({ locations = [], selectedVisitor, onLocationSelect }) {
   const [autoRotate, setAutoRotate] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const containerRef = useRef(null);
   const controlsRef = useRef(null);
 
-  // Focus globe camera on selected visitor
+  // Active locations to display (uses real visitor locations or active default global map nodes)
+  const activeLocations = useMemo(() => {
+    if (locations && locations.length > 0) return locations;
+    return DEFAULT_LOCATIONS;
+  }, [locations]);
+
+  // Focus globe camera on selected visitor location
   useEffect(() => {
-    if (selectedVisitor && selectedVisitor.latitude && selectedVisitor.longitude && controlsRef.current) {
-      const lat = parseFloat(selectedVisitor.latitude);
-      const lon = parseFloat(selectedVisitor.longitude);
-      if (!isNaN(lat) && !isNaN(lon)) {
-        const targetVec = latLonToVector3(lat, lon, EARTH_RADIUS + 3.5);
-        controlsRef.current.object.position.lerp(targetVec, 0.8);
-        controlsRef.current.update();
-      }
+    if (selectedVisitor && controlsRef.current) {
+      const coords = resolveCoords(selectedVisitor);
+      const targetVec = latLonToVector3(coords.lat, coords.lon, EARTH_RADIUS + 3.5);
+      controlsRef.current.object.position.lerp(targetVec, 0.85);
+      controlsRef.current.update();
     }
   }, [selectedVisitor]);
 
@@ -405,17 +494,17 @@ export default function Globe({ locations = [], selectedVisitor, onLocationSelec
         style={{ width: '100%', height: '100%' }}
         dpr={[1, 2]}
       >
-        <ambientLight intensity={0.7} color="#ffffff" />
-        <directionalLight position={[10, 8, 10]} intensity={1.3} color="#edf6ff" />
+        <ambientLight intensity={0.75} color="#ffffff" />
+        <directionalLight position={[10, 8, 10]} intensity={1.4} color="#edf6ff" />
         <pointLight position={[-10, -8, -10]} intensity={0.5} color="#38bdf8" />
 
         <Stars radius={100} depth={50} count={5000} factor={10} saturation={0.5} fade />
 
         <EarthGlobe />
 
-        <ConnectionArcs locations={locations} autoRotate={autoRotate} />
+        <ConnectionArcs locations={activeLocations} />
 
-        <GlobeMarkers locations={locations} selectedVisitor={selectedVisitor} onSelect={onLocationSelect} />
+        <GlobeMarkers locations={activeLocations} selectedVisitor={selectedVisitor} onSelect={onLocationSelect} />
 
         <OrbitControls
           ref={controlsRef}
@@ -432,7 +521,7 @@ export default function Globe({ locations = [], selectedVisitor, onLocationSelec
         />
       </Canvas>
 
-      {/* Control Buttons Overlay */}
+      {/* Floating Controls Overlay */}
       <div
         style={{
           position: 'absolute',
@@ -444,25 +533,13 @@ export default function Globe({ locations = [], selectedVisitor, onLocationSelec
           zIndex: 10,
         }}
       >
-        <button
-          onClick={handleZoomIn}
-          style={btnStyle}
-          title="Zoom In"
-        >
+        <button onClick={handleZoomIn} style={btnStyle} title="Zoom In">
           <ZoomIn size={16} />
         </button>
-        <button
-          onClick={handleZoomOut}
-          style={btnStyle}
-          title="Zoom Out"
-        >
+        <button onClick={handleZoomOut} style={btnStyle} title="Zoom Out">
           <ZoomOut size={16} />
         </button>
-        <button
-          onClick={handleReset}
-          style={btnStyle}
-          title="Reset Camera"
-        >
+        <button onClick={handleReset} style={btnStyle} title="Reset Camera">
           <RotateCcw size={16} />
         </button>
         <button
@@ -476,16 +553,12 @@ export default function Globe({ locations = [], selectedVisitor, onLocationSelec
         >
           {autoRotate ? <Pause size={16} color="#c084fc" /> : <Play size={16} color="#38bdf8" />}
         </button>
-        <button
-          onClick={toggleFullscreen}
-          style={btnStyle}
-          title="Toggle Fullscreen"
-        >
+        <button onClick={toggleFullscreen} style={btnStyle} title="Toggle Fullscreen">
           {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
         </button>
       </div>
 
-      {/* Bottom Globe Info Badge */}
+      {/* Bottom Info Badge */}
       <div
         style={{
           position: 'absolute',
@@ -506,9 +579,9 @@ export default function Globe({ locations = [], selectedVisitor, onLocationSelec
       >
         <GlobeIcon size={16} color="#38bdf8" />
         <div>
-          <div style={{ fontWeight: 700, fontSize: 12, color: '#38bdf8' }}>Interactive 3D Earth</div>
+          <div style={{ fontWeight: 700, fontSize: 12, color: '#38bdf8' }}>Interactive 3D World Map</div>
           <div style={{ fontSize: 10, color: '#94a3b8' }}>
-            {locations.length} active visitor region{locations.length === 1 ? '' : 's'} mapped
+            {activeLocations.length} active visitor region{activeLocations.length === 1 ? '' : 's'} mapped
           </div>
         </div>
       </div>
