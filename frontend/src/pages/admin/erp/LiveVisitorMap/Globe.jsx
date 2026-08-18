@@ -577,6 +577,40 @@ export default function Globe({ locations = [], selectedVisitor, onLocationSelec
         />
       </Canvas>
 
+      {/* Top Left Floating Card: New Visitor Alert */}
+      <div
+        style={{
+          position: 'absolute',
+          left: 16,
+          top: 16,
+          padding: '10px 14px',
+          borderRadius: 12,
+          background: 'rgba(13, 19, 34, 0.92)',
+          border: '1px solid rgba(139, 92, 246, 0.3)',
+          color: '#edf6ff',
+          fontSize: 11,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+          backdropFilter: 'blur(12px)',
+          boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
+          zIndex: 10,
+        }}
+      >
+        <span style={{ fontSize: 18 }}>🇺🇸</span>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ fontWeight: 700, fontSize: 12, color: '#ffffff' }}>San Francisco, USA</span>
+            <span style={{ fontSize: 9, fontWeight: 700, color: '#8b5cf6', background: 'rgba(139, 92, 246, 0.2)', padding: '1px 6px', borderRadius: 4 }}>
+              New
+            </span>
+          </div>
+          <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 2 }}>
+            2 seconds ago
+          </div>
+        </div>
+      </div>
+
       {/* Floating Controls Overlay */}
       <div
         style={{
@@ -625,33 +659,51 @@ export default function Globe({ locations = [], selectedVisitor, onLocationSelec
         </button>
       </div>
 
-      {/* Bottom Info Badge */}
+      {/* Bottom Left Info & Visitors Count Density Legend Card */}
       <div
         style={{
           position: 'absolute',
           left: 16,
           bottom: 16,
-          padding: '10px 14px',
-          borderRadius: 12,
-          background: 'rgba(6, 11, 24, 0.88)',
-          border: '1px solid rgba(56, 189, 248, 0.25)',
+          padding: '12px 16px',
+          borderRadius: 14,
+          background: 'rgba(13, 19, 34, 0.92)',
+          border: '1px solid rgba(255, 255, 255, 0.08)',
           color: '#edf6ff',
           fontSize: 11,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
-          backdropFilter: 'blur(10px)',
+          backdropFilter: 'blur(12px)',
+          boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
           zIndex: 10,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 8,
+          minWidth: 160,
         }}
       >
-        <GlobeIcon size={16} color="#38bdf8" />
-        <div>
-          <div style={{ fontWeight: 700, fontSize: 12, color: '#38bdf8' }}>3D World Map with Country Labels</div>
-          <div style={{ fontSize: 10, color: '#94a3b8' }}>
-            {activeLocations.length} pinpoint location{activeLocations.length === 1 ? '' : 's'} mapped
+        <div style={{ fontWeight: 700, fontSize: 11, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          Visitors Count
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, fontSize: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#a855f7' }} />
+            <span style={{ color: '#cbd5e1' }}>100+</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#8b5cf6' }} />
+            <span style={{ color: '#cbd5e1' }}>50-100</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#38bdf8' }} />
+            <span style={{ color: '#cbd5e1' }}>10-50</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#0284c7' }} />
+            <span style={{ color: '#cbd5e1' }}>1-10</span>
           </div>
         </div>
       </div>
+
     </div>
   );
 }

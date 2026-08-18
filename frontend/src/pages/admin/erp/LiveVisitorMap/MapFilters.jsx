@@ -1,4 +1,4 @@
-import { ChevronDown, X } from 'lucide-react';
+import { ChevronDown, X, Filter } from 'lucide-react';
 import { useState } from 'react';
 
 export default function MapFilters({ filters, onFilterChange, theme }) {
@@ -25,24 +25,24 @@ export default function MapFilters({ filters, onFilterChange, theme }) {
   const inp = {
     width: '100%',
     padding: '8px 12px',
-    fontSize: 13,
-    border: '1.5px solid rgba(148,163,184,0.2)',
+    fontSize: 12,
+    border: '1px solid rgba(255, 255, 255, 0.1)',
     borderRadius: 8,
     outline: 'none',
     fontFamily: 'inherit',
-    color: theme.text,
-    background: theme.inputBg,
+    color: '#ffffff',
+    background: '#090e1a',
     boxSizing: 'border-box',
   };
 
   return (
     <div
       style={{
-        background: theme.panel,
-        borderRadius: 20,
-        border: `1px solid ${theme.border}`,
+        background: '#0d1322',
+        borderRadius: 16,
+        border: '1px solid rgba(255, 255, 255, 0.08)',
         overflow: 'hidden',
-        boxShadow: theme.shadow,
+        boxShadow: '0 10px 30px rgba(0,0,0,0.3)',
       }}
     >
       {/* Header */}
@@ -54,15 +54,16 @@ export default function MapFilters({ filters, onFilterChange, theme }) {
           alignItems: 'center',
           justifyContent: 'space-between',
           gap: 12,
-          padding: '14px 18px',
+          padding: '12px 20px',
           border: 'none',
           background: 'transparent',
           cursor: 'pointer',
-          borderBottom: expanded ? '1px solid rgba(148,163,184,0.18)' : 'none',
+          borderBottom: expanded ? '1px solid rgba(255, 255, 255, 0.07)' : 'none',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 13, fontWeight: 600, color: theme.text }}>Filters</span>
+          <Filter size={15} color="#8b5cf6" />
+          <span style={{ fontSize: 13, fontWeight: 700, color: '#ffffff' }}>Filter Visitor Activity</span>
           {activeFilterCount > 0 && (
             <span
               style={{
@@ -72,7 +73,7 @@ export default function MapFilters({ filters, onFilterChange, theme }) {
                 width: 20,
                 height: 20,
                 borderRadius: '50%',
-                background: 'linear-gradient(135deg, #4f46e5, #7c3aed)',
+                background: '#8b5cf6',
                 color: '#fff',
                 fontSize: 11,
                 fontWeight: 700,
@@ -94,10 +95,10 @@ export default function MapFilters({ filters, onFilterChange, theme }) {
 
       {/* Content */}
       {expanded && (
-        <div style={{ padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 }}>
+        <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12 }}>
             <div>
-              <label style={{ fontSize: 11, fontWeight: 600, color: '#cbd5e1', display: 'block', marginBottom: 4 }}>
+              <label style={{ fontSize: 10, fontWeight: 700, color: '#64748b', display: 'block', marginBottom: 4, textTransform: 'uppercase' }}>
                 Start Date
               </label>
               <input
@@ -108,7 +109,7 @@ export default function MapFilters({ filters, onFilterChange, theme }) {
               />
             </div>
             <div>
-              <label style={{ fontSize: 11, fontWeight: 600, color: '#cbd5e1', display: 'block', marginBottom: 4 }}>
+              <label style={{ fontSize: 10, fontWeight: 700, color: '#64748b', display: 'block', marginBottom: 4, textTransform: 'uppercase' }}>
                 End Date
               </label>
               <input
@@ -119,7 +120,7 @@ export default function MapFilters({ filters, onFilterChange, theme }) {
               />
             </div>
             <div>
-              <label style={{ fontSize: 11, fontWeight: 600, color: '#cbd5e1', display: 'block', marginBottom: 4 }}>
+              <label style={{ fontSize: 10, fontWeight: 700, color: '#64748b', display: 'block', marginBottom: 4, textTransform: 'uppercase' }}>
                 Campaign
               </label>
               <input
@@ -131,7 +132,7 @@ export default function MapFilters({ filters, onFilterChange, theme }) {
               />
             </div>
             <div>
-              <label style={{ fontSize: 11, fontWeight: 600, color: '#cbd5e1', display: 'block', marginBottom: 4 }}>
+              <label style={{ fontSize: 10, fontWeight: 700, color: '#64748b', display: 'block', marginBottom: 4, textTransform: 'uppercase' }}>
                 Source
               </label>
               <select
@@ -149,7 +150,7 @@ export default function MapFilters({ filters, onFilterChange, theme }) {
               </select>
             </div>
             <div>
-              <label style={{ fontSize: 11, fontWeight: 600, color: '#cbd5e1', display: 'block', marginBottom: 4 }}>
+              <label style={{ fontSize: 10, fontWeight: 700, color: '#64748b', display: 'block', marginBottom: 4, textTransform: 'uppercase' }}>
                 Medium
               </label>
               <select
@@ -165,7 +166,7 @@ export default function MapFilters({ filters, onFilterChange, theme }) {
               </select>
             </div>
             <div>
-              <label style={{ fontSize: 11, fontWeight: 600, color: '#cbd5e1', display: 'block', marginBottom: 4 }}>
+              <label style={{ fontSize: 10, fontWeight: 700, color: '#64748b', display: 'block', marginBottom: 4, textTransform: 'uppercase' }}>
                 Country
               </label>
               <input
@@ -177,7 +178,7 @@ export default function MapFilters({ filters, onFilterChange, theme }) {
               />
             </div>
             <div>
-              <label style={{ fontSize: 11, fontWeight: 600, color: '#cbd5e1', display: 'block', marginBottom: 4 }}>
+              <label style={{ fontSize: 10, fontWeight: 700, color: '#64748b', display: 'block', marginBottom: 4, textTransform: 'uppercase' }}>
                 Device
               </label>
               <select
@@ -193,7 +194,6 @@ export default function MapFilters({ filters, onFilterChange, theme }) {
             </div>
           </div>
 
-          {/* Actions */}
           <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
             <button
               onClick={handleReset}
@@ -201,17 +201,17 @@ export default function MapFilters({ filters, onFilterChange, theme }) {
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: 6,
-                padding: '8px 14px',
+                padding: '6px 14px',
                 borderRadius: 8,
-                border: '1.5px solid #e5e7eb',
-                background: '#f9fafb',
-                color: '#374151',
+                border: '1px solid rgba(255,255,255,0.1)',
+                background: 'rgba(255,255,255,0.05)',
+                color: '#cbd5e1',
                 fontSize: 12,
                 fontWeight: 600,
                 cursor: 'pointer',
               }}
             >
-              <X size={12} /> Reset
+              <X size={13} /> Reset Filters
             </button>
           </div>
         </div>

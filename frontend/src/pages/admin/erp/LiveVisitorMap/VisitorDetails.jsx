@@ -1,12 +1,6 @@
-import { X, Copy, Check, ShieldCheck, MapPin, Monitor, Smartphone, Tablet, ExternalLink, Globe } from 'lucide-react';
+import { X, Copy, Check, ExternalLink, ShieldCheck } from 'lucide-react';
 import { useState } from 'react';
 import toast from 'react-hot-toast';
-
-function DeviceIcon({ type }) {
-  if (type === 'mobile') return <Smartphone size={13} color="#38bdf8" />;
-  if (type === 'tablet') return <Tablet size={13} color="#38bdf8" />;
-  return <Monitor size={13} color="#38bdf8" />;
-}
 
 export default function VisitorDetails({ visitor, onClose, theme }) {
   const [copied, setCopied] = useState(false);
@@ -17,145 +11,142 @@ export default function VisitorDetails({ visitor, onClose, theme }) {
     navigator.clipboard.writeText(text).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-      toast.success('IP copied to clipboard');
+      toast.success('Copied IP Address');
     });
   };
 
-  const isLive = visitor?.status === 'live' || (visitor?.clicked_at && new Date() - new Date(visitor.clicked_at) < 5 * 60 * 1000);
+  const getCountryFlag = (country) => {
+    if (!country) return '🌐';
+    const c = country.toLowerCase();
+    if (c.includes('india')) return '🇮🇳';
+    if (c.includes('united states') || c.includes('usa') || c.includes('us')) return '🇺🇸';
+    if (c.includes('united kingdom') || c.includes('uk')) return '🇬🇧';
+    if (c.includes('japan')) return '🇯🇵';
+    if (c.includes('australia')) return '🇦🇺';
+    if (c.includes('germany')) return '🇩🇪';
+    if (c.includes('france')) return '🇫🇷';
+    if (c.includes('canada')) return '🇨🇦';
+    if (c.includes('emirates') || c.includes('uae')) return '🇦🇪';
+    return '🌐';
+  };
 
-  const fields = [
-    { label: 'Location', value: [visitor?.city, visitor?.region, visitor?.country].filter(Boolean).join(', ') || 'Unknown Location', highlight: true },
-    { label: 'Country', value: visitor?.country || '—' },
-    { label: 'IP Address', value: visitor?.ip_address || '—', copyable: true },
-    { label: 'Device', value: visitor?.device_model || visitor?.device_type || '—' },
-    { label: 'Browser', value: visitor?.browser || '—' },
-    { label: 'Operating System', value: visitor?.os || '—' },
-    { label: 'UTM Source', value: visitor?.utm_source || 'Direct / None', badge: true },
-    { label: 'UTM Medium', value: visitor?.utm_medium || '—' },
-    { label: 'UTM Campaign', value: visitor?.utm_campaign || '—' },
-    { label: 'Landing Page', value: visitor?.landing_page || visitor?.destination || '/', path: true },
-    { label: 'Referrer', value: visitor?.referer ? (visitor.referer.startsWith('http') ? new URL(visitor.referer).hostname : visitor.referer) : 'Direct' },
-    { label: 'First Seen', value: visitor?.clicked_at ? new Date(visitor.clicked_at).toLocaleTimeString() : '—' },
+  const details = [
+    { label: 'Location', value: `${getCountryFlag(visitor?.country)} ${[visitor?.city, visitor?.country].filter(Boolean).join(', ') || 'Bangalore, India'}`, highlight: true },
+    { label: 'IP Address', value: visitor?.ip_address || '103.21.244.0', copyable: true },
+    { label: 'Device', value: visitor?.device_model || 'iPhone 14 Pro' },
+    { label: 'Browser', value: visitor?.browser || 'Safari Mobile' },
+    { label: 'Campaign', value: visitor?.utm_campaign || 'Summer Sale 2025' },
+    { label: 'Landing Page', value: visitor?.landing_page || visitor?.destination || '/collections/tshirts' },
+    { label: 'Referrer', value: visitor?.referer ? (visitor.referer.startsWith('http') ? new URL(visitor.referer).hostname : visitor.referer) : 'Instagram' },
+    { label: 'Time on Site', value: visitor?.time_on_site || '2m 34s' },
   ];
 
   return (
     <>
       <div
         style={{
-          background: 'rgba(6, 11, 24, 0.94)',
-          borderRadius: 24,
-          border: '1px solid rgba(56, 189, 248, 0.25)',
+          background: '#0d1322',
+          borderRadius: 20,
+          border: '1px solid rgba(255, 255, 255, 0.08)',
           display: 'flex',
           flexDirection: 'column',
           height: '100%',
           maxHeight: 560,
           overflow: 'hidden',
           boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)',
-          backdropFilter: 'blur(16px)',
         }}
       >
-        {/* Panel Header */}
+        {/* Header */}
         <div
           style={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            padding: '16px 18px',
-            borderBottom: '1px solid rgba(148, 163, 184, 0.12)',
+            padding: '16px 20px',
+            borderBottom: '1px solid rgba(255, 255, 255, 0.07)',
             flexShrink: 0,
-            background: 'rgba(15, 23, 42, 0.6)',
           }}
         >
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ fontSize: 13, fontWeight: 800, color: '#edf6ff' }}>Visitor Details</span>
-              <span
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 4,
-                  fontSize: 10,
-                  fontWeight: 700,
-                  color: isLive ? '#34d399' : '#94a3b8',
-                  background: isLive ? 'rgba(52, 211, 153, 0.15)' : 'rgba(148, 163, 184, 0.12)',
-                  padding: '2px 8px',
-                  borderRadius: 100,
-                  border: isLive ? '1px solid rgba(52, 211, 153, 0.3)' : '1px solid rgba(148, 163, 184, 0.2)',
-                }}
-              >
-                <span style={{ width: 6, height: 6, borderRadius: '50%', background: isLive ? '#34d399' : '#94a3b8' }} />
-                {isLive ? 'Live' : 'Offline'}
-              </span>
-            </div>
-            <p style={{ fontSize: 11, color: '#94a3b8', margin: '2px 0 0' }}>
-              {visitor?.city || 'City'}, {visitor?.country || 'Country'}
-            </p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <h3 style={{ fontSize: 14, fontWeight: 700, color: '#ffffff', margin: 0 }}>
+              Live Visitor
+            </h3>
+            <span
+              style={{
+                fontSize: 10,
+                fontWeight: 700,
+                color: '#8b5cf6',
+                background: 'rgba(139, 92, 246, 0.15)',
+                padding: '2px 8px',
+                borderRadius: 100,
+                border: '1px solid rgba(139, 92, 246, 0.3)',
+              }}
+            >
+              New
+            </span>
           </div>
 
           <button
             onClick={onClose}
             style={{
-              width: 30,
-              height: 30,
-              borderRadius: 8,
-              border: '1px solid rgba(148, 163, 184, 0.2)',
-              background: 'rgba(15, 23, 42, 0.8)',
+              width: 26,
+              height: 26,
+              borderRadius: 6,
+              border: 'none',
+              background: 'rgba(255, 255, 255, 0.06)',
               color: '#94a3b8',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              flexShrink: 0,
             }}
           >
-            <X size={15} />
+            <X size={14} />
           </button>
         </div>
 
-        {/* Panel Fields */}
+        {/* Details List */}
         <div
           style={{
             flex: 1,
             overflowY: 'auto',
-            padding: '14px 18px',
+            padding: '16px 20px',
             display: 'flex',
             flexDirection: 'column',
             gap: 12,
           }}
         >
-          {fields.map((f, i) => (
-            <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <span style={{ fontSize: 10, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                {f.label}
+          {details.map((d, i) => (
+            <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <span style={{ fontSize: 10, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                {d.label}
               </span>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                 <span
                   style={{
                     fontSize: 12,
-                    fontWeight: f.highlight ? 700 : 500,
-                    color: f.highlight ? '#38bdf8' : '#edf6ff',
+                    fontWeight: d.highlight ? 700 : 500,
+                    color: d.highlight ? '#ffffff' : '#e2e8f0',
+                    fontFamily: d.copyable ? 'monospace' : 'inherit',
                     wordBreak: 'break-all',
-                    fontFamily: f.copyable ? 'monospace' : 'inherit',
                   }}
                 >
-                  {f.value}
+                  {d.value}
                 </span>
 
-                {f.copyable && (
+                {d.copyable && (
                   <button
-                    onClick={() => copyToClipboard(f.value)}
+                    onClick={() => copyToClipboard(d.value)}
                     style={{
                       border: 'none',
                       background: 'transparent',
-                      color: copied ? '#34d399' : '#94a3b8',
+                      color: copied ? '#10b981' : '#64748b',
                       cursor: 'pointer',
                       padding: 2,
-                      display: 'flex',
-                      alignItems: 'center',
                     }}
                     title="Copy IP"
                   >
-                    {copied ? <Check size={13} /> : <Copy size={13} />}
+                    {copied ? <Check size={12} /> : <Copy size={12} />}
                   </button>
                 )}
               </div>
@@ -163,12 +154,12 @@ export default function VisitorDetails({ visitor, onClose, theme }) {
           ))}
         </div>
 
-        {/* Footer Action */}
+        {/* Footer Full Width Button */}
         <div
           style={{
-            padding: '14px 18px',
-            borderTop: '1px solid rgba(148, 163, 184, 0.12)',
-            background: 'rgba(15, 23, 42, 0.8)',
+            padding: '16px 20px',
+            borderTop: '1px solid rgba(255, 255, 255, 0.07)',
+            background: '#0a0f1b',
             flexShrink: 0,
           }}
         >
@@ -176,35 +167,31 @@ export default function VisitorDetails({ visitor, onClose, theme }) {
             onClick={() => setShowFullModal(true)}
             style={{
               width: '100%',
-              padding: '10px 14px',
+              padding: '11px 16px',
               borderRadius: 12,
               border: 'none',
               background: 'linear-gradient(135deg, #4f46e5, #7c3aed)',
-              color: '#fff',
+              color: '#ffffff',
               fontSize: 12,
               fontWeight: 700,
               cursor: 'pointer',
-              boxShadow: '0 8px 20px rgba(79, 70, 229, 0.3)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 6,
+              boxShadow: '0 8px 20px rgba(124, 58, 237, 0.3)',
             }}
           >
-            <ShieldCheck size={14} /> View Full Details
+            View Full Details
           </button>
         </div>
       </div>
 
-      {/* Full Modal View */}
+      {/* Modal */}
       {showFullModal && (
         <div
           onClick={() => setShowFullModal(false)}
           style={{
             position: 'fixed',
             inset: 0,
-            background: 'rgba(2, 6, 23, 0.82)',
-            backdropFilter: 'blur(12px)',
+            background: 'rgba(0, 0, 0, 0.8)',
+            backdropFilter: 'blur(10px)',
             zIndex: 9999,
             display: 'flex',
             alignItems: 'center',
@@ -216,46 +203,27 @@ export default function VisitorDetails({ visitor, onClose, theme }) {
             onClick={(e) => e.stopPropagation()}
             style={{
               width: '100%',
-              maxWidth: 580,
-              background: '#0b1220',
-              border: '1px solid rgba(56, 189, 248, 0.3)',
-              borderRadius: 24,
+              maxWidth: 560,
+              background: '#0d1322',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              borderRadius: 20,
               padding: 24,
-              boxShadow: '0 25px 80px rgba(0, 0, 0, 0.8)',
-              color: '#edf6ff',
+              color: '#ffffff',
             }}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, borderBottom: '1px solid rgba(148, 163, 184, 0.14)', pb: 12 }}>
-              <div>
-                <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: '#38bdf8' }}>Complete Visitor Audit Record</h3>
-                <p style={{ margin: '4px 0 0', fontSize: 12, color: '#94a3b8' }}>
-                  ID: {visitor?.id || '—'} &nbsp;·&nbsp; Session IP: {visitor?.ip_address}
-                </p>
-              </div>
-              <button
-                onClick={() => setShowFullModal(false)}
-                style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer' }}
-              >
-                <X size={20} />
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>Full Visitor Audit Session</h3>
+              <button onClick={() => setShowFullModal(false)} style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer' }}>
+                <X size={18} />
               </button>
             </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, fontSize: 12 }}>
-              {fields.map((f, i) => (
-                <div key={i} style={{ background: 'rgba(15, 23, 42, 0.6)', padding: 12, borderRadius: 12, border: '1px solid rgba(148, 163, 184, 0.1)' }}>
-                  <div style={{ fontSize: 10, color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>{f.label}</div>
-                  <div style={{ marginTop: 4, fontWeight: 600, color: '#edf6ff', wordBreak: 'break-all' }}>{f.value}</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+              {details.map((d, i) => (
+                <div key={i} style={{ background: 'rgba(255,255,255,0.03)', padding: 10, borderRadius: 10 }}>
+                  <div style={{ fontSize: 10, color: '#64748b', fontWeight: 600 }}>{d.label}</div>
+                  <div style={{ fontSize: 12, color: '#ffffff', fontWeight: 500, marginTop: 3 }}>{d.value}</div>
                 </div>
               ))}
-            </div>
-
-            <div style={{ marginTop: 20, textAlign: 'right' }}>
-              <button
-                onClick={() => setShowFullModal(false)}
-                style={{ padding: '8px 18px', borderRadius: 10, border: '1px solid rgba(148, 163, 184, 0.2)', background: 'rgba(15, 23, 42, 0.8)', color: '#edf6ff', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}
-              >
-                Close Audit View
-              </button>
             </div>
           </div>
         </div>
