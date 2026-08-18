@@ -25,6 +25,7 @@ const allowedOrigins = [
   ...envOrigins,
   'http://localhost:5173',
   'http://localhost:5174', // seller portal dev
+  'http://localhost:5175', // noren messaging dev
   'http://localhost:3000',
 ].map(normalizeOrigin);
 
@@ -104,6 +105,8 @@ app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/newsletter',    require('./routes/newsletter'));
 app.use('/api/seller',        require('./routes/seller'));
 app.use('/api/admin/sellers', require('./routes/adminSeller'));
+app.use('/api/social',        require('./routes/social'));
+app.use('/api/admin/social',  require('./routes/adminSocial'));
 
 // ── Sitemap in-memory cache (one DB query per 24 hours) ──────────────────
 const SITEMAP_CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours

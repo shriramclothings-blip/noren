@@ -2209,7 +2209,12 @@ const initDB = async () => {
     `).catch(() => {});
 
     console.log('✅ Phase 4 — Seller Marketplace schema applied');
-
+    try {
+      const { runSocialMigration } = require('../scripts/migrate_noren_messaging');
+      await runSocialMigration();
+    } catch (e) {
+      console.warn('⚠️ Noren Messaging migration warning:', e.message);
+    }
   } finally {
     client.release();
   }

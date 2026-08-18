@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useMemo, lazy, Suspense, Component } from 'react';
+import { useState, useEffect, useMemo, lazy, Suspense, Component } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import AdminPushSubscription from '../../components/AdminPushSubscription';
@@ -72,6 +72,7 @@ const AdminSellerKYC           = lazy(() => import('./erp/seller/AdminSellerKYC'
 const AdminSellerProducts      = lazy(() => import('./erp/seller/AdminSellerProducts'));
 const AdminSellerPayouts       = lazy(() => import('./erp/seller/AdminSellerPayouts'));
 const AdminSellerAudit         = lazy(() => import('./erp/seller/AdminSellerAudit'));
+const AdminSocialWorkspace     = lazy(() => import('./social/AdminSocialWorkspace'));
 import { ADMIN_ROUTE_ALIASES, ERP_MODULE_MAP, getVisibleNavGroups, canAccessModule } from './erpConfig';
 
 const iconMap = {
@@ -187,6 +188,7 @@ function renderSection(section, user, navigate) {
     case 'seller-products':   return <AdminSellerProducts />;
     case 'seller-payouts':    return <AdminSellerPayouts />;
     case 'seller-audit':      return <AdminSellerAudit />;
+    case 'social-workspace':  return <AdminSocialWorkspace initialTab={section} />;
     default:                  return <AdminModuleWorkspace module={mod} user={user} />;
   }
 }

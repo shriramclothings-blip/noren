@@ -109,6 +109,20 @@ export const ERP_NAV_GROUPS = [
       { key: 'inf-audit',       label: 'Influencer Audit', icon: 'FileClock',    componentKey: 'inf-audit',       roles: ['admin','super_admin'], description: 'Immutable audit trail for all influencer management actions.' },
     ],
   },
+  {
+    key: 'noren-messaging',
+    label: 'Noren Messaging',
+    items: [
+      { key: 'social-dashboard', label: 'Social Dashboard', icon: 'LayoutDashboard', componentKey: 'social-workspace', roles: ['admin','super_admin'], description: 'Overview of platform social engagement, total posts, reels, DMs and active users.' },
+      { key: 'social-users',     label: 'Users & Verification', icon: 'UsersRound', componentKey: 'social-workspace', roles: ['admin','super_admin'], description: 'Manage social user accounts, blue verification badges, suspensions and bans.' },
+      { key: 'social-posts',     label: 'Posts',            icon: 'Package',     componentKey: 'social-workspace', roles: ['admin','super_admin'], description: 'Review, moderate and search all user post submissions and media.' },
+      { key: 'social-reels',     label: 'Reels',            icon: 'Video',       componentKey: 'social-workspace', roles: ['admin','super_admin'], description: 'Manage short-form vertical video reels feed and metrics.' },
+      { key: 'social-stories',   label: 'Stories',          icon: 'Sparkles',    componentKey: 'social-workspace', roles: ['admin','super_admin'], description: 'Monitor 24-hour ephemeral active stories and viewer reactions.' },
+      { key: 'social-reports',   label: 'Reports & Moderation Queue', icon: 'AlertTriangle', componentKey: 'social-workspace', roles: ['admin','super_admin'], description: 'Content moderation pipeline for spam, harassment and policy violations.' },
+      { key: 'social-flags',     label: 'Feature Flags',    icon: 'Settings',    componentKey: 'social-workspace', roles: ['admin','super_admin'], description: 'Toggle social features live without redeploying (reels, stories, calling).' },
+      { key: 'social-audit',     label: 'Social Audit Trail', icon: 'FileClock', componentKey: 'social-workspace', roles: ['admin','super_admin'], description: 'Immutable log of administrative moderation and feature changes.' },
+    ],
+  },
 ];
 
 export const ADMIN_ROUTE_ALIASES = {
