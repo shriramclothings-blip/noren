@@ -20,55 +20,6 @@ import WebRTCCallModal from './components/WebRTCCallModal';
 import { useEffect } from 'react';
 import api from './utils/api';
 
-const DEFAULT_SAMPLE_POSTS = [
-  {
-    id: 'sample-1',
-    author_name: 'Vesper AI Labs',
-    author_username: 'vesper_ai',
-    author_avatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150',
-    author_verified: true,
-    caption: 'Welcome to NOREN Social — Operational AI Infrastructure meets next-gen real-time communication.',
-    location: 'Silicon Valley, CA',
-    created_at: new Date().toISOString(),
-    likes_count: 1420,
-    comments_count: 88,
-    reposts_count: 312,
-    is_liked: false,
-    is_saved: false,
-    is_reposted: false,
-    media: [
-      {
-        id: 'media-1',
-        media_type: 'image',
-        media_url: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1200',
-      },
-    ],
-  },
-  {
-    id: 'sample-2',
-    author_name: 'Antigravity Systems',
-    author_username: 'antigravity',
-    author_avatar: 'https://images.unsplash.com/photo-1634017839464-5c339ebe3cb4?w=150',
-    author_verified: true,
-    caption: 'Autonomous agents collaborating seamlessly across real-time media streams and high-performance workflows.',
-    location: 'Global Edge Network',
-    created_at: new Date().toISOString(),
-    likes_count: 2890,
-    comments_count: 142,
-    reposts_count: 520,
-    is_liked: true,
-    is_saved: true,
-    is_reposted: false,
-    media: [
-      {
-        id: 'media-2',
-        media_type: 'image',
-        media_url: 'https://images.unsplash.com/photo-1634017839464-5c339ebe3cb4?w=1200',
-      },
-    ],
-  },
-];
-
 function HomeFeed({ onOpenCreatePost }) {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -81,13 +32,9 @@ function HomeFeed({ onOpenCreatePost }) {
     setLoading(true);
     try {
       const res = await api.get('/social/feed');
-      if (res.data?.posts && res.data.posts.length > 0) {
-        setPosts(res.data.posts);
-      } else {
-        setPosts(DEFAULT_SAMPLE_POSTS);
-      }
+      setPosts(res.data?.posts || []);
     } catch {
-      setPosts(DEFAULT_SAMPLE_POSTS);
+      setPosts([]);
     } finally {
       setLoading(false);
     }
