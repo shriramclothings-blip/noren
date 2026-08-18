@@ -1,14 +1,14 @@
 const express = require('express');
 const router = express.Router();
-const { auth } = require('../middleware/auth');
+const { auth, optionalAuth } = require('../middleware/auth');
 const socialCtrl = require('../controllers/socialController');
 
 // Home Feed
-router.get('/feed', auth, socialCtrl.getFeed);
+router.get('/feed', optionalAuth, socialCtrl.getFeed);
 
 // Posts
 router.post('/posts', auth, socialCtrl.createPost);
-router.get('/posts/:id', auth, socialCtrl.getPostById);
+router.get('/posts/:id', optionalAuth, socialCtrl.getPostById);
 router.put('/posts/:id', auth, socialCtrl.updatePost);
 router.delete('/posts/:id', auth, socialCtrl.deletePost);
 
@@ -18,28 +18,28 @@ router.post('/bookmarks/toggle', auth, socialCtrl.toggleBookmark);
 router.post('/reposts/toggle', auth, socialCtrl.toggleRepost);
 
 // Comments
-router.get('/comments', auth, socialCtrl.getComments);
+router.get('/comments', optionalAuth, socialCtrl.getComments);
 router.post('/comments', auth, socialCtrl.addComment);
 router.delete('/comments/:id', auth, socialCtrl.deleteComment);
 
 // Reels
-router.get('/reels', auth, socialCtrl.getReels);
+router.get('/reels', optionalAuth, socialCtrl.getReels);
 router.post('/reels', auth, socialCtrl.createReel);
-router.post('/reels/:id/view', auth, socialCtrl.recordReelView);
+router.post('/reels/:id/view', optionalAuth, socialCtrl.recordReelView);
 
 // Stories
-router.get('/stories', auth, socialCtrl.getActiveStories);
+router.get('/stories', optionalAuth, socialCtrl.getActiveStories);
 router.post('/stories', auth, socialCtrl.createStory);
-router.post('/stories/:id/view', auth, socialCtrl.recordStoryView);
+router.post('/stories/:id/view', optionalAuth, socialCtrl.recordStoryView);
 
 // Profile & Follow
-router.get('/profile/:username', auth, socialCtrl.getUserProfile);
+router.get('/profile/:username', optionalAuth, socialCtrl.getUserProfile);
 router.put('/profile', auth, socialCtrl.updateProfile);
 router.post('/users/:id/follow', auth, socialCtrl.followUser);
 router.post('/users/:id/unfollow', auth, socialCtrl.unfollowUser);
 
 // Search
-router.get('/search', auth, socialCtrl.globalSearch);
+router.get('/search', optionalAuth, socialCtrl.globalSearch);
 
 // Safety & Privacy
 router.post('/reports', auth, socialCtrl.submitReport);

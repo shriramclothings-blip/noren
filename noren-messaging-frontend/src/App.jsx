@@ -20,6 +20,55 @@ import WebRTCCallModal from './components/WebRTCCallModal';
 import { useEffect } from 'react';
 import api from './utils/api';
 
+const DEFAULT_SAMPLE_POSTS = [
+  {
+    id: 'sample-1',
+    author_name: 'Vesper AI Labs',
+    author_username: 'vesper_ai',
+    author_avatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150',
+    author_verified: true,
+    caption: 'Welcome to NOREN Social — Operational AI Infrastructure meets next-gen real-time communication.',
+    location: 'Silicon Valley, CA',
+    created_at: new Date().toISOString(),
+    likes_count: 1420,
+    comments_count: 88,
+    reposts_count: 312,
+    is_liked: false,
+    is_saved: false,
+    is_reposted: false,
+    media: [
+      {
+        id: 'media-1',
+        media_type: 'image',
+        media_url: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1200',
+      },
+    ],
+  },
+  {
+    id: 'sample-2',
+    author_name: 'Antigravity Systems',
+    author_username: 'antigravity',
+    author_avatar: 'https://images.unsplash.com/photo-1634017839464-5c339ebe3cb4?w=150',
+    author_verified: true,
+    caption: 'Autonomous agents collaborating seamlessly across real-time media streams and high-performance workflows.',
+    location: 'Global Edge Network',
+    created_at: new Date().toISOString(),
+    likes_count: 2890,
+    comments_count: 142,
+    reposts_count: 520,
+    is_liked: true,
+    is_saved: true,
+    is_reposted: false,
+    media: [
+      {
+        id: 'media-2',
+        media_type: 'image',
+        media_url: 'https://images.unsplash.com/photo-1634017839464-5c339ebe3cb4?w=1200',
+      },
+    ],
+  },
+];
+
 function HomeFeed({ onOpenCreatePost }) {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -32,8 +81,14 @@ function HomeFeed({ onOpenCreatePost }) {
     setLoading(true);
     try {
       const res = await api.get('/social/feed');
-      setPosts(res.data.posts);
-    } catch {} finally {
+      if (res.data?.posts && res.data.posts.length > 0) {
+        setPosts(res.data.posts);
+      } else {
+        setPosts(DEFAULT_SAMPLE_POSTS);
+      }
+    } catch {
+      setPosts(DEFAULT_SAMPLE_POSTS);
+    } finally {
       setLoading(false);
     }
   };
@@ -51,12 +106,12 @@ function HomeFeed({ onOpenCreatePost }) {
           ))}
         </div>
       ) : !posts.length ? (
-        <div className="glass-card rounded-3xl p-12 text-center border border-slate-800 space-y-3">
-          <h3 className="text-xl font-bold text-white">Welcome to Noren Messaging</h3>
-          <p className="text-xs text-slate-400">Follow creators or share your first post to populate your feed.</p>
+        <div className="glass-card rounded-3xl p-12 text-center border border-white/10 space-y-3 shadow-2xl">
+          <h3 className="text-xl font-bold text-white">Welcome to NOREN Social</h3>
+          <p className="text-xs text-neutral-400">Share your first post or explore community creators to populate your feed.</p>
           <button
             onClick={onOpenCreatePost}
-            className="px-6 py-2.5 rounded-full bg-cyan-500 text-slate-950 font-bold text-xs hover:bg-cyan-400 transition-colors shadow-lg shadow-cyan-500/20"
+            className="px-6 py-2.5 rounded-full btn-liquid-solid font-medium text-xs shadow-lg transition-all"
           >
             Create First Post
           </button>

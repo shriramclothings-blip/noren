@@ -77,4 +77,42 @@ const requireAnyPermission = (...permissions) => (req, res, next) => {
   return res.status(403).json({ message: 'Permission denied' });
 };
 
-module.exports = { auth, requireRole, requirePermission, requireAnyPermission };
+const optionalAuth = async (req, res, next) => {
+  const token = req.headers.authorization?.split(' ')[1];
+  if (!token) {
+    req.user = { id: 0, role: 'guest' };
+    return next();
+  }
+
+  try {
+    const payload = jwt.verify(token, process.env.JWT_SECRET);
+    if (!payload?.id) {
+      req.user = { id: 0, role: 'guest' };
+      return next();
+    }
+
+    const userRes = await pool.query(
+      `SELECT id, name, email, role, avatar_url, phone, business_id, store_id, warehouse_id, is_banned
+       FROM src_users WHERE id=$1`,
+      [payload.id]
+    );
+
+    if (!userRes.rows.length) {
+      req.user = { id: 0, role: 'guest' };
+      return next();
+    }
+    const user = userRes.rows[0];
+    if (user.is_banned) {
+      req.user = { id: 0, role: 'guest' };
+      return next();
+    }
+
+    req.user = user;
+    next();
+  } catch (err) {
+    req.user = { id: 0, role: 'guest' };
+    next();
+  }
+};
+
+module.exports = { auth, optionalAuth, requireRole, requirePermission, requireAnyPermission };
