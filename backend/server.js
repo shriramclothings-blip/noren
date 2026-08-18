@@ -47,10 +47,31 @@ app.use(cors({
 const path = require('path');
 const fs = require('fs');
 const multer = require('multer');
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')), (req, res) => {
-  // Graceful fallback for missing files on ephemeral storage restarts
+app.use(express.json({ limit: '1024mb' }));
+app.use(express.urlencoded({ limit: '1024mb', extended: true }));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')), async (req, res) => {
+  // If local disk file was wiped by container redeployment, restore from PostgreSQL src_social_media_blobs
+  const filename = path.basename(req.path);
+  try {
+    const blobRes = await pool.query(
+      `SELECT mimetype, data FROM src_social_media_blobs WHERE filename = $1`,
+      [filename]
+    );
+    if (blobRes.rows.length > 0) {
+      const { mimetype, data } = blobRes.rows[0];
+      // Restore file back to local uploads directory for fast disk caching
+      const localFilePath = path.join(__dirname, 'uploads', filename);
+      try { fs.writeFileSync(localFilePath, data); } catch {}
+
+      res.setHeader('Content-Type', mimetype);
+      res.setHeader('Accept-Ranges', 'bytes');
+      return res.send(data);
+    }
+  } catch (dbErr) {
+    console.warn('Media blob restoration warning:', dbErr.message);
+  }
+
+  // Graceful fallback for missing files
   if (req.path.match(/\.(mp4|webm|mov)$/i)) {
     return res.redirect('https://assets.mixkit.co/videos/preview/mixkit-fashion-model-in-a-photoshoot-40244-large.mp4');
   }

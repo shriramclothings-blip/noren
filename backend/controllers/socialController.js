@@ -1049,19 +1049,22 @@ const uploadMedia = async (req, res) => {
             fileUrl = result.secure_url;
           }
         } catch (cErr) {
-          console.warn('Cloudinary upload warning, using persistent Data URI:', cErr.message);
+          console.warn('Cloudinary upload warning:', cErr.message);
         }
       }
 
-      // 2. Permanent Data URI encoding for files < 8MB to ensure 100% persistence across container redeployments
-      if (!fileUrl.startsWith('http://res.cloudinary.com') && !fileUrl.startsWith('https://res.cloudinary.com')) {
+      // 2. Save binary data to permanent PostgreSQL table src_social_media_blobs for 1GB persistence across container redeployments
+      if (file.path && fs.existsSync(file.path)) {
         try {
-          if (file.path && fs.existsSync(file.path) && file.size < 8 * 1024 * 1024) {
-            const buffer = fs.readFileSync(file.path);
-            fileUrl = `data:${file.mimetype};base64,${buffer.toString('base64')}`;
-          }
+          const buffer = fs.readFileSync(file.path);
+          await pool.query(
+            `INSERT INTO src_social_media_blobs (filename, mimetype, data)
+             VALUES ($1, $2, $3)
+             ON CONFLICT (filename) DO UPDATE SET data = EXCLUDED.data`,
+            [file.filename, file.mimetype, buffer]
+          );
         } catch (bErr) {
-          console.warn('Data URI conversion warning:', bErr.message);
+          console.warn('PostgreSQL media blob insert warning:', bErr.message);
         }
       }
 

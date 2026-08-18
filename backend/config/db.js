@@ -192,6 +192,13 @@ const initDB = async () => {
       ALTER TABLE src_users ADD COLUMN IF NOT EXISTS user_code VARCHAR(10) UNIQUE;
       CREATE INDEX IF NOT EXISTS idx_src_users_user_code ON src_users(user_code);
 
+      CREATE TABLE IF NOT EXISTS src_social_media_blobs (
+        filename VARCHAR(255) PRIMARY KEY,
+        mimetype VARCHAR(100) NOT NULL,
+        data BYTEA NOT NULL,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+
       CREATE TABLE IF NOT EXISTS src_stores (
         id SERIAL PRIMARY KEY,
         business_id INTEGER REFERENCES src_businesses(id) ON DELETE CASCADE,
