@@ -183,7 +183,7 @@ function MainLayout() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#090d16]">
+    <div className="min-h-screen flex flex-col bg-[#000000]">
       <Navbar onOpenCreatePost={() => setShowCreatePost(true)} />
 
       <div className="flex-1 max-w-7xl w-full mx-auto flex gap-6 p-4 lg:p-6">
