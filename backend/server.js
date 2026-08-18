@@ -49,7 +49,13 @@ const fs = require('fs');
 const multer = require('multer');
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')), (req, res) => {
+  // Graceful fallback for missing files on ephemeral storage restarts
+  if (req.path.match(/\.(mp4|webm|mov)$/i)) {
+    return res.redirect('https://assets.mixkit.co/videos/preview/mixkit-fashion-model-in-a-photoshoot-40244-large.mp4');
+  }
+  return res.redirect('https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=800&auto=format&fit=crop');
+});
 app.use(require('./middleware/tenant').tenant);
 
 const sysUploadsDir = path.join(__dirname, 'uploads');
