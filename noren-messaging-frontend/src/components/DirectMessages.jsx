@@ -53,9 +53,12 @@ export default function DirectMessages({ onInitiateCall }) {
     setActiveThread(thread);
     try {
       const res = await api.get(`/erp/communications/private/threads/${thread.id}/messages`);
-      setMessages(res.data);
+      const msgList = Array.isArray(res.data) ? res.data : (res.data.messages || []);
+      setMessages(msgList);
       scrollToBottom();
-    } catch {}
+    } catch {
+      setMessages([]);
+    }
   };
 
   const handleUserSearch = async (val) => {
@@ -89,13 +92,15 @@ export default function DirectMessages({ onInitiateCall }) {
   const startThreadWithUser = async (targetUser) => {
     try {
       const res = await api.post('/erp/communications/private/threads', { participant_id: targetUser.id });
-      const newThread = res.data.thread;
+      const newThread = res.data.thread || res.data;
       fetchThreads();
       handleSelectThread({
         ...newThread,
         participant_id: targetUser.id,
         participant_name: targetUser.name,
         participant_avatar_url: targetUser.avatar_url,
+        participant_username: targetUser.username,
+        participant_user_code: targetUser.user_code,
       });
       setSearchQuery('');
       setSearchResults([]);
@@ -277,7 +282,7 @@ export default function DirectMessages({ onInitiateCall }) {
 
             {/* Messages Scroll Area */}
             <div className="flex-1 overflow-y-auto p-4 space-y-3">
-              {messages.map((m) => {
+              {(Array.isArray(messages) ? messages : []).map((m) => {
                 const isMine = m.sender_user_id === user.id;
                 return (
                   <div key={m.id} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>

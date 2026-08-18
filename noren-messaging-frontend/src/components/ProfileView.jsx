@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import api from '../utils/api';
 import { useAuth } from '../context/AuthContext';
-import { UserCheck, UserPlus, Lock, Settings } from 'lucide-react';
+import { UserCheck, UserPlus, Lock, Settings, Camera, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function ProfileView() {
@@ -13,6 +13,7 @@ export default function ProfileView() {
   const [canView, setCanView] = useState(true);
   const [loading, setLoading] = useState(true);
   const [isFollowing, setIsFollowing] = useState(false);
+  const [avatarUploading, setAvatarUploading] = useState(false);
 
   useEffect(() => {
     fetchProfile();
@@ -58,6 +59,31 @@ export default function ProfileView() {
     }
   };
 
+  const handleAvatarUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setAvatarUploading(true);
+    const formData = new FormData();
+    formData.append('files', file);
+
+    try {
+      toast.loading('Uploading profile picture...', { id: 'avatarUpload' });
+      const uploadRes = await api.post('/social/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      const newAvatarUrl = uploadRes.data.url;
+
+      await api.put('/social/profile', { avatar_url: newAvatarUrl });
+      setProfile(prev => ({ ...prev, avatar_url: newAvatarUrl }));
+      toast.success('Profile picture updated!', { id: 'avatarUpload' });
+    } catch {
+      toast.error('Failed to update profile picture', { id: 'avatarUpload' });
+    } finally {
+      setAvatarUploading(false);
+    }
+  };
+
   if (loading) {
     return <div className="p-8 text-center text-neutral-400 font-medium">Loading social profile...</div>;
   }
@@ -72,13 +98,40 @@ export default function ProfileView() {
     <div className="w-full max-w-4xl mx-auto space-y-6 pb-12">
       {/* Profile Header Card */}
       <div className="glass-panel rounded-3xl p-6 border border-white/10 flex flex-col md:flex-row items-center md:items-start gap-6 shadow-2xl">
-        <div className="relative w-28 h-28 rounded-full bg-neutral-800 ring-4 ring-white/20 overflow-hidden shrink-0">
+        <div className="relative w-28 h-28 rounded-full bg-neutral-800 ring-4 ring-white/20 overflow-hidden shrink-0 group">
           {profile.avatar_url ? (
             <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-2xl font-black text-neutral-300">
               {profile.name?.[0]}
             </div>
+          )}
+
+          {isOwner && (
+            <>
+              <input
+                type="file"
+                id="avatarFileInput"
+                accept="image/*"
+                onChange={handleAvatarUpload}
+                className="hidden"
+              />
+              <button
+                onClick={() => document.getElementById('avatarFileInput')?.click()}
+                disabled={avatarUploading}
+                className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white text-xs font-bold gap-1 cursor-pointer"
+                title="Change Profile Photo"
+              >
+                {avatarUploading ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <>
+                    <Camera className="w-5 h-5 text-white" />
+                    <span className="text-[10px]">Change</span>
+                  </>
+                )}
+              </button>
+            </>
           )}
         </div>
 
