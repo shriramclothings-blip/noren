@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import api from '../utils/api';
 import { useSocket } from '../context/SocketContext';
 import { useAuth } from '../context/AuthContext';
-import { Search, Send, Phone, Video, Check, CheckCheck, AlertCircle, Paperclip } from 'lucide-react';
+import { Search, Send, Phone, Video, Check, CheckCheck, AlertCircle, Paperclip, ArrowLeft } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function DirectMessages({ onInitiateCall }) {
@@ -156,7 +156,7 @@ export default function DirectMessages({ onInitiateCall }) {
   return (
     <div className="w-full h-[calc(100vh-6rem)] glass-panel rounded-3xl border border-white/10 overflow-hidden flex shadow-2xl">
       {/* Thread List Sidebar */}
-      <div className="w-full md:w-80 border-r border-white/10 flex flex-col bg-black/60">
+      <div className={`w-full md:w-80 border-r border-white/10 flex-col bg-black/60 ${activeThread ? 'hidden md:flex' : 'flex'}`}>
         {/* Search */}
         <div className="p-4 border-b border-white/10">
           <div className="relative">
@@ -244,13 +244,21 @@ export default function DirectMessages({ onInitiateCall }) {
       </div>
 
       {/* Main Chat Area */}
-      <div className="hidden md:flex flex-1 flex-col bg-black/80">
+      <div className={`flex-1 flex-col bg-black/80 ${activeThread ? 'flex' : 'hidden md:flex'}`}>
         {activeThread ? (
           <>
             {/* Header */}
             <div className="p-4 border-b border-white/10 flex items-center justify-between glass-panel">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-neutral-800 overflow-hidden ring-2 ring-white/30">
+                <button
+                  onClick={() => setActiveThread(null)}
+                  className="md:hidden p-2 rounded-full hover:bg-white/10 text-white transition-colors"
+                  title="Back to Conversations"
+                >
+                  <ArrowLeft className="w-5 h-5" />
+                </button>
+
+                <div className="w-10 h-10 rounded-full bg-neutral-800 overflow-hidden ring-2 ring-white/30 shrink-0">
                   {activeThread.participant_avatar_url && (
                     <img src={activeThread.participant_avatar_url} alt="" className="w-full h-full object-cover" />
                   )}
