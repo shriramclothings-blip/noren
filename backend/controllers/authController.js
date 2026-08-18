@@ -88,34 +88,52 @@ const login = async (req, res) => {
       return res.status(401).json({ message: 'Invalid credentials' });
     if (user.is_banned) return res.status(403).json({ message: 'Account has been banned' });
 
-    // Record session (non-blocking — never fails login)
+    // Record session & capture client details
+    const ip = req.headers['cf-connecting-ip'] || (req.headers['x-forwarded-for'] ? req.headers['x-forwarded-for'].split(',')[0].trim() : req.socket.remoteAddress || '').replace('::ffff:', '');
+    const userAgent = req.headers['user-agent'] || 'Unknown Device';
     await recordSession(req, user.id, 'local');
 
-    // Login notification email
-    const loginTime = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'medium', timeStyle: 'short' });
-    sendMail(email, 'New Login to Your NOREN Account',
-      `<div style="font-family:'Inter',Arial,sans-serif;max-width:520px;margin:auto;background:#faf9f7;padding:0">
-        <div style="background:#1a1a18;padding:32px 40px;text-align:center">
-          <div style="font-family:Georgia,serif;font-weight:600;font-size:26px;letter-spacing:0.35em;color:#faf9f7;text-transform:uppercase">NOREN</div>
-          <div style="font-size:8px;letter-spacing:0.28em;color:#5a5750;margin-top:4px;text-transform:uppercase">Fashion House</div>
-        </div>
-        <div style="padding:40px 40px 32px;border:1px solid #e6e0d8;border-top:none">
-          <p style="font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:#c9a96e;margin-bottom:12px">Security Alert</p>
-          <h2 style="font-family:Georgia,serif;font-size:24px;font-weight:600;color:#1a1a18;margin:0 0 20px">Hi ${user.name},</h2>
-          <p style="color:#5a5750;line-height:1.8;font-size:14px;margin-bottom:24px">A new login was detected on your NOREN account.</p>
-          <div style="background:#f5f0e8;padding:20px 24px;margin-bottom:28px">
-            <table style="width:100%;font-size:13px">
-              <tr><td style="color:#9e9a94;padding:4px 0;width:40%">Time</td><td style="color:#1a1a18;font-weight:500">${loginTime} IST</td></tr>
-              <tr><td style="color:#9e9a94;padding:4px 0">Method</td><td style="color:#1a1a18;font-weight:500">Email & Password</td></tr>
-            </table>
+    // Fetch precise location for detailed email & notification
+    const { fetchGeoLocation } = require('../services/sessionService');
+    fetchGeoLocation(ip).then(geo => {
+      const locationStr = [geo.city, geo.region, geo.country].filter(Boolean).join(', ') || 'Unknown Location';
+      const loginTime = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'full', timeStyle: 'medium' });
+
+      // Detailed Security Email
+      sendMail(user.email, 'Security Alert: New Login to Your NOREN Account',
+        `<div style="font-family:'Inter',Arial,sans-serif;max-width:560px;margin:auto;background:#050505;color:#ffffff;padding:0;border-radius:16px;overflow:hidden;border:1px solid rgba(255,255,255,0.15)">
+          <div style="background:#111111;padding:32px 40px;text-align:center;border-b:1px solid rgba(255,255,255,0.1)">
+            <div style="font-family:Georgia,serif;font-weight:700;font-size:24px;letter-spacing:0.25em;color:#ffffff;text-transform:uppercase">NOREN <span style="font-style:italic;font-weight:400;color:#aaaaaa">Social</span></div>
+            <div style="font-size:9px;letter-spacing:0.2em;color:#888888;margin-top:4px;text-transform:uppercase">Account Security Notification</div>
           </div>
-          <p style="color:#b8a898;font-size:12px;margin-top:8px;padding-top:24px;border-top:1px solid #e6e0d8">If this wasn't you, please reset your password immediately or contact us at supportnoren1@gmail.com</p>
-        </div>
-        <div style="padding:20px 40px;text-align:center">
-          <p style="color:#b8a898;font-size:11px;letter-spacing:0.06em">© ${new Date().getFullYear()} NOREN. Timeless By Design.</p>
-        </div>
-      </div>`
-    ).catch(() => {});
+          <div style="padding:32px 36px">
+            <div style="display:inline-block;padding:4px 12px;border-radius:20px;background:rgba(239,68,68,0.15);color:#f87171;font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:16px;border:1px solid rgba(239,68,68,0.3)">New Login Attempt</div>
+            <h2 style="font-size:20px;font-weight:700;color:#ffffff;margin:0 0 12px">Hi ${user.name},</h2>
+            <p style="color:#cccccc;line-height:1.6;font-size:13px;margin-bottom:24px">A new login was detected for your NOREN account. Here are the precise connection details:</p>
+
+            <div style="background:#141414;border-radius:12px;padding:20px;border:1px solid rgba(255,255,255,0.1);margin-bottom:24px">
+              <table style="width:100%;font-size:12px;color:#dddddd;border-collapse:collapse">
+                <tr><td style="color:#888888;padding:6px 0;width:35%">Precise Location</td><td style="color:#ffffff;font-weight:600;padding:6px 0">${locationStr}</td></tr>
+                <tr><td style="color:#888888;padding:6px 0">IP Address</td><td style="color:#ffffff;font-weight:600;padding:6px 0">${ip || '127.0.0.1'}</td></tr>
+                <tr><td style="color:#888888;padding:6px 0">User Agent / Device</td><td style="color:#ffffff;font-weight:500;padding:6px 0">${userAgent.slice(0, 100)}</td></tr>
+                <tr><td style="color:#888888;padding:6px 0">Time (IST)</td><td style="color:#ffffff;font-weight:500;padding:6px 0">${loginTime} IST</td></tr>
+              </table>
+            </div>
+
+            <p style="color:#888888;font-size:11px;line-height:1.5">If this login was you, no action is needed. If you did not perform this login, please reset your password immediately or contact our security team.</p>
+          </div>
+          <div style="padding:16px 36px;background:#0d0d0d;text-align:center;border-t:1px solid rgba(255,255,255,0.08)">
+            <p style="color:#666666;font-size:10px;margin:0">© ${new Date().getFullYear()} NOREN Social. All rights reserved.</p>
+          </div>
+        </div>`
+      ).catch(() => {});
+
+      // Record In-App Notification
+      pool.query(
+        `INSERT INTO src_notifications (user_id, message, type, is_read) VALUES ($1, $2, 'security', FALSE)`,
+        [user.id, `New login from ${locationStr} (IP: ${ip})`]
+      ).catch(() => {});
+    }).catch(() => {});
 
     const { password: _, ...safeUser } = user;
     res.json({ token: signToken(user), user: await enrichUser(safeUser) });

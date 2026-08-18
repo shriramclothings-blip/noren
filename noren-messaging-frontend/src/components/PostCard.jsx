@@ -1,10 +1,12 @@
 import { useState } from 'react';
-import { Heart, MessageCircle, Share2, Bookmark, Repeat, MoreHorizontal } from 'lucide-react';
+import { Heart, MessageCircle, Share2, Bookmark, Repeat, MoreHorizontal, Trash2 } from 'lucide-react';
 import api from '../utils/api';
 import toast from 'react-hot-toast';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
-export default function PostCard({ post }) {
+export default function PostCard({ post, onDelete }) {
+  const { user } = useAuth();
   const [isLiked, setIsLiked] = useState(post.is_liked);
   const [likesCount, setLikesCount] = useState(parseInt(post.likes_count) || 0);
   const [isSaved, setIsSaved] = useState(post.is_saved);
@@ -14,6 +16,21 @@ export default function PostCard({ post }) {
   const [showComments, setShowComments] = useState(false);
   const [commentsList, setCommentsList] = useState([]);
   const [newComment, setNewComment] = useState('');
+  const [deleted, setDeleted] = useState(false);
+
+  const isOwnerOrAdmin = user && (user.id === post.user_id || user.role === 'admin' || user.role === 'super_admin');
+
+  const handleDeletePost = async () => {
+    if (!window.confirm('Are you sure you want to delete this post?')) return;
+    try {
+      await api.delete(`/social/posts/${post.id}`);
+      toast.success('Post deleted');
+      setDeleted(true);
+      if (onDelete) onDelete(post.id);
+    } catch {
+      toast.error('Failed to delete post');
+    }
+  };
 
   const handleLikeToggle = async () => {
     setIsLiked(!isLiked);
@@ -79,6 +96,8 @@ export default function PostCard({ post }) {
     toast.success('Link copied to clipboard');
   };
 
+  if (deleted) return null;
+
   const mediaList = post.media || [];
 
   return (
@@ -110,9 +129,16 @@ export default function PostCard({ post }) {
           </div>
         </Link>
 
-        <button onClick={handleCopyLink} className="text-neutral-400 hover:text-white p-1.5 rounded-lg hover:bg-white/10 transition-colors">
-          <MoreHorizontal className="w-5 h-5" />
-        </button>
+        <div className="flex items-center gap-2">
+          {isOwnerOrAdmin && (
+            <button onClick={handleDeletePost} className="text-neutral-400 hover:text-rose-400 p-1.5 rounded-lg hover:bg-white/10 transition-colors" title="Delete Post">
+              <Trash2 className="w-4 h-4" />
+            </button>
+          )}
+          <button onClick={handleCopyLink} className="text-neutral-400 hover:text-white p-1.5 rounded-lg hover:bg-white/10 transition-colors">
+            <MoreHorizontal className="w-5 h-5" />
+          </button>
+        </div>
       </div>
 
       {/* Media Carousel / Video */}

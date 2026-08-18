@@ -94,6 +94,8 @@ export default function AdminSocialWorkspace({ initialTab = 'dashboard' }) {
       <div style={{ display: 'flex', gap: 8, borderBottom: '1px solid #e2e8f0', marginBottom: 24 }}>
         {[
           { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+          { key: 'posts', label: 'Posts Management', icon: LayoutDashboard },
+          { key: 'reels', label: 'Reels Management', icon: Video },
           { key: 'reports', label: 'Moderation Queue', icon: AlertTriangle },
           { key: 'flags', label: 'Feature Flags', icon: Settings },
         ].map(t => {

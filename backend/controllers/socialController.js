@@ -918,6 +918,23 @@ const updatePrivacySettings = async (req, res) => {
   } catch (err) {
     res.status(500).json({ message: 'Failed to update privacy settings' });
   }
+const deleteReel = async (req, res) => {
+  try {
+    const reelId = req.params.id;
+    const userId = req.user.id;
+
+    const checkRes = await pool.query('SELECT user_id FROM src_social_reels WHERE id = $1', [reelId]);
+    if (!checkRes.rows.length) return res.status(404).json({ message: 'Reel not found' });
+    if (checkRes.rows[0].user_id !== userId && req.user.role !== 'admin' && req.user.role !== 'super_admin') {
+      return res.status(403).json({ message: 'Unauthorized to delete this reel' });
+    }
+
+    await pool.query('DELETE FROM src_social_reels WHERE id = $1', [reelId]);
+    res.json({ message: 'Reel deleted successfully' });
+  } catch (err) {
+    console.error('deleteReel error:', err.message);
+    res.status(500).json({ message: 'Failed to delete reel' });
+  }
 };
 
 module.exports = {
@@ -934,6 +951,7 @@ module.exports = {
   deleteComment,
   getReels,
   createReel,
+  deleteReel,
   recordReelView,
   getActiveStories,
   createStory,
