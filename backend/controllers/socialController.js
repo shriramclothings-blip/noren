@@ -918,6 +918,8 @@ const updatePrivacySettings = async (req, res) => {
   } catch (err) {
     res.status(500).json({ message: 'Failed to update privacy settings' });
   }
+};
+
 const deleteReel = async (req, res) => {
   try {
     const reelId = req.params.id;
