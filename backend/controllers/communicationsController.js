@@ -161,20 +161,15 @@ const listPrivateThreads = async (req, res) => {
   }
 };
 
-const getThreadById = async (threadId, businessId = null) => {
-  const query = businessId
-    ? 'SELECT * FROM src_private_chat_threads WHERE id = $1 AND business_id = $2'
-    : 'SELECT * FROM src_private_chat_threads WHERE id = $1';
-  const params = businessId ? [threadId, businessId] : [threadId];
-  const threadRes = await pool.query(query, params);
+const getThreadById = async (threadId) => {
+  const threadRes = await pool.query('SELECT * FROM src_private_chat_threads WHERE id = $1', [threadId]);
   return threadRes.rows[0] || null;
 };
 
 const listPrivateMessages = async (req, res) => {
   try {
     const { threadId } = req.params;
-    const businessId = getScopedBusinessId(req);
-    const thread = await getThreadById(threadId, businessId);
+    const thread = await getThreadById(threadId);
     if (!thread) return res.status(404).json({ message: 'Thread not found' });
 
     const isParticipant = [thread.user_one_id, thread.user_two_id].includes(req.user.id);
@@ -205,8 +200,7 @@ const sendPrivateMessage = async (req, res) => {
     const { message, attachment_url, message_type = 'text' } = req.body;
     if (!message?.trim() && !attachment_url) return res.status(400).json({ message: 'Message text or attachment required' });
 
-    const businessId = getScopedBusinessId(req);
-    const thread = await getThreadById(threadId, businessId);
+    const thread = await getThreadById(threadId);
     if (!thread) return res.status(404).json({ message: 'Thread not found' });
 
     const isParticipant = [thread.user_one_id, thread.user_two_id].includes(req.user.id);

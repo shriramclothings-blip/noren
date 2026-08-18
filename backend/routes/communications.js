@@ -8,28 +8,32 @@ const adminGuard = [auth, requireRole(...adminRoles)];
 router.get('/chat/messages', ...adminGuard, comms.listChatMessages);
 router.post('/chat/messages', ...adminGuard, comms.createChatMessage);
 
-router.get('/users/search', ...adminGuard, comms.searchUsers);
-router.post('/private-threads', ...adminGuard, comms.createPrivateThread);
-router.get('/private-threads', ...adminGuard, comms.listPrivateThreads);
-router.get('/private/threads', ...adminGuard, comms.listPrivateThreads);
-router.get('/private-threads/:threadId/messages', ...adminGuard, comms.listPrivateMessages);
-router.post('/private-threads/:threadId/messages', ...adminGuard, comms.sendPrivateMessage);
+// Private Messaging & Contact Search for ALL authenticated users
+router.get('/users/search', auth, comms.searchUsers);
+router.post('/private-threads', auth, comms.createPrivateThread);
+router.post('/private/threads', auth, comms.createPrivateThread);
+router.get('/private-threads', auth, comms.listPrivateThreads);
+router.get('/private/threads', auth, comms.listPrivateThreads);
+router.get('/private-threads/:threadId/messages', auth, comms.listPrivateMessages);
+router.get('/private/threads/:threadId/messages', auth, comms.listPrivateMessages);
+router.post('/private-threads/:threadId/messages', auth, comms.sendPrivateMessage);
+router.post('/private/threads/:threadId/messages', auth, comms.sendPrivateMessage);
 router.get('/admin/private-threads', ...adminGuard, comms.adminListAllThreads);
 
 router.get('/meetings', ...adminGuard, comms.listMeetings);
 router.post('/meetings', ...adminGuard, comms.createMeeting);
 
 // Phase 2: Read receipts, reactions, edit/delete, pin, star
-router.post('/private-threads/:threadId/read',                     ...adminGuard, comms.markMessagesRead);
-router.post('/private-threads/:threadId/messages/:msgId/react',    ...adminGuard, comms.addReaction);
-router.delete('/private-threads/:threadId/messages/:msgId/react',  ...adminGuard, comms.removeReaction);
-router.put('/private-threads/:threadId/messages/:msgId',           ...adminGuard, comms.editMessage);
-router.delete('/private-threads/:threadId/messages/:msgId/me',     ...adminGuard, comms.deleteMessageForMe);
-router.delete('/private-threads/:threadId/messages/:msgId/all',    ...adminGuard, comms.deleteMessageForAll);
-router.post('/private-threads/:threadId/messages/:msgId/pin',      ...adminGuard, comms.pinMessage);
-router.get('/private-threads/:threadId/pinned',                    ...adminGuard, comms.getPinnedMessages);
-router.post('/messages/:msgId/star',                               ...adminGuard, comms.starMessage);
-router.get('/starred-messages',                                    ...adminGuard, comms.getStarredMessages);
-router.get('/private-threads/:threadId/media',                     ...adminGuard, comms.getThreadMedia);
+router.post('/private-threads/:threadId/read',                     auth, comms.markMessagesRead);
+router.post('/private-threads/:threadId/messages/:msgId/react',    auth, comms.addReaction);
+router.delete('/private-threads/:threadId/messages/:msgId/react',  auth, comms.removeReaction);
+router.put('/private-threads/:threadId/messages/:msgId',           auth, comms.editMessage);
+router.delete('/private-threads/:threadId/messages/:msgId/me',     auth, comms.deleteMessageForMe);
+router.delete('/private-threads/:threadId/messages/:msgId/all',    auth, comms.deleteMessageForAll);
+router.post('/private-threads/:threadId/messages/:msgId/pin',      auth, comms.pinMessage);
+router.get('/private-threads/:threadId/pinned',                    auth, comms.getPinnedMessages);
+router.post('/messages/:msgId/star',                               auth, comms.starMessage);
+router.get('/starred-messages',                                    auth, comms.getStarredMessages);
+router.get('/private-threads/:threadId/media',                     auth, comms.getThreadMedia);
 
 module.exports = router;

@@ -188,6 +188,10 @@ const initDB = async () => {
         END IF;
       END $$;
 
+      -- Auto-migrate user_code column in src_users
+      ALTER TABLE src_users ADD COLUMN IF NOT EXISTS user_code VARCHAR(10) UNIQUE;
+      CREATE INDEX IF NOT EXISTS idx_src_users_user_code ON src_users(user_code);
+
       CREATE TABLE IF NOT EXISTS src_stores (
         id SERIAL PRIMARY KEY,
         business_id INTEGER REFERENCES src_businesses(id) ON DELETE CASCADE,
