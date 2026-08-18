@@ -537,7 +537,16 @@ httpServer.listen(PORT, '0.0.0.0', () => console.log(`🚀 NOREN API running on 
         call_id,
         callee_id: user.id,
         callee_name: user.name,
+        answer: answer || null,
       });
+
+      if (answer) {
+        io.to(`user:${caller_id}`).emit('call:answer', {
+          call_id,
+          answer,
+          from_id: user.id,
+        });
+      }
     });
 
     socket.on('call:reject', async (data) => {

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useSocket } from '../context/SocketContext';
-import { Phone, PhoneOff, Video, VideoOff, Mic, MicOff } from 'lucide-react';
+import { Phone, PhoneOff, Video, VideoOff, Mic, MicOff, Volume2, Loader2 } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 export default function WebRTCCallModal({ callData, onClose }) {
   const { socket } = useSocket();
@@ -11,18 +12,31 @@ export default function WebRTCCallModal({ callData, onClose }) {
 
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
+  const remoteAudioRef = useRef(null);
+  const localStreamRef = useRef(null);
   const peerConnectionRef = useRef(null);
+  const pendingCandidatesRef = useRef([]);
   const timerRef = useRef(null);
+
+  const isVideoCall = (callData.callType || callData.call_type) === 'video';
 
   useEffect(() => {
     if (!socket) return;
 
-    // WebRTC PeerConnection setup
+    // Multi-STUN configuration for reliable WebRTC NAT traversal across all cellular & home networks
     const pc = new RTCPeerConnection({
-      iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
+      iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' },
+        { urls: 'stun:stun2.l.google.com:19302' },
+        { urls: 'stun:stun3.l.google.com:19302' },
+        { urls: 'stun:stun4.l.google.com:19302' },
+        { urls: 'stun:stun.services.mozilla.com' },
+      ],
     });
     peerConnectionRef.current = pc;
 
+    // Send local ICE candidates to remote peer via socket
     pc.onicecandidate = (event) => {
       if (event.candidate) {
         socket.emit('call:ice-candidate', {
@@ -32,98 +46,156 @@ export default function WebRTCCallModal({ callData, onClose }) {
       }
     };
 
+    // Receive remote media track (audio / video)
     pc.ontrack = (event) => {
-      if (remoteVideoRef.current && event.streams[0]) {
-        remoteVideoRef.current.srcObject = event.streams[0];
+      console.log('📡 WebRTC Track Received:', event.track.kind);
+      const remoteStream = event.streams[0] || new MediaStream([event.track]);
+
+      if (remoteVideoRef.current) {
+        remoteVideoRef.current.srcObject = remoteStream;
+        remoteVideoRef.current.play().catch(() => {});
+      }
+      if (remoteAudioRef.current) {
+        remoteAudioRef.current.srcObject = remoteStream;
+        remoteAudioRef.current.play().catch(() => {});
       }
     };
 
-    // Socket signaling listeners
-    socket.on('call:accepted', async () => {
+    // Signaling listeners
+    socket.on('call:accepted', async (data) => {
       setCallState('connected');
       startDurationTimer();
-    });
 
-    socket.on('call:rejected', () => {
-      setCallState('ended');
-      setTimeout(onClose, 1500);
-    });
-
-    socket.on('call:ended', () => {
-      setCallState('ended');
-      setTimeout(onClose, 1000);
+      if (data.answer && pc.signalingState !== 'stable') {
+        try {
+          await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
+          await processPendingCandidates(pc);
+        } catch (err) {
+          console.error('Failed to set remote answer:', err);
+        }
+      }
     });
 
     socket.on('call:answer', async ({ answer }) => {
       if (pc.signalingState !== 'stable') {
-        await pc.setRemoteDescription(new RTCSessionDescription(answer));
+        try {
+          await pc.setRemoteDescription(new RTCSessionDescription(answer));
+          await processPendingCandidates(pc);
+        } catch (err) {
+          console.error('Failed to set remote answer:', err);
+        }
       }
     });
 
     socket.on('call:ice-candidate', async ({ candidate }) => {
-      try {
-        await pc.addIceCandidate(new RTCIceCandidate(candidate));
-      } catch {}
+      if (pc.remoteDescription && pc.remoteDescription.type) {
+        try {
+          await pc.addIceCandidate(new RTCIceCandidate(candidate));
+        } catch {}
+      } else {
+        pendingCandidatesRef.current.push(candidate);
+      }
+    });
+
+    socket.on('call:rejected', () => {
+      toast.error('Call rejected');
+      setCallState('ended');
+      cleanupAndClose();
+    });
+
+    socket.on('call:ended', () => {
+      setCallState('ended');
+      cleanupAndClose();
     });
 
     // Auto initiate if outgoing
     if (!callData.isIncoming) {
-      initiateOutgoingCall();
+      initiateOutgoingCall(pc);
     }
 
     return () => {
-      pc.close();
-      if (timerRef.current) clearInterval(timerRef.current);
+      cleanupMedia();
       socket.off('call:accepted');
-      socket.off('call:rejected');
-      socket.off('call:ended');
       socket.off('call:answer');
       socket.off('call:ice-candidate');
+      socket.off('call:rejected');
+      socket.off('call:ended');
     };
   }, [socket]);
 
+  const processPendingCandidates = async (pc) => {
+    while (pendingCandidatesRef.current.length > 0) {
+      const candidate = pendingCandidatesRef.current.shift();
+      try {
+        await pc.addIceCandidate(new RTCIceCandidate(candidate));
+      } catch {}
+    }
+  };
+
   const startDurationTimer = () => {
+    if (timerRef.current) clearInterval(timerRef.current);
     timerRef.current = setInterval(() => {
       setCallDuration(prev => prev + 1);
     }, 1000);
   };
 
-  const initiateOutgoingCall = async () => {
+  const initiateOutgoingCall = async (pc) => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: true,
-        video: callData.callType === 'video',
+        video: isVideoCall,
       });
-      if (localVideoRef.current) localVideoRef.current.srcObject = stream;
-      stream.getTracks().forEach(track => peerConnectionRef.current.addTrack(track, stream));
+      localStreamRef.current = stream;
 
-      const offer = await peerConnectionRef.current.createOffer();
-      await peerConnectionRef.current.setLocalDescription(offer);
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = stream;
+      }
+
+      stream.getTracks().forEach(track => {
+        pc.addTrack(track, stream);
+      });
+
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
 
       socket.emit('call:initiate', {
         callee_id: callData.targetId,
-        call_type: callData.callType,
+        call_type: isVideoCall ? 'video' : 'audio',
         offer,
       });
-    } catch {
+    } catch (err) {
+      console.error('GetUserMedia error:', err);
+      toast.error('Could not access microphone or camera');
       setCallState('ended');
-      setTimeout(onClose, 1500);
+      cleanupAndClose();
     }
   };
 
   const handleAcceptCall = async () => {
+    const pc = peerConnectionRef.current;
+    if (!pc) return;
+
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: true,
-        video: callData.call_type === 'video',
+        video: isVideoCall,
       });
-      if (localVideoRef.current) localVideoRef.current.srcObject = stream;
-      stream.getTracks().forEach(track => peerConnectionRef.current.addTrack(track, stream));
+      localStreamRef.current = stream;
+
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = stream;
+      }
+
+      stream.getTracks().forEach(track => {
+        pc.addTrack(track, stream);
+      });
 
       if (callData.offer) {
-        await peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription(callData.offer));
-        const answer = await peerConnectionRef.current.createAnswer();
-        await peerConnectionRef.current.setLocalDescription(answer);
+        await pc.setRemoteDescription(new RTCSessionDescription(callData.offer));
+        await processPendingCandidates(pc);
+
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
 
         socket.emit('call:accept', {
           call_id: callData.call_id,
@@ -134,18 +206,57 @@ export default function WebRTCCallModal({ callData, onClose }) {
 
       setCallState('connected');
       startDurationTimer();
-    } catch {
+    } catch (err) {
+      console.error('handleAcceptCall error:', err);
+      toast.error('Failed to access media device');
       handleEndCall();
     }
   };
 
   const handleEndCall = () => {
-    socket.emit('call:end', {
-      call_id: callData.call_id || 'active',
-      other_user_id: callData.targetId || callData.caller_id,
-    });
+    if (socket) {
+      socket.emit('call:end', {
+        call_id: callData.call_id || 'active',
+        other_user_id: callData.targetId || callData.caller_id,
+      });
+    }
     setCallState('ended');
-    setTimeout(onClose, 1000);
+    cleanupAndClose();
+  };
+
+  const toggleMic = () => {
+    if (localStreamRef.current) {
+      localStreamRef.current.getAudioTracks().forEach(track => {
+        track.enabled = isMicMuted;
+      });
+    }
+    setIsMicMuted(!isMicMuted);
+  };
+
+  const toggleVideo = () => {
+    if (localStreamRef.current) {
+      localStreamRef.current.getVideoTracks().forEach(track => {
+        track.enabled = isVideoOff;
+      });
+    }
+    setIsVideoOff(!isVideoOff);
+  };
+
+  const cleanupMedia = () => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    if (localStreamRef.current) {
+      localStreamRef.current.getTracks().forEach(track => track.stop());
+    }
+    if (peerConnectionRef.current) {
+      peerConnectionRef.current.close();
+    }
+  };
+
+  const cleanupAndClose = () => {
+    cleanupMedia();
+    setTimeout(() => {
+      onClose();
+    }, 1200);
   };
 
   const formatDuration = (secs) => {
@@ -156,69 +267,105 @@ export default function WebRTCCallModal({ callData, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 bg-black/95 backdrop-blur-2xl flex items-center justify-center p-4">
+      {/* Hidden audio element ensuring remote voice is played loud and clear */}
+      <audio ref={remoteAudioRef} autoPlay playsInline />
+
       <div className="w-full max-w-lg h-[80vh] bg-black rounded-3xl border border-white/20 flex flex-col justify-between p-6 relative overflow-hidden shadow-2xl">
         {/* Videos Container */}
         <div className="absolute inset-0 z-0 bg-black flex items-center justify-center">
-          <video ref={remoteVideoRef} autoPlay playsInline className="w-full h-full object-cover" />
-          <video ref={localVideoRef} autoPlay playsInline muted className="absolute top-4 right-4 w-32 h-44 object-cover rounded-2xl border-2 border-white/40 shadow-xl" />
+          {isVideoCall ? (
+            <>
+              <video
+                ref={remoteVideoRef}
+                autoPlay
+                playsInline
+                className="w-full h-full object-cover"
+              />
+              <video
+                ref={localVideoRef}
+                autoPlay
+                playsInline
+                muted
+                className="absolute top-4 right-4 w-32 h-44 object-cover rounded-2xl border-2 border-white/40 shadow-xl"
+              />
+            </>
+          ) : (
+            <div className="flex flex-col items-center justify-center gap-4 text-center">
+              <div className="relative">
+                <div className="w-32 h-32 rounded-full bg-gradient-to-tr from-amber-500 to-rose-500 flex items-center justify-center text-4xl font-extrabold text-white shadow-2xl animate-pulse ring-8 ring-white/10">
+                  {(callData.caller_name || callData.targetName || 'Noren')?.[0]}
+                </div>
+                <div className="absolute -bottom-2 right-2 p-2 rounded-full bg-emerald-500 text-white shadow-lg">
+                  <Volume2 className="w-5 h-5 animate-bounce" />
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Overlay Info */}
-        <div className="relative z-10 text-center mt-4">
-          <h3 className="text-xl font-extrabold text-white">
-            {callData.caller_name || callData.targetName || 'Noren Calling'}
+        {/* Overlay Header Info */}
+        <div className="relative z-10 text-center mt-4 bg-black/40 backdrop-blur-md p-4 rounded-2xl border border-white/10 max-w-xs mx-auto">
+          <h3 className="text-lg font-extrabold text-white truncate">
+            {callData.caller_name || callData.targetName || 'Noren User'}
           </h3>
-          <p className="text-xs font-semibold text-neutral-300 mt-1 uppercase tracking-widest">
-            {callState === 'incoming' && 'Incoming Call...'}
-            {callState === 'outgoing' && 'Ringing...'}
-            {callState === 'connected' && formatDuration(callDuration)}
-            {callState === 'ended' && 'Call Ended'}
+          <p className="text-xs font-semibold text-emerald-400 mt-1 uppercase tracking-widest flex items-center justify-center gap-1.5">
+            {callState === 'incoming' && '📞 Incoming Call...'}
+            {callState === 'outgoing' && '🔔 Ringing...'}
+            {callState === 'connected' && `🟢 ${formatDuration(callDuration)}`}
+            {callState === 'ended' && '🔴 Call Ended'}
           </p>
         </div>
 
-        {/* Controls */}
+        {/* Controls Bar */}
         <div className="relative z-10 flex items-center justify-center gap-6 mb-6">
           {callState === 'incoming' ? (
             <>
               <button
                 onClick={handleAcceptCall}
-                className="w-14 h-14 rounded-full bg-emerald-500 hover:bg-emerald-400 text-white flex items-center justify-center shadow-lg shadow-emerald-500/30"
+                className="w-16 h-16 rounded-full bg-emerald-500 hover:bg-emerald-400 text-white flex items-center justify-center shadow-lg shadow-emerald-500/40 transition-transform active:scale-95"
+                title="Accept Call"
               >
-                <Phone className="w-6 h-6" />
+                <Phone className="w-7 h-7" />
               </button>
               <button
                 onClick={handleEndCall}
-                className="w-14 h-14 rounded-full bg-rose-600 hover:bg-rose-500 text-white flex items-center justify-center shadow-lg shadow-rose-600/30"
+                className="w-16 h-16 rounded-full bg-rose-600 hover:bg-rose-500 text-white flex items-center justify-center shadow-lg shadow-rose-600/40 transition-transform active:scale-95"
+                title="Decline Call"
               >
-                <PhoneOff className="w-6 h-6" />
+                <PhoneOff className="w-7 h-7" />
               </button>
             </>
           ) : (
             <>
               <button
-                onClick={() => setIsMicMuted(!isMicMuted)}
-                className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                  isMicMuted ? 'bg-rose-500 text-white' : 'bg-neutral-800 text-neutral-200 border border-white/20'
+                onClick={toggleMic}
+                className={`w-14 h-14 rounded-full flex items-center justify-center transition-all ${
+                  isMicMuted ? 'bg-rose-500 text-white shadow-rose-500/30' : 'bg-white/10 hover:bg-white/20 text-white border border-white/20'
                 }`}
+                title={isMicMuted ? 'Unmute Microphone' : 'Mute Microphone'}
               >
-                {isMicMuted ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+                {isMicMuted ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
               </button>
 
               <button
                 onClick={handleEndCall}
-                className="w-14 h-14 rounded-full bg-rose-600 hover:bg-rose-500 text-white flex items-center justify-center shadow-lg shadow-rose-600/30"
+                className="w-16 h-16 rounded-full bg-rose-600 hover:bg-rose-500 text-white flex items-center justify-center shadow-lg shadow-rose-600/40 transition-transform active:scale-95"
+                title="End Call"
               >
-                <PhoneOff className="w-6 h-6" />
+                <PhoneOff className="w-7 h-7" />
               </button>
 
-              <button
-                onClick={() => setIsVideoOff(!isVideoOff)}
-                className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                  isVideoOff ? 'bg-rose-500 text-white' : 'bg-neutral-800 text-neutral-200 border border-white/20'
-                }`}
-              >
-                {isVideoOff ? <VideoOff className="w-5 h-5" /> : <Video className="w-5 h-5" />}
-              </button>
+              {isVideoCall && (
+                <button
+                  onClick={toggleVideo}
+                  className={`w-14 h-14 rounded-full flex items-center justify-center transition-all ${
+                    isVideoOff ? 'bg-rose-500 text-white shadow-rose-500/30' : 'bg-white/10 hover:bg-white/20 text-white border border-white/20'
+                  }`}
+                  title={isVideoOff ? 'Turn Camera On' : 'Turn Camera Off'}
+                >
+                  {isVideoOff ? <VideoOff className="w-6 h-6" /> : <Video className="w-6 h-6" />}
+                </button>
+              )}
             </>
           )}
         </div>
