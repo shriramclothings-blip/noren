@@ -19,17 +19,12 @@ export default function Navbar({ onOpenCreatePost }) {
     <header className="sticky top-0 z-40 w-full glass-panel border-b border-slate-800/80 px-4 lg:px-8 py-3">
       <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
         {/* Brand Identity */}
-        <Link to="/" className="flex items-center gap-2.5 group">
-          <svg className="w-6 h-6 text-white group-hover:scale-105 transition-transform" viewBox="0 0 24 24" fill="currentColor">
-            <g transform="rotate(-30 12 12)">
-              <circle cx="7.3" cy="3.2" r="1.45"/>
-              <rect x="5.5" y="4.7" width="3.6" height="14.6" rx="1.8"/>
-              <rect x="14.9" y="4.7" width="3.6" height="14.6" rx="1.8"/>
-              <circle cx="16.7" cy="20.8" r="1.45"/>
-            </g>
-          </svg>
-          <span className="text-lg font-semibold tracking-tight text-white">
-            Vesper<span className="font-normal text-slate-300">.ai</span>
+        <Link to="/" className="flex items-center gap-2 group">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-500 via-sky-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-cyan-500/20 group-hover:scale-105 transition-transform">
+            <Sparkles className="w-5 h-5 text-white" />
+          </div>
+          <span className="text-xl font-extrabold tracking-tight text-white font-display">
+            NOREN <span className="text-cyan-400 font-normal text-sm tracking-widest uppercase">Social</span>
           </span>
         </Link>
 
