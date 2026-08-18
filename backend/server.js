@@ -514,10 +514,10 @@ httpServer.listen(PORT, '0.0.0.0', () => console.log(`🚀 NOREN API running on 
       }
     });
 
-    socket.on('call:accept', async (data) => {
-      const { call_id, caller_id, answer } = data;
+    socket.on('call:accept', async (data = {}) => {
+      const { call_id, caller_id, answer = null } = data || {};
 
-      const entry = activeCalls.get(call_id);
+      const entry = call_id ? activeCalls.get(call_id) : null;
       if (entry?.ringingTimer) clearTimeout(entry.ringingTimer);
 
       if (entry) {
@@ -533,19 +533,21 @@ httpServer.listen(PORT, '0.0.0.0', () => console.log(`🚀 NOREN API running on 
         }
       }
 
-      io.to(`user:${caller_id}`).emit('call:accepted', {
-        call_id,
-        callee_id: user.id,
-        callee_name: user.name,
-        answer: answer || null,
-      });
-
-      if (answer) {
-        io.to(`user:${caller_id}`).emit('call:answer', {
+      if (caller_id) {
+        io.to(`user:${caller_id}`).emit('call:accepted', {
           call_id,
-          answer,
-          from_id: user.id,
+          callee_id: user.id,
+          callee_name: user.name,
+          answer: answer || null,
         });
+
+        if (answer) {
+          io.to(`user:${caller_id}`).emit('call:answer', {
+            call_id,
+            answer,
+            from_id: user.id,
+          });
+        }
       }
     });
 
