@@ -106,6 +106,7 @@ app.use('/api/newsletter',    require('./routes/newsletter'));
 app.use('/api/seller',        require('./routes/seller'));
 app.use('/api/admin/sellers', require('./routes/adminSeller'));
 app.use('/api/social',        require('./routes/social'));
+app.use('/api/social',        require('./routes/socialMessaging')); // Messaging, notifications, settings
 app.use('/api/admin/social',  require('./routes/adminSocial'));
 
 // ── Sitemap in-memory cache (one DB query per 24 hours) ──────────────────

@@ -4,7 +4,9 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js"
+    "dev": "nodemon server.js",
+    "migrate": "node migrations/runMigrations.js",
+    "migrate:test": "node migrations/testMigrations.js"
   },
   "type": "commonjs",
   "dependencies": {
