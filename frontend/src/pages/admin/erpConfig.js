@@ -111,7 +111,7 @@ export const ERP_NAV_GROUPS = [
   },
   {
     key: 'noren-messaging',
-    label: 'Noren Messaging',
+    label: 'NOREN Social',
     items: [
       { key: 'social-dashboard', label: 'Social Dashboard', icon: 'LayoutDashboard', componentKey: 'social-workspace', roles: ['admin','super_admin'], description: 'Overview of platform social engagement, total posts, reels, DMs and active users.' },
       { key: 'social-users',     label: 'Users & Verification', icon: 'UsersRound', componentKey: 'social-workspace', roles: ['admin','super_admin'], description: 'Manage social user accounts, blue verification badges, suspensions and bans.' },

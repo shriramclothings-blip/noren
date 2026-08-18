@@ -78,7 +78,7 @@ export default function AdminSocialWorkspace({ initialTab = 'dashboard' }) {
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <div>
-          <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0, color: '#0f172a' }}>Noren Messaging Administration</h1>
+          <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0, color: '#0f172a' }}>NOREN Social Administration</h1>
           <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: 14 }}>
             Central social platform moderation, analytics, user verification, and feature flags.
           </p>

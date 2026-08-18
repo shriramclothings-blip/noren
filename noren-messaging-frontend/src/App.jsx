@@ -109,10 +109,10 @@ function LoginView() {
     <div className="min-h-screen flex items-center justify-center p-4">
       <div className="w-full max-w-md glass-panel rounded-3xl p-8 border border-slate-800 shadow-2xl">
         <h2 className="text-2xl font-black text-white text-center mb-1">
-          {isRegister ? 'Join Noren Social' : 'Welcome Back'}
+          {isRegister ? 'Join NOREN Social' : 'Welcome Back'}
         </h2>
-        <p className="text-xs text-slate-400 text-center mb-6">
-          Access Noren Messaging with your existing ecosystem account.
+        <p className="text-xs text-neutral-400 text-center mb-6">
+          Access NOREN Social with your existing ecosystem account.
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
