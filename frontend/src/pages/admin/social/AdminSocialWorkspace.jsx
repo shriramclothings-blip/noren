@@ -15,6 +15,8 @@ export default function AdminSocialWorkspace({ initialTab = 'dashboard' }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [reportFilter, setReportFilter] = useState('pending');
 
+  const [contentList, setContentList] = useState([]);
+
   useEffect(() => {
     fetchData();
   }, [activeTab, reportFilter]);
@@ -25,6 +27,9 @@ export default function AdminSocialWorkspace({ initialTab = 'dashboard' }) {
       if (activeTab === 'dashboard' || activeTab === 'social-dashboard') {
         const res = await api.get('/admin/social/metrics');
         setMetrics(res.data.metrics);
+      } else if (activeTab === 'posts' || activeTab === 'reels') {
+        const res = await api.get(`/admin/social/content?type=${activeTab}`);
+        setContentList(res.data.content || []);
       } else if (activeTab === 'reports' || activeTab === 'social-reports') {
         const res = await api.get(`/admin/social/reports?status=${reportFilter}`);
         setReports(res.data);
@@ -36,6 +41,22 @@ export default function AdminSocialWorkspace({ initialTab = 'dashboard' }) {
       console.error('Failed to load admin social data:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAdminDeleteContent = async (contentType, contentId) => {
+    if (!window.confirm(`Are you sure you want to delete this ${contentType}?`)) return;
+    try {
+      await api.post('/admin/social/content/action', {
+        content_type: contentType,
+        content_id: contentId,
+        action: 'remove',
+        reason: 'Removed by Admin'
+      });
+      toast.success(`${contentType} deleted successfully`);
+      setContentList(prev => prev.filter(c => c.id !== contentId));
+    } catch {
+      toast.error('Failed to delete content');
     }
   };
 
@@ -200,6 +221,33 @@ export default function AdminSocialWorkspace({ initialTab = 'dashboard' }) {
                       </button>
                     </div>
                   )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : activeTab === 'posts' || activeTab === 'reels' ? (
+        <div style={{ background: '#fff', borderRadius: 12, padding: 20, border: '1px solid #e2e8f0' }}>
+          <h3 style={{ margin: '0 0 16px', fontSize: 16, fontWeight: 700, textTransform: 'capitalize' }}>{activeTab} Management</h3>
+          {!contentList.length ? (
+            <div style={{ padding: 40, textAlign: 'center', color: '#64748b' }}>No {activeTab} published yet.</div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {contentList.map(item => (
+                <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0' }}>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>{item.name}</span>
+                      <span style={{ fontSize: 11, color: '#94a3b8' }}>({new Date(item.created_at).toLocaleString()})</span>
+                    </div>
+                    <div style={{ fontSize: 14, color: '#334155' }}>{item.caption || 'No caption'}</div>
+                    <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>Likes: {item.likes_count || 0}</div>
+                  </div>
+                  <button
+                    onClick={() => handleAdminDeleteContent(item.content_type || (activeTab === 'posts' ? 'post' : 'reel'), item.id)}
+                    style={{ padding: '6px 14px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <Trash2 size={14} /> Remove Content
+                  </button>
                 </div>
               ))}
             </div>

@@ -268,46 +268,51 @@ const manageUserStatus = async (req, res) => {
 // List content (posts, reels, comments)
 const listContent = async (req, res) => {
   try {
-    const type = req.query.type || 'all'; // post, reel, comment, message
-    const status = req.query.status || 'active'; // active, removed, flagged
-    const limit = parseInt(req.query.limit) || 20;
+    const type = req.query.type || 'posts'; // posts, reels, comments, all
+    const limit = parseInt(req.query.limit) || 50;
     const offset = parseInt(req.query.offset) || 0;
 
-    let query = '';
-    let params = [];
-
-    if (type === 'post' || type === 'all') {
-      query += `
-        SELECT 'post' as content_type, p.id, p.user_id, u.name, u.avatar_url, 
-               p.caption, p.likes_count, p.created_at
-        FROM src_social_posts p
-        JOIN src_users u ON p.user_id = u.id
-      `;
-      params = [limit, offset];
-    } else if (type === 'reel') {
-      query += `
-        SELECT 'reel' as content_type, r.id, r.user_id, u.name, u.avatar_url,
-               r.caption, r.likes_count, r.created_at
-        FROM src_social_reels r
-        JOIN src_users u ON r.user_id = u.id
-      `;
-    } else if (type === 'comment') {
-      query += `
-        SELECT 'comment' as content_type, c.id, c.user_id, u.name, u.avatar_url,
-               c.comment_text, c.likes_count, c.created_at
-        FROM src_social_comments c
-        JOIN src_users u ON c.user_id = u.id
-        WHERE c.is_hidden = FALSE
-      `;
+    let rows = [];
+    if (type === 'posts' || type === 'all' || type === 'post') {
+      const postsRes = await pool.query(
+        `SELECT 'post' as content_type, p.id, p.user_id, u.name, u.avatar_url, 
+                p.caption, p.likes_count, p.created_at
+         FROM src_social_posts p
+         JOIN src_users u ON p.user_id = u.id
+         ORDER BY p.created_at DESC
+         LIMIT $1 OFFSET $2`,
+        [limit, offset]
+      );
+      rows = [...rows, ...postsRes.rows];
+    }
+    
+    if (type === 'reels' || type === 'reel') {
+      const reelsRes = await pool.query(
+        `SELECT 'reel' as content_type, r.id, r.user_id, u.name, u.avatar_url,
+                r.caption, r.likes_count, r.created_at
+         FROM src_social_reels r
+         JOIN src_users u ON r.user_id = u.id
+         ORDER BY r.created_at DESC
+         LIMIT $1 OFFSET $2`,
+        [limit, offset]
+      );
+      rows = [...rows, ...reelsRes.rows];
     }
 
-    if (query) {
-      query += ` ORDER BY created_at DESC LIMIT $${params.length - 1} OFFSET $${params.length}`;
-      const contentRes = await pool.query(query, params);
-      res.json({ content: contentRes.rows, limit, offset });
-    } else {
-      res.json({ content: [], limit, offset });
+    if (type === 'comments' || type === 'comment') {
+      const commentsRes = await pool.query(
+        `SELECT 'comment' as content_type, c.id, c.user_id, u.name, u.avatar_url,
+                c.comment_text as caption, c.likes_count, c.created_at
+         FROM src_social_comments c
+         JOIN src_users u ON c.user_id = u.id
+         ORDER BY c.created_at DESC
+         LIMIT $1 OFFSET $2`,
+        [limit, offset]
+      );
+      rows = [...rows, ...commentsRes.rows];
     }
+
+    res.json({ content: rows, limit, offset });
   } catch (err) {
     console.error('listContent error:', err.message);
     res.status(500).json({ message: 'Failed to list content' });
@@ -320,30 +325,22 @@ const manageContent = async (req, res) => {
     const adminId = req.user.id;
     const { content_type, content_id, action, reason } = req.body;
 
-    if (!['remove', 'restore', 'flag'].includes(action)) {
+    if (!['remove', 'restore', 'flag', 'delete'].includes(action)) {
       return res.status(400).json({ message: 'Invalid action' });
     }
 
-    if (action === 'remove') {
+    if (action === 'remove' || action === 'delete') {
       if (content_type === 'post') {
-        await pool.query('UPDATE src_social_posts SET is_deleted = TRUE WHERE id = $1', [content_id]);
+        await pool.query('DELETE FROM src_social_posts WHERE id = $1', [content_id]);
       } else if (content_type === 'reel') {
-        await pool.query('UPDATE src_social_reels SET is_deleted = TRUE WHERE id = $1', [content_id]);
+        await pool.query('DELETE FROM src_social_reels WHERE id = $1', [content_id]);
       } else if (content_type === 'comment') {
-        await pool.query('UPDATE src_social_comments SET is_hidden = TRUE WHERE id = $1', [content_id]);
-      }
-    } else if (action === 'restore') {
-      if (content_type === 'post') {
-        await pool.query('UPDATE src_social_posts SET is_deleted = FALSE WHERE id = $1', [content_id]);
-      } else if (content_type === 'reel') {
-        await pool.query('UPDATE src_social_reels SET is_deleted = FALSE WHERE id = $1', [content_id]);
-      } else if (content_type === 'comment') {
-        await pool.query('UPDATE src_social_comments SET is_hidden = FALSE WHERE id = $1', [content_id]);
+        await pool.query('DELETE FROM src_social_comments WHERE id = $1', [content_id]);
       }
     }
 
     await logAdminAction(adminId, `${action}_content`, content_type, content_id, reason);
-    res.json({ message: `Content ${action}ed successfully` });
+    res.json({ message: `Content ${action}d successfully` });
   } catch (err) {
     console.error('manageContent error:', err.message);
     res.status(500).json({ message: 'Failed to manage content' });

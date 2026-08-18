@@ -175,6 +175,9 @@ function LoginView() {
   );
 }
 
+import NotificationsView from './components/NotificationsView';
+import BookmarksView from './components/BookmarksView';
+
 function MainLayout() {
   const [showCreatePost, setShowCreatePost] = useState(false);
   const [activeCallData, setActiveCallData] = useState(null);
@@ -197,6 +200,8 @@ function MainLayout() {
             <Route path="/search" element={<SearchView />} />
             <Route path="/reels" element={<ReelsView />} />
             <Route path="/messages" element={<DirectMessages onInitiateCall={handleInitiateCall} />} />
+            <Route path="/notifications" element={<NotificationsView />} />
+            <Route path="/bookmarks" element={<BookmarksView />} />
             <Route path="/profile/:username" element={<ProfileView />} />
             <Route path="/settings" element={<SettingsView />} />
             <Route path="*" element={<Navigate to="/" replace />} />

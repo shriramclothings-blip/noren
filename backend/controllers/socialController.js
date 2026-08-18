@@ -937,6 +937,76 @@ const deleteReel = async (req, res) => {
   }
 };
 
+const getBookmarks = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const postsRes = await pool.query(
+      `SELECT p.id, p.user_id, p.caption, p.location, p.alt_text,
+              p.is_comments_disabled, p.is_likes_hidden, p.privacy,
+              p.likes_count, p.comments_count, p.shares_count, p.reposts_count,
+              p.is_edited, p.created_at,
+              u.name AS author_name, u.username AS author_username, u.avatar_url AS author_avatar, u.is_verified AS author_verified,
+              EXISTS (SELECT 1 FROM src_social_likes WHERE user_id = $1 AND target_type = 'post' AND target_id = p.id) AS is_liked,
+              TRUE AS is_saved,
+              COALESCE(json_agg(
+                json_build_object(
+                  'id', m.id,
+                  'media_type', m.media_type,
+                  'media_url', m.media_url,
+                  'thumbnail_url', m.thumbnail_url,
+                  'aspect_ratio', m.aspect_ratio,
+                  'sort_order', m.sort_order
+                ) ORDER BY m.sort_order ASC
+              ) FILTER (WHERE m.id IS NOT NULL), '[]') AS media
+       FROM src_social_bookmarks b
+       JOIN src_social_posts p ON p.id = b.target_id AND b.target_type = 'post'
+       JOIN src_users u ON u.id = p.user_id
+       LEFT JOIN src_social_post_media m ON m.post_id = p.id
+       WHERE b.user_id = $1
+       GROUP BY p.id, u.id, b.created_at
+       ORDER BY b.created_at DESC`,
+      [userId]
+    );
+
+    res.json({ posts: postsRes.rows });
+  } catch (err) {
+    console.error('getBookmarks error:', err.message);
+    res.status(500).json({ message: 'Failed to fetch saved bookmarks' });
+  }
+};
+
+const getNotifications = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const notifsRes = await pool.query(
+      `SELECT id, message, type, is_read, created_at
+       FROM src_notifications
+       WHERE user_id = $1
+       ORDER BY created_at DESC
+       LIMIT 50`,
+      [userId]
+    );
+
+    res.json({ notifications: notifsRes.rows });
+  } catch (err) {
+    console.error('getNotifications error:', err.message);
+    res.status(500).json({ message: 'Failed to fetch notifications' });
+  }
+};
+
+const markNotificationsRead = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    await pool.query(
+      `UPDATE src_notifications SET is_read = TRUE WHERE user_id = $1`,
+      [userId]
+    );
+    res.json({ message: 'Notifications marked as read' });
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to update notifications' });
+  }
+};
+
 module.exports = {
   getFeed,
   createPost,
@@ -945,6 +1015,7 @@ module.exports = {
   deletePost,
   toggleLike,
   toggleBookmark,
+  getBookmarks,
   toggleRepost,
   getComments,
   addComment,
@@ -961,6 +1032,8 @@ module.exports = {
   followUser,
   unfollowUser,
   globalSearch,
+  getNotifications,
+  markNotificationsRead,
   submitReport,
   blockUser,
   unblockUser,
