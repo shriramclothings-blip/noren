@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { RefreshCw, Download, SunMedium, MoonStar, Activity, MapPin } from 'lucide-react';
+import { RefreshCw, Download, SunMedium, MoonStar, Globe as GlobeIcon, Cpu, Layers } from 'lucide-react';
 import { io } from 'socket.io-client';
 import api from '../../../../utils/api';
 import toast from 'react-hot-toast';
 import Globe from './Globe';
+import CesiumGlobe from './CesiumGlobe';
 import { WebGLErrorBoundary } from './WebGLErrorBoundary';
 import VisitorStats from './VisitorStats';
 import MapFilters from './MapFilters';
@@ -16,6 +17,7 @@ export default function LiveVisitorMap() {
   const [selectedVisitor, setSelectedVisitor] = useState(null);
   const [socketConnected, setSocketConnected] = useState(false);
   const [themeMode, setThemeMode] = useState('dark');
+  const [globeEngine, setGlobeEngine] = useState('cesium'); // 'cesium' (Google Earth 3D) or 'three' (Cyber 3D)
   const [filters, setFilters] = useState({
     startDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     endDate: new Date().toISOString().split('T')[0],
@@ -180,7 +182,7 @@ export default function LiveVisitorMap() {
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <h2 style={{ fontSize: 20, fontWeight: 800, color: theme.text, margin: 0, letterSpacing: '-0.02em' }}>
-                Live Visitor Map
+                Live Visitor Map 3D
               </h2>
               <span
                 style={{
@@ -201,19 +203,70 @@ export default function LiveVisitorMap() {
               </span>
             </div>
             <p style={{ fontSize: 12, color: theme.textMuted, margin: '4px 0 0' }}>
-              Futuristic 3D Earth visualization of real-time global traffic & UTM campaigns
+              Real Earth Satellite Globe visualization with live visitor tracking & OpenStreetMap data
             </p>
           </div>
 
-          <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+            {/* Globe Engine Switcher */}
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                background: theme.panelStrong,
+                borderRadius: 10,
+                border: `1px solid ${theme.borderStrong}`,
+                padding: 3,
+                gap: 2,
+              }}
+            >
+              <button
+                onClick={() => setGlobeEngine('cesium')}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 5,
+                  padding: '6px 12px',
+                  borderRadius: 8,
+                  border: 'none',
+                  background: globeEngine === 'cesium' ? 'linear-gradient(135deg, #0284c7, #0369a1)' : 'transparent',
+                  color: globeEngine === 'cesium' ? '#fff' : theme.textMuted,
+                  fontSize: 11,
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                }}
+              >
+                <GlobeIcon size={13} /> Google Earth 3D
+              </button>
+
+              <button
+                onClick={() => setGlobeEngine('three')}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 5,
+                  padding: '6px 12px',
+                  borderRadius: 8,
+                  border: 'none',
+                  background: globeEngine === 'three' ? 'linear-gradient(135deg, #7c3aed, #4f46e5)' : 'transparent',
+                  color: globeEngine === 'three' ? '#fff' : theme.textMuted,
+                  fontSize: 11,
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                }}
+              >
+                <Cpu size={13} /> Cyber 3D Globe
+              </button>
+            </div>
+
             <button
               onClick={() => setThemeMode(isDark ? 'light' : 'dark')}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                width: 38,
-                height: 38,
+                width: 36,
+                height: 36,
                 borderRadius: 10,
                 border: `1px solid ${theme.borderStrong}`,
                 background: theme.panelStrong,
@@ -222,7 +275,7 @@ export default function LiveVisitorMap() {
               }}
               title={isDark ? 'Light theme' : 'Dark theme'}
             >
-              {isDark ? <SunMedium size={16} /> : <MoonStar size={16} />}
+              {isDark ? <SunMedium size={15} /> : <MoonStar size={15} />}
             </button>
 
             <button
@@ -252,7 +305,7 @@ export default function LiveVisitorMap() {
         {/* Filters */}
         <MapFilters filters={filters} onFilterChange={setFilters} theme={theme} />
 
-        {/* 3D Earth Globe + Detail Panel */}
+        {/* 3D Earth Globe (Google Earth Cesium or Cyber 3D) + Detail Panel */}
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 320px', gap: 16, minHeight: 560 }}>
           <div
             style={{
@@ -265,11 +318,19 @@ export default function LiveVisitorMap() {
             }}
           >
             <WebGLErrorBoundary locations={geoLocations} onLocationSelect={setSelectedVisitor}>
-              <Globe
-                locations={geoLocations}
-                selectedVisitor={selectedVisitor}
-                onLocationSelect={setSelectedVisitor}
-              />
+              {globeEngine === 'cesium' ? (
+                <CesiumGlobe
+                  locations={geoLocations}
+                  selectedVisitor={selectedVisitor}
+                  onLocationSelect={setSelectedVisitor}
+                />
+              ) : (
+                <Globe
+                  locations={geoLocations}
+                  selectedVisitor={selectedVisitor}
+                  onLocationSelect={setSelectedVisitor}
+                />
+              )}
             </WebGLErrorBoundary>
           </div>
 
@@ -295,10 +356,10 @@ export default function LiveVisitorMap() {
                   boxShadow: theme.shadow,
                 }}
               >
-                <MapPin size={36} color="#38bdf8" style={{ marginBottom: 12, opacity: 0.6 }} />
+                <GlobeIcon size={36} color="#38bdf8" style={{ marginBottom: 12, opacity: 0.6 }} />
                 <div style={{ fontWeight: 700, fontSize: 14, color: theme.text }}>Select a Visitor</div>
                 <div style={{ fontSize: 12, marginTop: 4, maxWidth: 220 }}>
-                  Click any glowing marker on the 3D Earth or a row in the live table to inspect session details.
+                  Click any marker on the 3D Google Earth globe or a row in the live table to inspect session details.
                 </div>
               </div>
             )}
