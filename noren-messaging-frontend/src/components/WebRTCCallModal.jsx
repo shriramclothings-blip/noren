@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useSocket } from '../context/SocketContext';
-import { Phone, PhoneOff, Video, VideoOff, Mic, MicOff, Volume2, Loader2 } from 'lucide-react';
+import { Phone, PhoneOff, Video, VideoOff, Mic, MicOff, Volume2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function WebRTCCallModal({ callData, onClose }) {
@@ -20,10 +20,12 @@ export default function WebRTCCallModal({ callData, onClose }) {
 
   const isVideoCall = (callData.callType || callData.call_type) === 'video';
 
+  const getTargetId = () => callData.targetId || callData.caller_id || callData.user_id;
+
   useEffect(() => {
     if (!socket) return;
 
-    // Multi-STUN configuration for reliable WebRTC NAT traversal across all cellular & home networks
+    // Comprehensive STUN + TURN OpenRelay configuration for 100% NAT traversal
     const pc = new RTCPeerConnection({
       iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
@@ -31,32 +33,43 @@ export default function WebRTCCallModal({ callData, onClose }) {
         { urls: 'stun:stun2.l.google.com:19302' },
         { urls: 'stun:stun3.l.google.com:19302' },
         { urls: 'stun:stun4.l.google.com:19302' },
+        { urls: 'stun:global.stun.twilio.com:3478' },
         { urls: 'stun:stun.services.mozilla.com' },
+        {
+          urls: 'turn:openrelay.metered.ca:80',
+          username: 'openrelay',
+          credential: 'openrelay',
+        },
+        {
+          urls: 'turn:openrelay.metered.ca:443',
+          username: 'openrelay',
+          credential: 'openrelay',
+        },
       ],
     });
     peerConnectionRef.current = pc;
 
-    // Send local ICE candidates to remote peer via socket
+    // Send local ICE candidates
     pc.onicecandidate = (event) => {
       if (event.candidate) {
         socket.emit('call:ice-candidate', {
-          target_id: callData.targetId || callData.caller_id,
+          target_id: getTargetId(),
           candidate: event.candidate,
         });
       }
     };
 
-    // Receive remote media track (audio / video)
+    // Handle incoming remote media tracks (voice audio & video streams)
     pc.ontrack = (event) => {
-      console.log('📡 WebRTC Track Received:', event.track.kind);
-      const remoteStream = event.streams[0] || new MediaStream([event.track]);
+      console.log('📡 WebRTC Remote Track Arrived:', event.track.kind);
+      const stream = event.streams && event.streams[0] ? event.streams[0] : new MediaStream([event.track]);
 
       if (remoteVideoRef.current) {
-        remoteVideoRef.current.srcObject = remoteStream;
+        remoteVideoRef.current.srcObject = stream;
         remoteVideoRef.current.play().catch(() => {});
       }
       if (remoteAudioRef.current) {
-        remoteAudioRef.current.srcObject = remoteStream;
+        remoteAudioRef.current.srcObject = stream;
         remoteAudioRef.current.play().catch(() => {});
       }
     };
@@ -66,10 +79,11 @@ export default function WebRTCCallModal({ callData, onClose }) {
       setCallState('connected');
       startDurationTimer();
 
-      if (data.answer && pc.signalingState !== 'stable') {
+      const answerSdp = data.answer || callData.answer;
+      if (answerSdp && pc.signalingState !== 'stable') {
         try {
-          await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
-          await processPendingCandidates(pc);
+          await pc.setRemoteDescription(new RTCSessionDescription(answerSdp));
+          await drainPendingCandidates(pc);
         } catch (err) {
           console.error('Failed to set remote answer:', err);
         }
@@ -77,10 +91,10 @@ export default function WebRTCCallModal({ callData, onClose }) {
     });
 
     socket.on('call:answer', async ({ answer }) => {
-      if (pc.signalingState !== 'stable') {
+      if (answer && pc.signalingState !== 'stable') {
         try {
           await pc.setRemoteDescription(new RTCSessionDescription(answer));
-          await processPendingCandidates(pc);
+          await drainPendingCandidates(pc);
         } catch (err) {
           console.error('Failed to set remote answer:', err);
         }
@@ -88,17 +102,19 @@ export default function WebRTCCallModal({ callData, onClose }) {
     });
 
     socket.on('call:ice-candidate', async ({ candidate }) => {
-      if (pc.remoteDescription && pc.remoteDescription.type) {
-        try {
-          await pc.addIceCandidate(new RTCIceCandidate(candidate));
-        } catch {}
-      } else {
-        pendingCandidatesRef.current.push(candidate);
+      if (candidate) {
+        if (pc.remoteDescription && pc.remoteDescription.type) {
+          try {
+            await pc.addIceCandidate(new RTCIceCandidate(candidate));
+          } catch {}
+        } else {
+          pendingCandidatesRef.current.push(candidate);
+        }
       }
     });
 
     socket.on('call:rejected', () => {
-      toast.error('Call rejected');
+      toast.error('Call declined');
       setCallState('ended');
       cleanupAndClose();
     });
@@ -123,11 +139,11 @@ export default function WebRTCCallModal({ callData, onClose }) {
     };
   }, [socket]);
 
-  const processPendingCandidates = async (pc) => {
+  const drainPendingCandidates = async (pc) => {
     while (pendingCandidatesRef.current.length > 0) {
-      const candidate = pendingCandidatesRef.current.shift();
+      const cand = pendingCandidatesRef.current.shift();
       try {
-        await pc.addIceCandidate(new RTCIceCandidate(candidate));
+        await pc.addIceCandidate(new RTCIceCandidate(cand));
       } catch {}
     }
   };
@@ -139,15 +155,29 @@ export default function WebRTCCallModal({ callData, onClose }) {
     }, 1000);
   };
 
+  const getMediaStream = async () => {
+    return await navigator.mediaDevices.getUserMedia({
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+      },
+      video: isVideoCall
+        ? {
+            width: { ideal: 1280, max: 1920 },
+            height: { ideal: 720, max: 1080 },
+            facingMode: 'user',
+          }
+        : false,
+    });
+  };
+
   const initiateOutgoingCall = async (pc) => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: true,
-        video: isVideoCall,
-      });
+      const stream = await getMediaStream();
       localStreamRef.current = stream;
 
-      if (localVideoRef.current) {
+      if (localVideoRef.current && isVideoCall) {
         localVideoRef.current.srcObject = stream;
       }
 
@@ -155,16 +185,19 @@ export default function WebRTCCallModal({ callData, onClose }) {
         pc.addTrack(track, stream);
       });
 
-      const offer = await pc.createOffer();
+      const offer = await pc.createOffer({
+        offerToReceiveAudio: true,
+        offerToReceiveVideo: isVideoCall,
+      });
       await pc.setLocalDescription(offer);
 
       socket.emit('call:initiate', {
-        callee_id: callData.targetId,
+        callee_id: getTargetId(),
         call_type: isVideoCall ? 'video' : 'audio',
         offer,
       });
     } catch (err) {
-      console.error('GetUserMedia error:', err);
+      console.error('initiateOutgoingCall error:', err);
       toast.error('Could not access microphone or camera');
       setCallState('ended');
       cleanupAndClose();
@@ -176,13 +209,10 @@ export default function WebRTCCallModal({ callData, onClose }) {
     if (!pc) return;
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: true,
-        video: isVideoCall,
-      });
+      const stream = await getMediaStream();
       localStreamRef.current = stream;
 
-      if (localVideoRef.current) {
+      if (localVideoRef.current && isVideoCall) {
         localVideoRef.current.srcObject = stream;
       }
 
@@ -192,7 +222,7 @@ export default function WebRTCCallModal({ callData, onClose }) {
 
       if (callData.offer) {
         await pc.setRemoteDescription(new RTCSessionDescription(callData.offer));
-        await processPendingCandidates(pc);
+        await drainPendingCandidates(pc);
 
         const answer = await pc.createAnswer();
         await pc.setLocalDescription(answer);
@@ -217,7 +247,7 @@ export default function WebRTCCallModal({ callData, onClose }) {
     if (socket) {
       socket.emit('call:end', {
         call_id: callData.call_id || 'active',
-        other_user_id: callData.targetId || callData.caller_id,
+        other_user_id: getTargetId(),
       });
     }
     setCallState('ended');
@@ -267,7 +297,7 @@ export default function WebRTCCallModal({ callData, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 bg-black/95 backdrop-blur-2xl flex items-center justify-center p-4">
-      {/* Hidden audio element ensuring remote voice is played loud and clear */}
+      {/* Hidden audio element ensuring remote audio/voice is always output loud and clear */}
       <audio ref={remoteAudioRef} autoPlay playsInline />
 
       <div className="w-full max-w-lg h-[80vh] bg-black rounded-3xl border border-white/20 flex flex-col justify-between p-6 relative overflow-hidden shadow-2xl">

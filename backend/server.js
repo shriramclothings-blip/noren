@@ -515,7 +515,7 @@ httpServer.listen(PORT, '0.0.0.0', () => console.log(`🚀 NOREN API running on 
     });
 
     socket.on('call:accept', async (data) => {
-      const { call_id, caller_id } = data;
+      const { call_id, caller_id, answer } = data;
 
       const entry = activeCalls.get(call_id);
       if (entry?.ringingTimer) clearTimeout(entry.ringingTimer);
