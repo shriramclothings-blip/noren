@@ -15,10 +15,13 @@ export default function NotificationsView() {
     setLoading(true);
     try {
       const res = await api.get('/social/notifications');
-      setNotifications(res.data.notifications || []);
-      await api.put('/social/notifications/read');
-    } catch {
-      toast.error('Failed to load notifications');
+      setNotifications(res.data?.notifications || []);
+      if (res.data?.notifications?.length > 0) {
+        await api.put('/social/notifications/read').catch(() => {});
+      }
+    } catch (err) {
+      console.warn('Failed to load notifications:', err?.message);
+      setNotifications([]);
     } finally {
       setLoading(false);
     }

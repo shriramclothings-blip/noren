@@ -43,9 +43,9 @@ router.post('/users/:id/unfollow', auth, socialCtrl.unfollowUser);
 router.get('/search', optionalAuth, socialCtrl.globalSearch);
 
 // Safety, Privacy & Notifications
-router.get('/bookmarks', auth, socialCtrl.getBookmarks);
-router.get('/notifications', auth, socialCtrl.getNotifications);
-router.put('/notifications/read', auth, socialCtrl.markNotificationsRead);
+router.get('/bookmarks', optionalAuth, socialCtrl.getBookmarks);
+router.get('/notifications', optionalAuth, socialCtrl.getNotifications);
+router.put('/notifications/read', optionalAuth, socialCtrl.markNotificationsRead);
 router.post('/reports', auth, socialCtrl.submitReport);
 router.post('/blocks', auth, socialCtrl.blockUser);
 router.delete('/blocks/:id', auth, socialCtrl.unblockUser);

@@ -939,7 +939,8 @@ const deleteReel = async (req, res) => {
 
 const getBookmarks = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user?.id;
+    if (!userId) return res.json({ posts: [] });
     const postsRes = await pool.query(
       `SELECT p.id, p.user_id, p.caption, p.location, p.alt_text,
               p.is_comments_disabled, p.is_likes_hidden, p.privacy,
@@ -977,7 +978,8 @@ const getBookmarks = async (req, res) => {
 
 const getNotifications = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user?.id;
+    if (!userId) return res.json({ notifications: [] });
     const notifsRes = await pool.query(
       `SELECT id, message, type, is_read, created_at
        FROM src_notifications
@@ -996,7 +998,8 @@ const getNotifications = async (req, res) => {
 
 const markNotificationsRead = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user?.id;
+    if (!userId) return res.json({ message: 'OK' });
     await pool.query(
       `UPDATE src_notifications SET is_read = TRUE WHERE user_id = $1`,
       [userId]
