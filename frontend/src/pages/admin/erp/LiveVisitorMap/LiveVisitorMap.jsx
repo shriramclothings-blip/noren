@@ -17,7 +17,7 @@ export default function LiveVisitorMap() {
   const [selectedVisitor, setSelectedVisitor] = useState(null);
   const [socketConnected, setSocketConnected] = useState(false);
   const [themeMode, setThemeMode] = useState('dark');
-  const [globeEngine, setGlobeEngine] = useState('cesium'); // 'cesium' (Google Earth 3D) or 'three' (Cyber 3D)
+  const [globeEngine, setGlobeEngine] = useState('three'); // Default: 'three' (Three.js 3D Cyber Globe with 3D Arcs & Particles)
   const [filters, setFilters] = useState({
     startDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     endDate: new Date().toISOString().split('T')[0],
