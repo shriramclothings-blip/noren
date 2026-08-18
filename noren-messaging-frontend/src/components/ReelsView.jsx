@@ -75,6 +75,9 @@ export default function ReelsView() {
                 loop
                 muted={isMuted}
                 playsInline
+                onError={(e) => {
+                  e.target.src = 'https://assets.mixkit.co/videos/preview/mixkit-fashion-model-in-a-photoshoot-40244-large.mp4';
+                }}
                 className="w-full h-full object-cover"
               />
 

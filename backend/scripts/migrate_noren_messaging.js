@@ -299,6 +299,60 @@ async function runSocialMigration() {
       CREATE INDEX IF NOT EXISTS idx_social_follows_following ON src_social_follows(following_id);
     `);
 
+    // Auto-seed default permanent Fashion Posts if posts table is empty
+    const postCountRes = await client.query('SELECT COUNT(*) FROM src_social_posts');
+    if (parseInt(postCountRes.rows[0].count) === 0) {
+      const firstUserRes = await client.query('SELECT id FROM src_users ORDER BY id ASC LIMIT 1');
+      const seedUserId = firstUserRes.rows[0]?.id || 1;
+
+      const seedPost1 = await client.query(
+        `INSERT INTO src_social_posts (user_id, caption, location, privacy)
+         VALUES ($1, '✨ Welcome to NOREN Social! Discover spring couture & urban streetwear. #NOREN #Fashion', 'Mumbai, India', 'public')
+         RETURNING id`,
+        [seedUserId]
+      );
+      await client.query(
+        `INSERT INTO src_social_post_media (post_id, media_type, media_url, aspect_ratio, sort_order)
+         VALUES ($1, 'image', 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=1000&auto=format&fit=crop', '1:1', 0)`,
+        [seedPost1.rows[0].id]
+      );
+
+      const seedPost2 = await client.query(
+        `INSERT INTO src_social_posts (user_id, caption, location, privacy)
+         VALUES ($1, '🔥 High-fashion minimalism for the summer season. What do you think of this look? #Streetwear', 'Delhi, India', 'public')
+         RETURNING id`,
+        [seedUserId]
+      );
+      await client.query(
+        `INSERT INTO src_social_post_media (post_id, media_type, media_url, aspect_ratio, sort_order)
+         VALUES ($1, 'image', 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=1000&auto=format&fit=crop', '1:1', 0)`,
+        [seedPost2.rows[0].id]
+      );
+    }
+
+    // Auto-seed default permanent Fashion Reels if reels table is empty
+    const reelCountRes = await client.query('SELECT COUNT(*) FROM src_social_reels');
+    if (parseInt(reelCountRes.rows[0].count) === 0) {
+      const firstUserRes = await client.query('SELECT id FROM src_users ORDER BY id ASC LIMIT 1');
+      const seedUserId = firstUserRes.rows[0]?.id || 1;
+
+      await client.query(
+        `INSERT INTO src_social_reels (user_id, video_url, thumbnail_url, caption, audio_title, is_hidden)
+         VALUES ($1, 'https://assets.mixkit.co/videos/preview/mixkit-fashion-model-in-a-photoshoot-40244-large.mp4',
+                 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=800',
+                 '✨ Official NOREN Runway Collection 2026 #FashionReel #Style', 'Original Audio - Noren Trends', FALSE)`,
+        [seedUserId]
+      );
+
+      await client.query(
+        `INSERT INTO src_social_reels (user_id, video_url, thumbnail_url, caption, audio_title, is_hidden)
+         VALUES ($1, 'https://assets.mixkit.co/videos/preview/mixkit-girl-in-neon-sign-lit-street-40250-large.mp4',
+                 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=800',
+                 '🔥 Urban Neon Fashion Nightout #StreetStyle #Reels', 'Noren Beat - Trending', FALSE)`,
+        [seedUserId]
+      );
+    }
+
     await client.query('COMMIT');
     console.log('✅ Noren Messaging Database Migration completed successfully!');
   } catch (err) {

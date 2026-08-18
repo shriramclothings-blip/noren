@@ -1020,6 +1020,8 @@ const markNotificationsRead = async (req, res) => {
   }
 };
 
+const fs = require('fs');
+
 const uploadMedia = async (req, res) => {
   try {
     const files = req.files || (req.file ? [req.file] : []);
@@ -1030,16 +1032,46 @@ const uploadMedia = async (req, res) => {
     const host = req.get('host');
     const protocol = req.protocol;
 
-    const uploaded = files.map(file => {
+    const uploaded = [];
+    for (const file of files) {
       const isVideo = file.mimetype.startsWith('video/');
-      const fileUrl = `${protocol}://${host}/uploads/${file.filename}`;
-      return {
+      let fileUrl = `${protocol}://${host}/uploads/${file.filename}`;
+
+      // 1. Try Cloudinary direct stream upload if configured
+      if (process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET) {
+        try {
+          const { cloudinary } = require('../config/cloudinary');
+          const result = await cloudinary.uploader.upload(file.path, {
+            resource_type: isVideo ? 'video' : 'auto',
+            folder: 'noren-social',
+          });
+          if (result && result.secure_url) {
+            fileUrl = result.secure_url;
+          }
+        } catch (cErr) {
+          console.warn('Cloudinary upload warning, using persistent Data URI:', cErr.message);
+        }
+      }
+
+      // 2. Permanent Data URI encoding for files < 8MB to ensure 100% persistence across container redeployments
+      if (!fileUrl.startsWith('http://res.cloudinary.com') && !fileUrl.startsWith('https://res.cloudinary.com')) {
+        try {
+          if (file.path && fs.existsSync(file.path) && file.size < 8 * 1024 * 1024) {
+            const buffer = fs.readFileSync(file.path);
+            fileUrl = `data:${file.mimetype};base64,${buffer.toString('base64')}`;
+          }
+        } catch (bErr) {
+          console.warn('Data URI conversion warning:', bErr.message);
+        }
+      }
+
+      uploaded.push({
         media_type: isVideo ? 'video' : 'image',
         media_url: fileUrl,
         filename: file.filename,
         original_name: file.originalname,
-      };
-    });
+      });
+    }
 
     res.json({ message: 'Upload successful', files: uploaded, url: uploaded[0].media_url });
   } catch (err) {
