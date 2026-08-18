@@ -655,16 +655,17 @@ const getUserProfile = async (req, res) => {
   try {
     const username = req.params.username;
     const viewerId = req.user?.id || 0;
+    const cleanQ = username.replace(/^#/, '').trim();
 
     const userRes = await pool.query(
-      `SELECT u.id, u.name, u.username, u.email, u.avatar_url, u.bio, u.website,
+      `SELECT u.id, u.name, u.username, u.user_code, u.email, u.avatar_url, u.bio, u.website,
               u.is_verified, u.is_private, u.followers_count, u.following_count, u.posts_count,
               EXISTS (SELECT 1 FROM src_social_follows WHERE follower_id = $2 AND following_id = u.id AND status = 'accepted') AS is_following,
               EXISTS (SELECT 1 FROM src_social_follows WHERE follower_id = $2 AND following_id = u.id AND status = 'pending') AS is_follow_pending,
               EXISTS (SELECT 1 FROM src_social_blocks WHERE blocker_id = $2 AND blocked_id = u.id) AS is_blocked
        FROM src_users u
-       WHERE LOWER(u.username) = LOWER($1) OR u.id::text = $1`,
-      [username, viewerId]
+       WHERE LOWER(u.username) = LOWER($1) OR u.id::text = $1 OR u.user_code = $3`,
+      [username, viewerId, cleanQ]
     );
 
     if (!userRes.rows.length) return res.status(404).json({ message: 'User profile not found' });
@@ -784,15 +785,16 @@ const globalSearch = async (req, res) => {
   try {
     const q = (req.query.q || '').trim();
     if (!q) return res.json({ users: [], hashtags: [], posts: [] });
+    const cleanQ = q.replace(/^#/, '').trim();
 
     const usersRes = await pool.query(
-      `SELECT id, name, username, avatar_url, is_verified, followers_count
+      `SELECT id, name, username, user_code, avatar_url, is_verified, followers_count
        FROM src_users
-       WHERE (name ILIKE $1 OR username ILIKE $1 OR email ILIKE $1)
+       WHERE (name ILIKE $1 OR username ILIKE $1 OR user_code ILIKE $1 OR user_code = $2 OR CAST(id AS TEXT) = $2)
          AND is_banned = FALSE
        ORDER BY followers_count DESC, name ASC
-       LIMIT 10`,
-      [`%${q}%`]
+       LIMIT 15`,
+      [`%${cleanQ}%`, cleanQ]
     );
 
     const hashtagsRes = await pool.query(

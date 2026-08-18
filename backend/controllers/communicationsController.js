@@ -28,24 +28,24 @@ const validateLocationForBusiness = async (businessId, store_id) => {
 const resolveParticipant = async (businessId, participantId, email, phone) => {
   if (participantId) {
     const userRes = await pool.query(
-      'SELECT id, name, email, phone, avatar_url, role FROM src_users WHERE id = $1 AND business_id = $2 AND is_banned = FALSE',
-      [participantId, businessId]
+      'SELECT id, name, username, user_code, email, phone, avatar_url, role FROM src_users WHERE id = $1 AND is_banned = FALSE',
+      [participantId]
     );
     return userRes.rows[0] || null;
   }
 
   if (email) {
     const userRes = await pool.query(
-      'SELECT id, name, email, phone, avatar_url, role FROM src_users WHERE LOWER(email) = LOWER($1) AND business_id = $2 AND is_banned = FALSE',
-      [email.trim(), businessId]
+      'SELECT id, name, username, user_code, email, phone, avatar_url, role FROM src_users WHERE LOWER(email) = LOWER($1) AND is_banned = FALSE',
+      [email.trim()]
     );
     return userRes.rows[0] || null;
   }
 
   if (phone) {
     const userRes = await pool.query(
-      'SELECT id, name, email, phone, avatar_url, role FROM src_users WHERE phone = $1 AND business_id = $2 AND is_banned = FALSE',
-      [phone.trim(), businessId]
+      'SELECT id, name, username, user_code, email, phone, avatar_url, role FROM src_users WHERE phone = $1 AND is_banned = FALSE',
+      [phone.trim()]
     );
     return userRes.rows[0] || null;
   }
@@ -55,21 +55,36 @@ const resolveParticipant = async (businessId, participantId, email, phone) => {
 
 const searchUsers = async (req, res) => {
   try {
-    const businessId = getScopedBusinessId(req);
-    if (!businessId) return res.status(400).json({ message: 'Business context required' });
-    const q = (req.query.q || '').trim();
-    if (!q || q.length < 2) return res.json([]);
+    const rawQ = (req.query.q || '').trim();
+    if (!rawQ) return res.json([]);
+
+    // Strip leading # if user enters 6-digit user code like #100002
+    const cleanQ = rawQ.replace(/^#/, '').trim();
+    const searchPattern = `%${cleanQ}%`;
 
     const result = await pool.query(
-      `SELECT id, name, email, phone, avatar_url, role
+      `SELECT id, name, username, user_code, email, phone, avatar_url, role
        FROM src_users
-       WHERE business_id = $1
-         AND is_banned = FALSE
-         AND id != $2
-         AND (name ILIKE $3 OR email ILIKE $3 OR phone ILIKE $3)
-       ORDER BY CASE WHEN email ILIKE $3 THEN 0 ELSE 1 END, name ASC
+       WHERE is_banned = FALSE
+         AND id != $1
+         AND (
+           name ILIKE $2 OR 
+           username ILIKE $2 OR 
+           user_code ILIKE $2 OR 
+           user_code = $3 OR
+           email ILIKE $2 OR 
+           phone ILIKE $2 OR
+           CAST(id AS TEXT) = $3
+         )
+       ORDER BY 
+         CASE 
+           WHEN user_code = $3 THEN 0 
+           WHEN username ILIKE $2 THEN 1 
+           WHEN name ILIKE $2 THEN 2 
+           ELSE 3 
+         END, name ASC
        LIMIT 20`,
-      [businessId, req.user.id, `%${q}%`]
+      [req.user.id, searchPattern, cleanQ]
     );
 
     res.json(result.rows);
@@ -87,9 +102,8 @@ const normalizeThreadParticipantIds = (userA, userB) => {
 
 const createPrivateThread = async (req, res) => {
   try {
-    const businessId = getScopedBusinessId(req);
-    if (!businessId) return res.status(400).json({ message: 'Business context required' });
-    const storeId = getScopedStoreId(req);
+    const businessId = req.user.business_id || 1;
+    const storeId = req.user.store_id || 1;
     const { participant_id, email, phone } = req.body;
 
     const participant = await resolveParticipant(businessId, participant_id, email, phone);
@@ -116,8 +130,6 @@ const createPrivateThread = async (req, res) => {
 
 const listPrivateThreads = async (req, res) => {
   try {
-    const businessId = getScopedBusinessId(req);
-    if (!businessId) return res.status(400).json({ message: 'Business context required' });
     const result = await pool.query(
       `SELECT t.id,
           t.user_one_id,
@@ -128,17 +140,18 @@ const listPrivateThreads = async (req, res) => {
           COALESCE((SELECT m.created_at FROM src_private_chat_messages m WHERE m.thread_id = t.id ORDER BY m.created_at DESC LIMIT 1), t.created_at) AS last_message_at,
           CASE WHEN t.user_one_id = $1 THEN u2.id ELSE u1.id END AS participant_id,
           CASE WHEN t.user_one_id = $1 THEN u2.name ELSE u1.name END AS participant_name,
+          CASE WHEN t.user_one_id = $1 THEN u2.username ELSE u1.username END AS participant_username,
+          CASE WHEN t.user_one_id = $1 THEN u2.user_code ELSE u1.user_code END AS participant_user_code,
           CASE WHEN t.user_one_id = $1 THEN u2.email ELSE u1.email END AS participant_email,
           CASE WHEN t.user_one_id = $1 THEN u2.phone ELSE u1.phone END AS participant_phone,
           CASE WHEN t.user_one_id = $1 THEN u2.avatar_url ELSE u1.avatar_url END AS participant_avatar_url
        FROM src_private_chat_threads t
        LEFT JOIN src_users u1 ON u1.id = t.user_one_id
        LEFT JOIN src_users u2 ON u2.id = t.user_two_id
-       WHERE t.business_id = $2
-         AND ($1 = t.user_one_id OR $1 = t.user_two_id)
+       WHERE ($1 = t.user_one_id OR $1 = t.user_two_id)
        ORDER BY last_message_at DESC
        LIMIT 50`,
-      [req.user.id, businessId]
+      [req.user.id]
     );
 
     res.json(result.rows);

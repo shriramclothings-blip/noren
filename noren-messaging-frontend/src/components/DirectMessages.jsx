@@ -135,26 +135,40 @@ export default function DirectMessages({ onInitiateCall }) {
             <Search className="w-4 h-4 text-neutral-400 absolute left-3.5 top-3" />
             <input
               type="text"
-              placeholder="Search contacts..."
+              placeholder="Search by Name, @username or #ID..."
               value={searchQuery}
               onChange={(e) => handleUserSearch(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 text-xs rounded-xl glass-input"
+              className="w-full pl-9 pr-4 py-2 text-xs rounded-xl glass-input text-white placeholder:text-neutral-500"
             />
           </div>
 
           {/* Search Dropdown */}
           {searchResults.length > 0 && (
-            <div className="mt-2 bg-neutral-900 rounded-xl border border-white/20 p-2 space-y-1 z-20 relative">
+            <div className="mt-2 bg-neutral-900/95 backdrop-blur-xl rounded-xl border border-white/20 p-2 space-y-1 z-30 relative shadow-2xl max-h-60 overflow-y-auto">
               {searchResults.map(u => (
                 <button
                   key={u.id}
                   onClick={() => startThreadWithUser(u)}
-                  className="w-full text-left px-3 py-2 text-xs text-neutral-200 hover:bg-white/10 rounded-lg flex items-center gap-2"
+                  className="w-full text-left px-3 py-2 text-xs text-neutral-200 hover:bg-white/10 rounded-lg flex items-center justify-between transition-colors"
                 >
-                  <div className="w-6 h-6 rounded-full bg-neutral-800 overflow-hidden">
-                    {u.avatar_url && <img src={u.avatar_url} alt="" className="w-full h-full object-cover" />}
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-7 h-7 rounded-full bg-neutral-800 overflow-hidden ring-1 ring-white/20 shrink-0">
+                      {u.avatar_url ? (
+                        <img src={u.avatar_url} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center font-bold text-[10px] text-white">
+                          {u.name?.[0]}
+                        </div>
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-bold text-white text-xs truncate">{u.name}</p>
+                      <p className="text-[10px] text-neutral-400 truncate">@{u.username || `user_${u.id}`}</p>
+                    </div>
                   </div>
-                  <span>{u.name} ({u.email})</span>
+                  <span className="text-[10px] font-mono font-bold text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded-full border border-amber-400/30 shrink-0">
+                    #{u.user_code || (100000 + parseInt(u.id)).toString().slice(-6)}
+                  </span>
                 </button>
               ))}
             </div>
@@ -214,7 +228,12 @@ export default function DirectMessages({ onInitiateCall }) {
                   )}
                 </div>
                 <div>
-                  <h4 className="text-sm font-bold text-white">{activeThread.participant_name}</h4>
+                  <div className="flex items-center gap-2">
+                    <h4 className="text-sm font-bold text-white">{activeThread.participant_name}</h4>
+                    <span className="text-[10px] font-mono font-bold text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded-full border border-amber-400/30">
+                      #{activeThread.participant_user_code || (100000 + parseInt(activeThread.participant_id)).toString().slice(-6)}
+                    </span>
+                  </div>
                   <p className="text-xs text-emerald-400 font-medium">
                     {onlineUsers.has(activeThread.participant_id) ? 'Online' : 'Offline'}
                   </p>

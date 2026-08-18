@@ -88,7 +88,12 @@ export default function ProfileView() {
                   </span>
                 )}
               </div>
-              <p className="text-sm font-semibold text-neutral-400">@{profile.username}</p>
+              <div className="flex items-center gap-2 mt-0.5">
+                <p className="text-sm font-semibold text-neutral-400">@{profile.username || `user_${profile.id}`}</p>
+                <span className="text-xs font-mono font-bold text-amber-400 bg-amber-400/10 px-2.5 py-0.5 rounded-full border border-amber-400/30">
+                  User ID: #{profile.user_code || (100000 + parseInt(profile.id)).toString().slice(-6)}
+                </span>
+              </div>
             </div>
 
             {/* Actions */}

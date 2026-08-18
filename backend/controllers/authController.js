@@ -35,11 +35,16 @@ const register = async (req, res) => {
     const exists = await pool.query('SELECT id FROM src_users WHERE email=$1', [email]);
     if (exists.rows.length) return res.status(409).json({ message: 'Email already registered' });
     const hash = await bcrypt.hash(password, 12);
+    // Generate unique 6-digit user code
+    const countRes = await pool.query('SELECT MAX(id) as max_id FROM src_users');
+    const nextId = (parseInt(countRes.rows[0]?.max_id || 0) + 1);
+    const userCode = (100000 + nextId).toString().slice(-6);
+
     const result = await pool.query(
-      `INSERT INTO src_users (name, email, password, phone, business_id, store_id)
-       VALUES ($1,$2,$3,$4,$5,$6)
-       RETURNING id, name, email, role, avatar_url, phone, business_id, store_id, warehouse_id`,
-      [name, email, hash, phone || null, req.tenant?.business_id || null, req.tenant?.store_id || null]
+      `INSERT INTO src_users (name, email, password, phone, business_id, store_id, user_code)
+       VALUES ($1,$2,$3,$4,$5,$6,$7)
+       RETURNING id, name, email, role, avatar_url, phone, business_id, store_id, warehouse_id, user_code`,
+      [name, email, hash, phone || null, req.tenant?.business_id || null, req.tenant?.store_id || null, userCode]
     );
     const user = result.rows[0];
     // Record registration session
