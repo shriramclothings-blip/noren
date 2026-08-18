@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Search, PlusSquare, Bell, MessageCircle, LogOut } from 'lucide-react';
+import { Search, PlusSquare, Bell, MessageCircle, LogOut, UploadCloud } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 
 export default function Navbar({ onOpenCreatePost }) {
@@ -51,10 +51,20 @@ export default function Navbar({ onOpenCreatePost }) {
             <>
               <button
                 onClick={onOpenCreatePost}
-                className="flex items-center gap-2 px-4 py-2 rounded-full btn-liquid-solid text-xs sm:text-sm font-medium shadow-md transition-all"
+                className="flex items-center gap-2 px-4 py-2 rounded-full btn-liquid-solid text-xs sm:text-sm font-medium shadow-md transition-all text-black"
+                title="Bulk Upload Photos & Videos"
+              >
+                <UploadCloud className="w-4 h-4" />
+                <span className="hidden sm:inline">Bulk Upload</span>
+              </button>
+
+              <button
+                onClick={onOpenCreatePost}
+                className="flex items-center gap-2 px-3 py-2 rounded-full btn-liquid-ghost text-white text-xs sm:text-sm font-medium transition-all"
+                title="Create Post"
               >
                 <PlusSquare className="w-4 h-4" />
-                <span className="hidden sm:inline">Create Post</span>
+                <span className="hidden md:inline">Post</span>
               </button>
 
               <Link
