@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Search, PlusSquare, Bell, Sparkles, MessageCircle, LogOut } from 'lucide-react';
+import { Search, PlusSquare, Bell, MessageCircle, LogOut } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 
 export default function Navbar({ onOpenCreatePost }) {
@@ -18,11 +18,16 @@ export default function Navbar({ onOpenCreatePost }) {
   return (
     <header className="sticky top-0 z-40 w-full glass-panel border-b border-white/10 px-4 lg:px-8 py-3">
       <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
-        {/* Brand Identity */}
+        {/* NOREN Social Brand Logo */}
         <Link to="/" className="flex items-center gap-2.5 group">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-neutral-200 via-neutral-400 to-white flex items-center justify-center shadow-lg shadow-white/10 group-hover:scale-105 transition-transform">
-            <Sparkles className="w-5 h-5 text-black" />
-          </div>
+          <svg className="w-6 h-6 text-white group-hover:scale-105 transition-transform shrink-0" viewBox="0 0 24 24" fill="currentColor">
+            <g transform="rotate(-30 12 12)">
+              <circle cx="7.3" cy="3.2" r="1.45"/>
+              <rect x="5.5" y="4.7" width="3.6" height="14.6" rx="1.8"/>
+              <rect x="14.9" y="4.7" width="3.6" height="14.6" rx="1.8"/>
+              <circle cx="16.7" cy="20.8" r="1.45"/>
+            </g>
+          </svg>
           <span className="text-xl font-extrabold tracking-tight text-white">
             NOREN <span className="font-serif-italic font-normal text-neutral-400 text-lg tracking-normal">Social</span>
           </span>
