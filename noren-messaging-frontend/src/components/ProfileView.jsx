@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import api from '../utils/api';
 import { useAuth } from '../context/AuthContext';
-import { UserCheck, UserPlus, Lock, Grid, Video, Settings, ShieldCheck } from 'lucide-react';
+import { UserCheck, UserPlus, Lock, Settings } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function ProfileView() {
@@ -54,11 +54,11 @@ export default function ProfileView() {
   };
 
   if (loading) {
-    return <div className="p-8 text-center text-slate-400">Loading social profile...</div>;
+    return <div className="p-8 text-center text-neutral-400 font-medium">Loading social profile...</div>;
   }
 
   if (!profile) {
-    return <div className="p-8 text-center text-slate-400">User profile not found.</div>;
+    return <div className="p-8 text-center text-neutral-400 font-medium">User profile not found.</div>;
   }
 
   const isOwner = currentUser?.id === profile.id;
@@ -66,12 +66,12 @@ export default function ProfileView() {
   return (
     <div className="w-full max-w-4xl mx-auto space-y-6 pb-12">
       {/* Profile Header Card */}
-      <div className="glass-panel rounded-3xl p-6 border border-slate-800 flex flex-col md:flex-row items-center md:items-start gap-6">
-        <div className="relative w-28 h-28 rounded-full bg-slate-800 ring-4 ring-cyan-500/30 overflow-hidden shrink-0">
+      <div className="glass-panel rounded-3xl p-6 border border-white/10 flex flex-col md:flex-row items-center md:items-start gap-6 shadow-2xl">
+        <div className="relative w-28 h-28 rounded-full bg-neutral-800 ring-4 ring-white/20 overflow-hidden shrink-0">
           {profile.avatar_url ? (
             <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-2xl font-black text-slate-300">
+            <div className="w-full h-full flex items-center justify-center text-2xl font-black text-neutral-300">
               {profile.name?.[0]}
             </div>
           )}
@@ -83,22 +83,22 @@ export default function ProfileView() {
               <div className="flex items-center gap-2">
                 <h2 className="text-2xl font-black text-white">{profile.name}</h2>
                 {profile.is_verified && (
-                  <span className="w-5 h-5 rounded-full bg-cyan-400 text-slate-950 flex items-center justify-center text-xs font-black">
+                  <span className="w-5 h-5 rounded-full bg-white text-black flex items-center justify-center text-xs font-black">
                     ✓
                   </span>
                 )}
               </div>
-              <p className="text-sm font-semibold text-cyan-400">@{profile.username}</p>
+              <p className="text-sm font-semibold text-neutral-400">@{profile.username}</p>
             </div>
 
             {/* Actions */}
             {!isOwner ? (
               <button
                 onClick={handleFollowToggle}
-                className={`flex items-center gap-2 px-6 py-2 rounded-full font-bold text-sm transition-all ${
+                className={`flex items-center gap-2 px-6 py-2 rounded-full font-medium text-sm transition-all ${
                   isFollowing
-                    ? 'bg-slate-800 text-slate-200 border border-slate-700'
-                    : 'bg-cyan-500 text-slate-950 hover:bg-cyan-400 shadow-md shadow-cyan-500/20'
+                    ? 'btn-liquid-ghost text-white'
+                    : 'btn-liquid-solid text-black shadow-lg'
                 }`}
               >
                 {isFollowing ? <UserCheck className="w-4 h-4" /> : <UserPlus className="w-4 h-4" />}
@@ -107,7 +107,7 @@ export default function ProfileView() {
             ) : (
               <Link
                 to="/settings"
-                className="flex items-center gap-2 px-4 py-2 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold border border-slate-700"
+                className="flex items-center gap-2 px-4 py-2 rounded-full btn-liquid-ghost text-white text-xs font-medium"
               >
                 <Settings className="w-4 h-4" /> Edit Profile
               </Link>
@@ -115,25 +115,25 @@ export default function ProfileView() {
           </div>
 
           {/* Stats */}
-          <div className="flex justify-center md:justify-start gap-8 pt-2 border-t border-slate-800/60">
+          <div className="flex justify-center md:justify-start gap-8 pt-2 border-t border-white/10">
             <div>
               <span className="block text-lg font-black text-white">{profile.posts_count}</span>
-              <span className="text-xs text-slate-400">Posts</span>
+              <span className="text-xs text-neutral-400">Posts</span>
             </div>
             <div>
               <span className="block text-lg font-black text-white">{profile.followers_count}</span>
-              <span className="text-xs text-slate-400">Followers</span>
+              <span className="text-xs text-neutral-400">Followers</span>
             </div>
             <div>
               <span className="block text-lg font-black text-white">{profile.following_count}</span>
-              <span className="text-xs text-slate-400">Following</span>
+              <span className="text-xs text-neutral-400">Following</span>
             </div>
           </div>
 
           {/* Bio */}
-          {profile.bio && <p className="text-sm text-slate-300">{profile.bio}</p>}
+          {profile.bio && <p className="text-sm text-neutral-200">{profile.bio}</p>}
           {profile.website && (
-            <a href={profile.website} target="_blank" rel="noreferrer" className="text-xs text-cyan-400 hover:underline">
+            <a href={profile.website} target="_blank" rel="noreferrer" className="text-xs text-white underline hover:opacity-80">
               {profile.website}
             </a>
           )}
@@ -142,19 +142,19 @@ export default function ProfileView() {
 
       {/* Media Grid / Private Warning */}
       {!canView ? (
-        <div className="glass-card rounded-3xl p-12 text-center border border-slate-800 space-y-2">
-          <Lock className="w-10 h-10 text-cyan-400 mx-auto" />
+        <div className="glass-card rounded-3xl p-12 text-center border border-white/10 space-y-2">
+          <Lock className="w-10 h-10 text-white mx-auto" />
           <h4 className="text-lg font-bold text-white">This Account is Private</h4>
-          <p className="text-xs text-slate-400">Follow this account to see their photos and videos.</p>
+          <p className="text-xs text-neutral-400">Follow this account to see their photos and videos.</p>
         </div>
       ) : (
         <div className="grid grid-cols-3 gap-3">
           {posts.map((post) => (
-            <div key={post.id} className="aspect-square rounded-2xl bg-slate-900 overflow-hidden relative group cursor-pointer border border-slate-800">
+            <div key={post.id} className="aspect-square rounded-2xl bg-neutral-900 overflow-hidden relative group cursor-pointer border border-white/10">
               {post.primary_media ? (
                 <img src={post.primary_media} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
               ) : (
-                <div className="w-full h-full p-4 flex items-center justify-center text-xs text-slate-300 font-medium">
+                <div className="w-full h-full p-4 flex items-center justify-center text-xs text-neutral-300 font-medium">
                   {post.caption}
                 </div>
               )}

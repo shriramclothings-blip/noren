@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import api from '../utils/api';
 import { useSocket } from '../context/SocketContext';
 import { useAuth } from '../context/AuthContext';
-import { Search, Send, Phone, Video, Image, Paperclip, Check, CheckCheck, AlertCircle, RefreshCw } from 'lucide-react';
+import { Search, Send, Phone, Video, Check, CheckCheck, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function DirectMessages({ onInitiateCall }) {
@@ -112,10 +112,8 @@ export default function DirectMessages({ onInitiateCall }) {
         client_msg_id: clientMsgId,
       });
 
-      // Update message status to sent
       setMessages(prev => prev.map(m => m.id === clientMsgId ? { ...res.data, status: 'sent' } : m));
     } catch {
-      // Mark as failed
       setMessages(prev => prev.map(m => m.id === clientMsgId ? { ...m, status: 'failed' } : m));
       toast.error('Failed to send message');
     }
@@ -128,13 +126,13 @@ export default function DirectMessages({ onInitiateCall }) {
   };
 
   return (
-    <div className="w-full h-[calc(100vh-6rem)] glass-panel rounded-3xl border border-slate-800/80 overflow-hidden flex">
+    <div className="w-full h-[calc(100vh-6rem)] glass-panel rounded-3xl border border-white/10 overflow-hidden flex shadow-2xl">
       {/* Thread List Sidebar */}
-      <div className="w-full md:w-80 border-r border-slate-800/80 flex flex-col">
+      <div className="w-full md:w-80 border-r border-white/10 flex flex-col bg-black/60">
         {/* Search */}
-        <div className="p-4 border-b border-slate-800">
+        <div className="p-4 border-b border-white/10">
           <div className="relative">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+            <Search className="w-4 h-4 text-neutral-400 absolute left-3.5 top-3" />
             <input
               type="text"
               placeholder="Search contacts..."
@@ -146,14 +144,14 @@ export default function DirectMessages({ onInitiateCall }) {
 
           {/* Search Dropdown */}
           {searchResults.length > 0 && (
-            <div className="mt-2 bg-slate-900 rounded-xl border border-slate-700 p-2 space-y-1">
+            <div className="mt-2 bg-neutral-900 rounded-xl border border-white/20 p-2 space-y-1 z-20 relative">
               {searchResults.map(u => (
                 <button
                   key={u.id}
                   onClick={() => startThreadWithUser(u)}
-                  className="w-full text-left px-3 py-2 text-xs text-slate-200 hover:bg-slate-800 rounded-lg flex items-center gap-2"
+                  className="w-full text-left px-3 py-2 text-xs text-neutral-200 hover:bg-white/10 rounded-lg flex items-center gap-2"
                 >
-                  <div className="w-6 h-6 rounded-full bg-slate-700 overflow-hidden">
+                  <div className="w-6 h-6 rounded-full bg-neutral-800 overflow-hidden">
                     {u.avatar_url && <img src={u.avatar_url} alt="" className="w-full h-full object-cover" />}
                   </div>
                   <span>{u.name} ({u.email})</span>
@@ -172,30 +170,30 @@ export default function DirectMessages({ onInitiateCall }) {
               <button
                 key={t.id}
                 onClick={() => handleSelectThread(t)}
-                className={`w-full p-3 rounded-2xl flex items-center gap-3 transition-colors text-left ${
-                  isSelected ? 'bg-cyan-500/10 border border-cyan-500/30' : 'hover:bg-slate-800/60'
+                className={`w-full p-3 rounded-2xl flex items-center gap-3 transition-all text-left ${
+                  isSelected ? 'liquid-pill border-white/30 text-white shadow-lg' : 'hover:bg-white/5 text-neutral-300'
                 }`}
               >
-                <div className="relative w-10 h-10 rounded-full bg-slate-700 overflow-hidden shrink-0">
+                <div className="relative w-10 h-10 rounded-full bg-neutral-800 overflow-hidden shrink-0 ring-2 ring-white/20">
                   {t.participant_avatar_url ? (
                     <img src={t.participant_avatar_url} alt="" className="w-full h-full object-cover" />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center font-bold text-slate-300">
+                    <div className="w-full h-full flex items-center justify-center font-bold text-neutral-300">
                       {t.participant_name?.[0]}
                     </div>
                   )}
                   {isOnline && (
-                    <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-emerald-500 ring-2 ring-slate-900" />
+                    <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-emerald-500 ring-2 ring-black" />
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-center">
-                    <h5 className="text-xs font-bold text-slate-100 truncate">{t.participant_name}</h5>
-                    <span className="text-[10px] text-slate-500">
+                    <h5 className="text-xs font-bold text-white truncate">{t.participant_name}</h5>
+                    <span className="text-[10px] text-neutral-400">
                       {new Date(t.last_message_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
                   </div>
-                  <p className="text-xs text-slate-400 truncate mt-0.5">{t.last_message || 'Start a conversation'}</p>
+                  <p className="text-xs text-neutral-400 truncate mt-0.5">{t.last_message || 'Start a conversation'}</p>
                 </div>
               </button>
             );
@@ -204,13 +202,13 @@ export default function DirectMessages({ onInitiateCall }) {
       </div>
 
       {/* Main Chat Area */}
-      <div className="hidden md:flex flex-1 flex-col bg-slate-950/40">
+      <div className="hidden md:flex flex-1 flex-col bg-black/80">
         {activeThread ? (
           <>
             {/* Header */}
-            <div className="p-4 border-b border-slate-800 flex items-center justify-between glass-panel">
+            <div className="p-4 border-b border-white/10 flex items-center justify-between glass-panel">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-slate-700 overflow-hidden">
+                <div className="w-10 h-10 rounded-full bg-neutral-800 overflow-hidden ring-2 ring-white/30">
                   {activeThread.participant_avatar_url && (
                     <img src={activeThread.participant_avatar_url} alt="" className="w-full h-full object-cover" />
                   )}
@@ -227,17 +225,17 @@ export default function DirectMessages({ onInitiateCall }) {
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => onInitiateCall(activeThread.participant_id, 'audio')}
-                  className="p-2 text-slate-300 hover:text-cyan-400 rounded-full hover:bg-slate-800"
+                  className="p-2.5 text-white hover:text-white rounded-full btn-liquid-ghost"
                   title="Voice Call"
                 >
-                  <Phone className="w-5 h-5" />
+                  <Phone className="w-4 h-4" />
                 </button>
                 <button
                   onClick={() => onInitiateCall(activeThread.participant_id, 'video')}
-                  className="p-2 text-slate-300 hover:text-cyan-400 rounded-full hover:bg-slate-800"
+                  className="p-2.5 text-white hover:text-white rounded-full btn-liquid-ghost"
                   title="Video Call"
                 >
-                  <Video className="w-5 h-5" />
+                  <Video className="w-4 h-4" />
                 </button>
               </div>
             </div>
@@ -249,25 +247,24 @@ export default function DirectMessages({ onInitiateCall }) {
                 return (
                   <div key={m.id} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
                     <div
-                      className={`max-w-xs sm:max-w-md px-4 py-2.5 rounded-2xl text-xs leading-relaxed ${
+                      className={`max-w-[70%] p-3 rounded-2xl text-xs space-y-1 ${
                         isMine
-                          ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-br-none'
-                          : 'bg-slate-800 text-slate-100 rounded-bl-none border border-slate-700/60'
+                          ? 'btn-liquid-solid text-black'
+                          : 'bg-neutral-900 border border-white/10 text-white'
                       }`}
                     >
-                      <p>{m.message}</p>
-
-                      {/* Status indicator for sent messages */}
-                      {isMine && (
-                        <div className="flex justify-end items-center gap-1 mt-1 text-[10px] opacity-75">
-                          <span>{new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                          {m.status === 'sending' && <RefreshCw className="w-3 h-3 animate-spin" />}
-                          {m.status === 'sent' && <Check className="w-3 h-3" />}
-                          {m.status === 'delivered' && <CheckCheck className="w-3 h-3" />}
-                          {m.status === 'read' && <CheckCheck className="w-3 h-3 text-cyan-200" />}
-                          {m.status === 'failed' && <AlertCircle className="w-3 h-3 text-rose-300" />}
-                        </div>
-                      )}
+                      <p className="leading-relaxed font-medium">{m.message}</p>
+                      <div className="flex items-center justify-end gap-1 text-[10px] opacity-75">
+                        <span>{new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                        {isMine && (
+                          <span>
+                            {m.status === 'sending' && '⏳'}
+                            {m.status === 'sent' && <Check className="w-3 h-3 inline" />}
+                            {(m.status === 'delivered' || m.status === 'read') && <CheckCheck className="w-3 h-3 inline" />}
+                            {m.status === 'failed' && <AlertCircle className="w-3 h-3 text-rose-500 inline" />}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 );
@@ -275,8 +272,8 @@ export default function DirectMessages({ onInitiateCall }) {
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Input Bar */}
-            <form onSubmit={handleSendMessage} className="p-4 border-t border-slate-800 glass-panel flex items-center gap-3">
+            {/* Input Form */}
+            <form onSubmit={handleSendMessage} className="p-4 border-t border-white/10 flex gap-2 glass-panel">
               <input
                 type="text"
                 placeholder="Type a message..."
@@ -286,15 +283,16 @@ export default function DirectMessages({ onInitiateCall }) {
               />
               <button
                 type="submit"
-                className="p-2.5 rounded-full bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold transition-colors"
+                className="p-2.5 rounded-full btn-liquid-solid text-black font-bold flex items-center justify-center"
               >
                 <Send className="w-4 h-4" />
               </button>
             </form>
           </>
         ) : (
-          <div className="flex-1 flex flex-col items-center justify-center text-slate-500">
-            <p className="text-sm font-semibold">Select a conversation or start a new message</p>
+          <div className="flex-1 flex flex-col items-center justify-center text-neutral-400 p-8">
+            <p className="text-lg font-bold text-white mb-1">Your Direct Messages</p>
+            <p className="text-xs text-neutral-400">Select a conversation or search for a user to start messaging.</p>
           </div>
         )}
       </div>

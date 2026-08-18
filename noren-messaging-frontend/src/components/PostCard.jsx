@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Heart, MessageCircle, Share2, Bookmark, Repeat, MoreHorizontal, Check, Copy, Flag, Send } from 'lucide-react';
+import { Heart, MessageCircle, Share2, Bookmark, Repeat, MoreHorizontal } from 'lucide-react';
 import api from '../utils/api';
 import toast from 'react-hot-toast';
 import { Link } from 'react-router-dom';
@@ -82,35 +82,35 @@ export default function PostCard({ post }) {
   const mediaList = post.media || [];
 
   return (
-    <article className="glass-card rounded-2xl border border-slate-800/80 mb-6 overflow-hidden transition-all hover:border-slate-700/80">
+    <article className="glass-card rounded-2xl border border-white/10 mb-6 overflow-hidden transition-all hover:border-white/20 shadow-xl">
       {/* Post Header */}
       <div className="p-4 flex items-center justify-between">
         <Link to={`/profile/${post.author_username || post.user_id}`} className="flex items-center gap-3 group">
-          <div className="w-10 h-10 rounded-full bg-slate-800 overflow-hidden ring-2 ring-cyan-500/30 group-hover:ring-cyan-400 transition-all">
+          <div className="w-10 h-10 rounded-full bg-neutral-800 overflow-hidden ring-2 ring-white/20 group-hover:ring-white/50 transition-all">
             {post.author_avatar ? (
               <img src={post.author_avatar} alt="" className="w-full h-full object-cover" />
             ) : (
-              <div className="w-full h-full flex items-center justify-center font-bold text-slate-300">
+              <div className="w-full h-full flex items-center justify-center font-bold text-neutral-300">
                 {post.author_name?.[0]}
               </div>
             )}
           </div>
           <div>
             <div className="flex items-center gap-1.5">
-              <h4 className="text-sm font-bold text-slate-100 group-hover:text-cyan-400 transition-colors">
+              <h4 className="text-sm font-bold text-white group-hover:text-neutral-300 transition-colors">
                 {post.author_name}
               </h4>
               {post.author_verified && (
-                <span className="w-3.5 h-3.5 rounded-full bg-cyan-400 text-slate-950 flex items-center justify-center text-[9px] font-black">
+                <span className="w-3.5 h-3.5 rounded-full bg-white text-black flex items-center justify-center text-[9px] font-black">
                   ✓
                 </span>
               )}
             </div>
-            {post.location && <p className="text-xs text-slate-400">{post.location}</p>}
+            {post.location && <p className="text-xs text-neutral-400">{post.location}</p>}
           </div>
         </Link>
 
-        <button onClick={handleCopyLink} className="text-slate-400 hover:text-slate-200 p-1.5 rounded-lg hover:bg-slate-800">
+        <button onClick={handleCopyLink} className="text-neutral-400 hover:text-white p-1.5 rounded-lg hover:bg-white/10 transition-colors">
           <MoreHorizontal className="w-5 h-5" />
         </button>
       </div>
@@ -133,7 +133,7 @@ export default function PostCard({ post }) {
             <button
               onClick={handleLikeToggle}
               className={`flex items-center gap-1.5 text-sm font-semibold transition-colors ${
-                isLiked ? 'text-rose-500' : 'text-slate-300 hover:text-rose-400'
+                isLiked ? 'text-rose-500' : 'text-neutral-300 hover:text-rose-400'
               }`}
             >
               <Heart className={`w-5 h-5 ${isLiked ? 'fill-rose-500' : ''}`} />
@@ -142,7 +142,7 @@ export default function PostCard({ post }) {
 
             <button
               onClick={loadComments}
-              className="flex items-center gap-1.5 text-sm font-semibold text-slate-300 hover:text-cyan-400 transition-colors"
+              className="flex items-center gap-1.5 text-sm font-semibold text-neutral-300 hover:text-white transition-colors"
             >
               <MessageCircle className="w-5 h-5" />
               <span>{commentsCount}</span>
@@ -151,7 +151,7 @@ export default function PostCard({ post }) {
             <button
               onClick={handleRepostToggle}
               className={`flex items-center gap-1.5 text-sm font-semibold transition-colors ${
-                isReposted ? 'text-emerald-400' : 'text-slate-300 hover:text-emerald-400'
+                isReposted ? 'text-emerald-400' : 'text-neutral-300 hover:text-emerald-400'
               }`}
             >
               <Repeat className="w-5 h-5" />
@@ -160,10 +160,10 @@ export default function PostCard({ post }) {
           </div>
 
           <div className="flex items-center gap-2">
-            <button onClick={handleBookmarkToggle} className={`text-slate-300 hover:text-amber-400 ${isSaved ? 'text-amber-400 fill-amber-400' : ''}`}>
+            <button onClick={handleBookmarkToggle} className={`text-neutral-300 hover:text-amber-400 ${isSaved ? 'text-amber-400 fill-amber-400' : ''}`}>
               <Bookmark className="w-5 h-5" />
             </button>
-            <button onClick={handleCopyLink} className="text-slate-300 hover:text-cyan-400">
+            <button onClick={handleCopyLink} className="text-neutral-300 hover:text-white">
               <Share2 className="w-5 h-5" />
             </button>
           </div>
@@ -171,25 +171,25 @@ export default function PostCard({ post }) {
 
         {/* Caption */}
         {post.caption && (
-          <p className="text-sm text-slate-200 leading-relaxed">
+          <p className="text-sm text-neutral-200 leading-relaxed">
             <span className="font-bold mr-2 text-white">{post.author_name}</span>
             {post.caption}
           </p>
         )}
 
         {/* Timestamp */}
-        <p className="text-[11px] text-slate-500 mt-2 uppercase tracking-wider font-semibold">
+        <p className="text-[11px] text-neutral-500 mt-2 uppercase tracking-wider font-semibold">
           {new Date(post.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
         </p>
 
         {/* Comments Drawer */}
         {showComments && (
-          <div className="mt-4 pt-4 border-t border-slate-800/80 space-y-3">
+          <div className="mt-4 pt-4 border-t border-white/10 space-y-3">
             <div className="max-h-60 overflow-y-auto space-y-2 pr-1">
               {commentsList.map((comm) => (
-                <div key={comm.id} className="text-xs bg-slate-900/60 p-2.5 rounded-xl border border-slate-800">
-                  <span className="font-bold text-cyan-400 mr-2">{comm.author_name}:</span>
-                  <span className="text-slate-200">{comm.comment_text}</span>
+                <div key={comm.id} className="text-xs bg-neutral-900/80 p-2.5 rounded-xl border border-white/10">
+                  <span className="font-bold text-white mr-2">{comm.author_name}:</span>
+                  <span className="text-neutral-200">{comm.comment_text}</span>
                 </div>
               ))}
             </div>
@@ -200,11 +200,11 @@ export default function PostCard({ post }) {
                 placeholder="Add a comment..."
                 value={newComment}
                 onChange={(e) => setNewComment(e.target.value)}
-                className="flex-1 px-3 py-1.5 text-xs rounded-xl glass-input"
+                className="flex-1 px-3.5 py-2 text-xs rounded-xl glass-input"
               />
               <button
                 type="submit"
-                className="px-3 py-1.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs transition-colors"
+                className="px-4 py-2 rounded-xl btn-liquid-solid font-medium text-xs transition-colors"
               >
                 Post
               </button>

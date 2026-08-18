@@ -14,7 +14,7 @@ export default function BottomBar() {
   ];
 
   return (
-    <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 glass-panel border-t border-slate-800/80 px-2 py-2">
+    <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 glass-panel border-t border-white/10 px-2 py-2.5">
       <div className="flex items-center justify-around">
         {mobileTabs.map((tab) => {
           const Icon = tab.icon;
@@ -23,13 +23,13 @@ export default function BottomBar() {
               key={tab.path}
               to={tab.path}
               className={({ isActive }) =>
-                `flex flex-col items-center gap-1 p-2 rounded-lg text-xs transition-colors ${
-                  isActive ? 'text-cyan-400 font-bold' : 'text-slate-400 hover:text-slate-200'
+                `flex flex-col items-center gap-1 p-2 rounded-xl text-xs transition-colors ${
+                  isActive ? 'text-white font-bold scale-105' : 'text-neutral-400 hover:text-white'
                 }`
               }
             >
               <Icon className="w-5 h-5" />
-              <span>{tab.label}</span>
+              <span className="text-[10px] tracking-tight">{tab.label}</span>
             </NavLink>
           );
         })}

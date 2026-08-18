@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useSocket } from '../context/SocketContext';
-import { Phone, PhoneOff, Video, VideoOff, Mic, MicOff, Volume2 } from 'lucide-react';
+import { Phone, PhoneOff, Video, VideoOff, Mic, MicOff } from 'lucide-react';
 
 export default function WebRTCCallModal({ callData, onClose }) {
   const { socket } = useSocket();
@@ -155,12 +155,12 @@ export default function WebRTCCallModal({ callData, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-xl flex items-center justify-center p-4">
-      <div className="w-full max-w-lg h-[80vh] bg-slate-900 rounded-3xl border border-slate-800 flex flex-col justify-between p-6 relative overflow-hidden shadow-2xl">
+    <div className="fixed inset-0 z-50 bg-black/95 backdrop-blur-2xl flex items-center justify-center p-4">
+      <div className="w-full max-w-lg h-[80vh] bg-black rounded-3xl border border-white/20 flex flex-col justify-between p-6 relative overflow-hidden shadow-2xl">
         {/* Videos Container */}
-        <div className="absolute inset-0 z-0 bg-slate-950 flex items-center justify-center">
+        <div className="absolute inset-0 z-0 bg-black flex items-center justify-center">
           <video ref={remoteVideoRef} autoPlay playsInline className="w-full h-full object-cover" />
-          <video ref={localVideoRef} autoPlay playsInline muted className="absolute top-4 right-4 w-32 h-44 object-cover rounded-2xl border-2 border-cyan-500/50 shadow-lg" />
+          <video ref={localVideoRef} autoPlay playsInline muted className="absolute top-4 right-4 w-32 h-44 object-cover rounded-2xl border-2 border-white/40 shadow-xl" />
         </div>
 
         {/* Overlay Info */}
@@ -168,7 +168,7 @@ export default function WebRTCCallModal({ callData, onClose }) {
           <h3 className="text-xl font-extrabold text-white">
             {callData.caller_name || callData.targetName || 'Noren Calling'}
           </h3>
-          <p className="text-xs font-semibold text-cyan-400 mt-1 uppercase tracking-widest">
+          <p className="text-xs font-semibold text-neutral-300 mt-1 uppercase tracking-widest">
             {callState === 'incoming' && 'Incoming Call...'}
             {callState === 'outgoing' && 'Ringing...'}
             {callState === 'connected' && formatDuration(callDuration)}
@@ -198,7 +198,7 @@ export default function WebRTCCallModal({ callData, onClose }) {
               <button
                 onClick={() => setIsMicMuted(!isMicMuted)}
                 className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                  isMicMuted ? 'bg-rose-500 text-white' : 'bg-slate-800 text-slate-200'
+                  isMicMuted ? 'bg-rose-500 text-white' : 'bg-neutral-800 text-neutral-200 border border-white/20'
                 }`}
               >
                 {isMicMuted ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
@@ -214,7 +214,7 @@ export default function WebRTCCallModal({ callData, onClose }) {
               <button
                 onClick={() => setIsVideoOff(!isVideoOff)}
                 className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                  isVideoOff ? 'bg-rose-500 text-white' : 'bg-slate-800 text-slate-200'
+                  isVideoOff ? 'bg-rose-500 text-white' : 'bg-neutral-800 text-neutral-200 border border-white/20'
                 }`}
               >
                 {isVideoOff ? <VideoOff className="w-5 h-5" /> : <Video className="w-5 h-5" />}

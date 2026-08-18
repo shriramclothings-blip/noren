@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { Home, Compass, Video, MessageCircle, Bell, User, Settings, Bookmark } from 'lucide-react';
+import { Home, Compass, Video, MessageCircle, Bell, User, Settings, Bookmark, Shield } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export default function Sidebar() {
@@ -17,8 +17,8 @@ export default function Sidebar() {
   ];
 
   return (
-    <aside className="hidden md:flex flex-col w-64 glass-panel border-r border-slate-800/80 p-4 sticky top-16 h-[calc(100vh-4rem)]">
-      <nav className="flex-1 space-y-1">
+    <aside className="hidden md:flex flex-col w-64 glass-panel border-r border-white/10 p-4 sticky top-16 h-[calc(100vh-4rem)]">
+      <nav className="flex-1 space-y-1.5">
         {navItems.map((item) => {
           const Icon = item.icon;
           return (
@@ -28,8 +28,8 @@ export default function Sidebar() {
               className={({ isActive }) =>
                 `flex items-center gap-3.5 px-4 py-3 rounded-xl font-medium text-sm transition-all ${
                   isActive
-                    ? 'bg-gradient-to-r from-cyan-500/20 to-blue-500/10 text-cyan-400 border-l-4 border-cyan-400 font-semibold'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                    ? 'liquid-pill text-white font-semibold shadow-lg shadow-white/5 border-white/40'
+                    : 'text-neutral-400 hover:text-white hover:bg-white/5'
                 }`
               }
             >
@@ -40,15 +40,16 @@ export default function Sidebar() {
         })}
       </nav>
 
-      {/* Admin Panel Quick Access */}
+      {/* Admin Panel Access */}
       {user && (user.role === 'admin' || user.role === 'super_admin') && (
-        <div className="pt-4 border-t border-slate-800">
+        <div className="pt-4 border-t border-white/10">
           <a
             href="http://localhost:5173/admin"
             target="_blank"
             rel="noreferrer"
-            className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-800 text-xs font-semibold text-cyan-300 border border-cyan-500/30 transition-all"
+            className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl btn-liquid-ghost text-xs font-semibold text-white border border-white/20 transition-all"
           >
+            <Shield className="w-4 h-4 text-white" />
             Admin Panel Access
           </a>
         </div>
