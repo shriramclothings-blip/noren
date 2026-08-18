@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import api from '../utils/api';
 import { useSocket } from '../context/SocketContext';
 import { useAuth } from '../context/AuthContext';
-import { Search, Send, Phone, Video, Check, CheckCheck, AlertCircle } from 'lucide-react';
+import { Search, Send, Phone, Video, Check, CheckCheck, AlertCircle, Paperclip } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function DirectMessages({ onInitiateCall }) {
@@ -253,6 +253,15 @@ export default function DirectMessages({ onInitiateCall }) {
                           : 'bg-neutral-900 border border-white/10 text-white'
                       }`}
                     >
+                      {m.attachment_url && (
+                        <div className="mb-1 rounded-xl overflow-hidden max-h-48 border border-black/20">
+                          {m.attachment_url.match(/\.(mp4|webm|mov)$/i) ? (
+                            <video src={m.attachment_url} controls className="w-full h-full object-cover" />
+                          ) : (
+                            <img src={m.attachment_url} alt="Attachment" className="w-full h-full object-cover" />
+                          )}
+                        </div>
+                      )}
                       <p className="leading-relaxed font-medium">{m.message}</p>
                       <div className="flex items-center justify-end gap-1 text-[10px] opacity-75">
                         <span>{new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
@@ -273,13 +282,53 @@ export default function DirectMessages({ onInitiateCall }) {
             </div>
 
             {/* Input Form */}
-            <form onSubmit={handleSendMessage} className="p-4 border-t border-white/10 flex gap-2 glass-panel">
+            <form onSubmit={handleSendMessage} className="p-4 border-t border-white/10 flex items-center gap-2 glass-panel">
+              <input
+                type="file"
+                id="dmFileInput"
+                accept="image/*,video/*"
+                className="hidden"
+                onChange={async (e) => {
+                  const files = e.target.files;
+                  if (!files || !files.length) return;
+                  const formData = new FormData();
+                  formData.append('files', files[0]);
+                  try {
+                    toast.loading('Uploading attachment...', { id: 'dmUpload' });
+                    const res = await api.post('/social/upload', formData, {
+                      headers: { 'Content-Type': 'multipart/form-data' }
+                    });
+                    toast.success('Attached from device!', { id: 'dmUpload' });
+                    // Automatically send attachment message
+                    if (socket && activeThread) {
+                      socket.emit('chat:send_message', {
+                        threadId: activeThread.id,
+                        receiverId: activeThread.participant_id,
+                        message: 'Sent an attachment',
+                        attachmentUrl: res.data.url,
+                      });
+                    }
+                  } catch {
+                    toast.error('Failed to attach file', { id: 'dmUpload' });
+                  }
+                }}
+              />
+
+              <button
+                type="button"
+                onClick={() => document.getElementById('dmFileInput')?.click()}
+                className="p-2.5 rounded-full btn-liquid-ghost text-white"
+                title="Attach photo/video from device"
+              >
+                <Paperclip className="w-4 h-4" />
+              </button>
+
               <input
                 type="text"
                 placeholder="Type a message..."
                 value={messageInput}
                 onChange={(e) => setMessageInput(e.target.value)}
-                className="flex-1 px-4 py-2.5 text-xs rounded-full glass-input"
+                className="flex-1 px-4 py-2.5 text-xs rounded-full glass-input text-white"
               />
               <button
                 type="submit"

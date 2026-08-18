@@ -44,8 +44,10 @@ app.use(cors({
   allowedHeaders: ['Content-Type','Authorization'],
 }));
 
+const path = require('path');
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use(require('./middleware/tenant').tenant);
 
 // ── HTTP request logger (4xx / 5xx) ────────────────────────────────────────

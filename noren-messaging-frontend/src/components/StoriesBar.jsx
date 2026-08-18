@@ -183,7 +183,31 @@ export default function StoriesBar() {
 
             <form onSubmit={handleCreateStory} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-neutral-300 mb-1">Image URL (Optional)</label>
+                <label className="block text-xs font-semibold text-neutral-300 mb-1">Upload Photo / Video from Device</label>
+                <input
+                  type="file"
+                  accept="image/*,video/*"
+                  onChange={async (e) => {
+                    const files = e.target.files;
+                    if (!files || !files.length) return;
+                    const formData = new FormData();
+                    formData.append('files', files[0]);
+                    try {
+                      const res = await api.post('/social/upload', formData, {
+                        headers: { 'Content-Type': 'multipart/form-data' }
+                      });
+                      setMediaUrl(res.data.url);
+                      toast.success('Story media uploaded from device!');
+                    } catch {
+                      toast.error('Failed to upload file from device');
+                    }
+                  }}
+                  className="w-full text-xs text-neutral-300 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:btn-liquid-ghost file:text-white cursor-pointer"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-neutral-400 mb-1">Or Media URL Link (Optional)</label>
                 <input
                   type="text"
                   placeholder="https://images.unsplash.com/..."

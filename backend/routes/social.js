@@ -3,8 +3,39 @@ const router = express.Router();
 const { auth, optionalAuth } = require('../middleware/auth');
 const socialCtrl = require('../controllers/socialController');
 
-// Home Feed
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
+
+const uploadsDir = path.join(__dirname, '../uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, uploadsDir),
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    const uniqueName = `media_${Date.now()}_${Math.random().toString(36).substring(2, 9)}${ext}`;
+    cb(null, uniqueName);
+  }
+});
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 100 * 1024 * 1024 }, // 100MB max
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/') || file.mimetype.startsWith('video/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image and video files are allowed'), false);
+    }
+  }
+});
+
+// Home Feed & Media Upload
 router.get('/feed', optionalAuth, socialCtrl.getFeed);
+router.post('/upload', optionalAuth, upload.array('files', 10), socialCtrl.uploadMedia);
 
 // Posts
 router.post('/posts', auth, socialCtrl.createPost);

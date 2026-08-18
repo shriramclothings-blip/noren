@@ -1010,6 +1010,32 @@ const markNotificationsRead = async (req, res) => {
   } catch (err) {
     res.status(500).json({ message: 'Failed to update notifications' });
   }
+const uploadMedia = async (req, res) => {
+  try {
+    const files = req.files || (req.file ? [req.file] : []);
+    if (!files.length) {
+      return res.status(400).json({ message: 'No media files uploaded' });
+    }
+
+    const host = req.get('host');
+    const protocol = req.protocol;
+
+    const uploaded = files.map(file => {
+      const isVideo = file.mimetype.startsWith('video/');
+      const fileUrl = `${protocol}://${host}/uploads/${file.filename}`;
+      return {
+        media_type: isVideo ? 'video' : 'image',
+        media_url: fileUrl,
+        filename: file.filename,
+        original_name: file.originalname,
+      };
+    });
+
+    res.json({ message: 'Upload successful', files: uploaded, url: uploaded[0].media_url });
+  } catch (err) {
+    console.error('uploadMedia error:', err.message);
+    res.status(500).json({ message: 'Failed to upload media files' });
+  }
 };
 
 module.exports = {
@@ -1018,6 +1044,7 @@ module.exports = {
   getPostById,
   updatePost,
   deletePost,
+  uploadMedia,
   toggleLike,
   toggleBookmark,
   getBookmarks,
