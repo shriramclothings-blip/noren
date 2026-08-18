@@ -127,7 +127,7 @@ const login = async (req, res) => {
 const getMe = async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT id, name, email, role, avatar_url, phone, is_banned, created_at, business_id, store_id, warehouse_id, auth_provider FROM src_users WHERE id=$1',
+      'SELECT id, name, email, role, avatar_url, phone, is_banned, created_at, business_id, store_id, warehouse_id, auth_provider, username, bio, website, is_verified, is_private, followers_count, following_count, posts_count FROM src_users WHERE id=$1',
       [req.user.id]
     );
     if (!result.rows.length) return res.status(404).json({ message: 'User not found' });

@@ -68,23 +68,40 @@ function HomeFeed({ onOpenCreatePost }) {
   );
 }
 
+import { useNavigate, useLocation } from 'react-router-dom';
+import toast from 'react-hot-toast';
+
 function LoginView() {
-  const { login, register } = useAuth();
+  const { user, login, register } = useAuth();
+  const navigate = useNavigate();
   const [isRegister, setIsRegister] = useState(false);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      navigate('/');
+    }
+  }, [user, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setSubmitting(true);
     try {
       if (isRegister) {
         await register(name, email, password);
+        toast.success('Account created successfully');
       } else {
         await login(email, password);
+        toast.success('Welcome back!');
       }
+      navigate('/');
     } catch (err) {
-      alert(err.response?.data?.message || 'Authentication failed');
+      toast.error(err.response?.data?.message || 'Authentication failed');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -136,9 +153,10 @@ function LoginView() {
 
           <button
             type="submit"
-            className="w-full py-3 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 font-bold text-white text-sm hover:from-cyan-400 hover:to-blue-500 transition-all shadow-md shadow-cyan-500/20"
+            disabled={submitting}
+            className="w-full py-3 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 font-bold text-white text-sm hover:from-cyan-400 hover:to-blue-500 transition-all shadow-md shadow-cyan-500/20 disabled:opacity-50"
           >
-            {isRegister ? 'Create Account' : 'Log In'}
+            {submitting ? 'Authenticating...' : isRegister ? 'Create Account' : 'Log In'}
           </button>
         </form>
 
