@@ -55,21 +55,19 @@ const GEO_LOOKUP = {
   'uae': { lat: 23.4241, lon: 53.8478 },
 };
 
-// Major Countries for on-globe typography labels
+// Major Countries & Continents for on-globe typography labels
 const COUNTRY_LABELS = [
   { name: 'INDIA', lat: 20.5937, lon: 78.9629 },
   { name: 'UNITED STATES', lat: 37.0902, lon: -95.7129 },
   { name: 'UNITED KINGDOM', lat: 55.3781, lon: -3.4360 },
-  { name: 'UNITED ARAB EMIRATES', lat: 23.4241, lon: 53.8478 },
+  { name: 'UAE', lat: 23.4241, lon: 53.8478 },
   { name: 'JAPAN', lat: 36.2048, lon: 138.2529 },
   { name: 'AUSTRALIA', lat: -25.2744, lon: 133.7751 },
-  { name: 'GERMANY', lat: 51.1657, lon: 10.4515 },
-  { name: 'FRANCE', lat: 46.2276, lon: 2.2137 },
+  { name: 'EUROPE', lat: 48.8566, lon: 12.3522 },
   { name: 'BRAZIL', lat: -14.2350, lon: -51.9253 },
   { name: 'CANADA', lat: 56.1304, lon: -106.3468 },
   { name: 'CHINA', lat: 35.8617, lon: 104.1954 },
   { name: 'RUSSIA', lat: 61.5240, lon: 105.3188 },
-  { name: 'SOUTH AFRICA', lat: -30.5595, lon: 22.9375 },
 ];
 
 function resolveCoords(loc) {
@@ -225,19 +223,22 @@ function Country3DLabels() {
   return (
     <group>
       {COUNTRY_LABELS.map((country, i) => {
-        const pos = latLonToVector3(country.lat, country.lon, EARTH_RADIUS + 0.01);
+        const pos = latLonToVector3(country.lat, country.lon, EARTH_RADIUS + 0.015);
         return (
           <group key={i} position={pos}>
-            <Html distanceFactor={8} style={{ pointerEvents: 'none' }}>
+            <Html distanceFactor={9} style={{ pointerEvents: 'none' }}>
               <div
                 style={{
-                  color: 'rgba(226, 232, 240, 0.85)',
-                  fontSize: 9,
+                  color: 'rgba(241, 245, 249, 0.85)',
+                  fontSize: 7.5,
                   fontWeight: 800,
-                  letterSpacing: '0.08em',
+                  letterSpacing: '0.1em',
                   textTransform: 'uppercase',
                   whiteSpace: 'nowrap',
-                  textShadow: '0 0 6px rgba(0,0,0,0.8), 0 0 12px rgba(56, 189, 248, 0.4)',
+                  padding: '1px 4px',
+                  borderRadius: 3,
+                  background: 'rgba(6, 11, 24, 0.4)',
+                  textShadow: '0 0 6px rgba(0,0,0,0.9)',
                   transform: 'translate(-50%, -50%)',
                 }}
               >
@@ -578,38 +579,54 @@ export default function Globe({ locations = [], selectedVisitor, onLocationSelec
       </Canvas>
 
       {/* Top Left Floating Card: New Visitor Alert */}
-      <div
-        style={{
-          position: 'absolute',
-          left: 16,
-          top: 16,
-          padding: '10px 14px',
-          borderRadius: 12,
-          background: 'rgba(13, 19, 34, 0.92)',
-          border: '1px solid rgba(139, 92, 246, 0.3)',
-          color: '#edf6ff',
-          fontSize: 11,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 10,
-          backdropFilter: 'blur(12px)',
-          boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
-          zIndex: 10,
-        }}
-      >
-        <span style={{ fontSize: 18 }}>🇺🇸</span>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ fontWeight: 700, fontSize: 12, color: '#ffffff' }}>San Francisco, USA</span>
-            <span style={{ fontSize: 9, fontWeight: 700, color: '#8b5cf6', background: 'rgba(139, 92, 246, 0.2)', padding: '1px 6px', borderRadius: 4 }}>
-              New
-            </span>
+      {(() => {
+        const active = selectedVisitor || (activeLocations.length > 0 ? activeLocations[0] : null);
+        const city = active?.city || 'San Francisco';
+        const country = active?.country || 'USA';
+        let flag = '🇺🇸';
+        const c = country.toLowerCase();
+        if (c.includes('india')) flag = '🇮🇳';
+        else if (c.includes('uk') || c.includes('kingdom')) flag = '🇬🇧';
+        else if (c.includes('japan')) flag = '🇯🇵';
+        else if (c.includes('australia')) flag = '🇦🇺';
+        else if (c.includes('uae') || c.includes('emirates')) flag = '🇦🇪';
+        else if (c.includes('germany')) flag = '🇩🇪';
+
+        return (
+          <div
+            style={{
+              position: 'absolute',
+              left: 16,
+              top: 16,
+              padding: '10px 14px',
+              borderRadius: 12,
+              background: 'rgba(13, 19, 34, 0.92)',
+              border: '1px solid rgba(139, 92, 246, 0.3)',
+              color: '#edf6ff',
+              fontSize: 11,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+              backdropFilter: 'blur(12px)',
+              boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
+              zIndex: 10,
+            }}
+          >
+            <span style={{ fontSize: 18 }}>{flag}</span>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontWeight: 700, fontSize: 12, color: '#ffffff' }}>{city}, {country}</span>
+                <span style={{ fontSize: 9, fontWeight: 700, color: '#8b5cf6', background: 'rgba(139, 92, 246, 0.2)', padding: '1px 6px', borderRadius: 4 }}>
+                  Active
+                </span>
+              </div>
+              <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 2 }}>
+                Live session stream
+              </div>
+            </div>
           </div>
-          <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 2 }}>
-            2 seconds ago
-          </div>
-        </div>
-      </div>
+        );
+      })()}
 
       {/* Floating Controls Overlay */}
       <div

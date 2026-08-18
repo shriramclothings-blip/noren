@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { RefreshCw, Download, SunMedium, MoonStar, Globe as GlobeIcon, Cpu, Layers } from 'lucide-react';
+import { RefreshCw, Globe as GlobeIcon, Cpu, SunMedium, MoonStar } from 'lucide-react';
 import { io } from 'socket.io-client';
 import api from '../../../../utils/api';
 import toast from 'react-hot-toast';
@@ -17,7 +17,7 @@ export default function LiveVisitorMap() {
   const [selectedVisitor, setSelectedVisitor] = useState(null);
   const [socketConnected, setSocketConnected] = useState(false);
   const [themeMode, setThemeMode] = useState('dark');
-  const [globeEngine, setGlobeEngine] = useState('three'); // Default: 'three' (Three.js 3D Cyber Globe with 3D Arcs & Particles)
+  const [globeEngine, setGlobeEngine] = useState('three'); // Default: 'three' (Three.js 3D Cyber Globe)
   const [filters, setFilters] = useState({
     startDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     endDate: new Date().toISOString().split('T')[0],
@@ -43,33 +43,19 @@ export default function LiveVisitorMap() {
   const refreshTimer = useRef(null);
   const isDark = themeMode === 'dark';
 
-  const theme = isDark
-    ? {
-        pageBg: 'radial-gradient(ellipse at top, #090e1a 0%, #040812 50%, #020409 100%)',
-        panel: 'rgba(9, 15, 29, 0.82)',
-        panelStrong: 'rgba(11, 19, 36, 0.94)',
-        border: 'rgba(148, 163, 184, 0.12)',
-        borderStrong: 'rgba(56, 189, 248, 0.25)',
-        text: '#edf6ff',
-        textMuted: '#94a3b8',
-        textSoft: '#cbd5e1',
-        shadow: '0 20px 60px rgba(0, 0, 0, 0.6)',
-        buttonBg: 'rgba(15, 23, 42, 0.9)',
-        inputBg: 'rgba(15, 23, 42, 0.8)',
-      }
-    : {
-        pageBg: 'radial-gradient(ellipse at top, #f8fafc 0%, #f1f5f9 50%, #e2e8f0 100%)',
-        panel: 'rgba(255, 255, 255, 0.85)',
-        panelStrong: 'rgba(255, 255, 255, 0.96)',
-        border: 'rgba(148, 163, 184, 0.22)',
-        borderStrong: 'rgba(56, 189, 248, 0.35)',
-        text: '#0f172a',
-        textMuted: '#64748b',
-        textSoft: '#334155',
-        shadow: '0 18px 50px rgba(15, 23, 42, 0.12)',
-        buttonBg: 'rgba(255, 255, 255, 0.9)',
-        inputBg: 'rgba(255, 255, 255, 0.9)',
-      };
+  const theme = {
+    pageBg: '#060b17',
+    panel: 'rgba(13, 19, 34, 0.94)',
+    panelStrong: '#0a0f1d',
+    border: 'rgba(255, 255, 255, 0.08)',
+    borderStrong: 'rgba(56, 189, 248, 0.3)',
+    text: '#ffffff',
+    textMuted: '#94a3b8',
+    textSoft: '#cbd5e1',
+    shadow: '0 16px 40px rgba(0, 0, 0, 0.5)',
+    buttonBg: 'rgba(255, 255, 255, 0.06)',
+    inputBg: '#070c18',
+  };
 
   const { locations: geoLocations } = useVisitorLocations(filters);
 
@@ -84,7 +70,13 @@ export default function LiveVisitorMap() {
         api.get('/erp/utm/geo-summary', { params: filters }),
       ]);
 
-      setVisitors(visitorsRes.data.visitors || []);
+      const fetchedVisitors = visitorsRes.data.visitors || [];
+      setVisitors(fetchedVisitors);
+
+      // Auto-select latest active visitor by default if none selected
+      if (fetchedVisitors.length > 0 && !selectedVisitor) {
+        setSelectedVisitor(fetchedVisitors[0]);
+      }
 
       setStats({
         total: analyticsRes.data.total || 0,
@@ -100,7 +92,7 @@ export default function LiveVisitorMap() {
     } finally {
       setLoading(false);
     }
-  }, [filters]);
+  }, [filters, selectedVisitor]);
 
   useEffect(() => {
     fetchAnalytics();
@@ -147,6 +139,9 @@ export default function LiveVisitorMap() {
     toast.success('Live map refreshed');
   };
 
+  // Determine active visitor to show in right panel (selected or first in list)
+  const activeVisitor = selectedVisitor || (visitors.length > 0 ? visitors[0] : null);
+
   return (
     <div
       style={{
@@ -155,21 +150,23 @@ export default function LiveVisitorMap() {
         background: theme.pageBg,
         color: theme.text,
         display: 'flex',
-        justifyContent: 'center',
-        padding: '12px 16px 32px',
+        flexDirection: 'column',
+        alignItems: 'center',
+        padding: '16px 20px 40px',
         boxSizing: 'border-box',
+        borderRadius: 20,
       }}
     >
       <div
         style={{
           width: '100%',
-          maxWidth: 1560,
+          maxWidth: 1600,
           display: 'flex',
           flexDirection: 'column',
           gap: 16,
         }}
       >
-        {/* Header */}
+        {/* Top Control Action Bar */}
         <div
           style={{
             display: 'flex',
@@ -177,34 +174,48 @@ export default function LiveVisitorMap() {
             justifyContent: 'space-between',
             gap: 12,
             flexWrap: 'wrap',
+            padding: '12px 18px',
+            background: '#0a0f1d',
+            borderRadius: 16,
+            border: `1px solid ${theme.border}`,
           }}
         >
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <h2 style={{ fontSize: 20, fontWeight: 800, color: theme.text, margin: 0, letterSpacing: '-0.02em' }}>
-                Live Visitor Map 3D
-              </h2>
-              <span
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 4,
-                  fontSize: 10,
-                  fontWeight: 700,
-                  color: '#34d399',
-                  background: 'rgba(52, 211, 153, 0.12)',
-                  padding: '3px 8px',
-                  borderRadius: 100,
-                  border: '1px solid rgba(52, 211, 153, 0.25)',
-                }}
-              >
-                <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#34d399', animation: 'ping 2s infinite' }} />
-                REAL-TIME STREAM
-              </span>
-            </div>
-            <p style={{ fontSize: 12, color: theme.textMuted, margin: '4px 0 0' }}>
-              Real Earth Satellite Globe visualization with live visitor tracking & OpenStreetMap data
-            </p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 5,
+                fontSize: 11,
+                fontWeight: 700,
+                color: '#34d399',
+                background: 'rgba(52, 211, 153, 0.12)',
+                padding: '4px 10px',
+                borderRadius: 100,
+                border: '1px solid rgba(52, 211, 153, 0.25)',
+              }}
+            >
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#34d399', animation: 'ping 2s infinite' }} />
+              REAL-TIME LIVE STREAM
+            </span>
+
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                fontSize: 11,
+                fontWeight: 600,
+                color: socketConnected ? '#38bdf8' : '#f43f5e',
+                background: 'rgba(15, 23, 42, 0.6)',
+                padding: '4px 10px',
+                borderRadius: 8,
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+              }}
+            >
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: socketConnected ? '#38bdf8' : '#f43f5e' }} />
+              {socketConnected ? 'Websocket Active' : 'Polling Sync'}
+            </span>
           </div>
 
           <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -213,9 +224,9 @@ export default function LiveVisitorMap() {
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
-                background: theme.panelStrong,
+                background: '#070c18',
                 borderRadius: 10,
-                border: `1px solid ${theme.borderStrong}`,
+                border: '1px solid rgba(255, 255, 255, 0.1)',
                 padding: 3,
                 gap: 2,
               }}
@@ -230,7 +241,7 @@ export default function LiveVisitorMap() {
                   borderRadius: 8,
                   border: 'none',
                   background: globeEngine === 'cesium' ? 'linear-gradient(135deg, #0284c7, #0369a1)' : 'transparent',
-                  color: globeEngine === 'cesium' ? '#fff' : theme.textMuted,
+                  color: globeEngine === 'cesium' ? '#fff' : '#94a3b8',
                   fontSize: 11,
                   fontWeight: 700,
                   cursor: 'pointer',
@@ -249,7 +260,7 @@ export default function LiveVisitorMap() {
                   borderRadius: 8,
                   border: 'none',
                   background: globeEngine === 'three' ? 'linear-gradient(135deg, #7c3aed, #4f46e5)' : 'transparent',
-                  color: globeEngine === 'three' ? '#fff' : theme.textMuted,
+                  color: globeEngine === 'three' ? '#fff' : '#94a3b8',
                   fontSize: 11,
                   fontWeight: 700,
                   cursor: 'pointer',
@@ -260,25 +271,6 @@ export default function LiveVisitorMap() {
             </div>
 
             <button
-              onClick={() => setThemeMode(isDark ? 'light' : 'dark')}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: 36,
-                height: 36,
-                borderRadius: 10,
-                border: `1px solid ${theme.borderStrong}`,
-                background: theme.panelStrong,
-                color: theme.text,
-                cursor: 'pointer',
-              }}
-              title={isDark ? 'Light theme' : 'Dark theme'}
-            >
-              {isDark ? <SunMedium size={15} /> : <MoonStar size={15} />}
-            </button>
-
-            <button
               onClick={handleRefresh}
               style={{
                 display: 'inline-flex',
@@ -286,7 +278,7 @@ export default function LiveVisitorMap() {
                 gap: 6,
                 padding: '8px 14px',
                 borderRadius: 10,
-                border: `1px solid ${theme.borderStrong}`,
+                border: '1px solid rgba(255, 255, 255, 0.1)',
                 background: theme.buttonBg,
                 color: theme.text,
                 fontSize: 12,
@@ -305,12 +297,13 @@ export default function LiveVisitorMap() {
         {/* Filters */}
         <MapFilters filters={filters} onFilterChange={setFilters} theme={theme} />
 
-        {/* 3D Earth Globe (Google Earth Cesium or Cyber 3D) + Detail Panel */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 320px', gap: 16, minHeight: 560 }}>
+        {/* Main Section: 3D Earth Globe + Visitor Detail Panel */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 340px', gap: 16, minHeight: 560 }}>
+          {/* Globe Canvas Container */}
           <div
             style={{
-              background: theme.panelStrong,
-              borderRadius: 24,
+              background: '#0a0f1d',
+              borderRadius: 20,
               border: `1px solid ${theme.border}`,
               overflow: 'hidden',
               boxShadow: theme.shadow,
@@ -334,43 +327,17 @@ export default function LiveVisitorMap() {
             </WebGLErrorBoundary>
           </div>
 
-          {/* Visitor Details Panel */}
+          {/* Visitor Details Panel (Always populated with selected or latest visitor) */}
           <div style={{ display: 'flex', flexDirection: 'column' }}>
-            {selectedVisitor ? (
-              <VisitorDetails visitor={selectedVisitor} onClose={() => setSelectedVisitor(null)} theme={theme} />
-            ) : (
-              <div
-                style={{
-                  height: '100%',
-                  minHeight: 280,
-                  background: theme.panelStrong,
-                  borderRadius: 24,
-                  border: `1px solid ${theme.border}`,
-                  padding: 24,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  textAlign: 'center',
-                  color: theme.textMuted,
-                  boxShadow: theme.shadow,
-                }}
-              >
-                <GlobeIcon size={36} color="#38bdf8" style={{ marginBottom: 12, opacity: 0.6 }} />
-                <div style={{ fontWeight: 700, fontSize: 14, color: theme.text }}>Select a Visitor</div>
-                <div style={{ fontSize: 12, marginTop: 4, maxWidth: 220 }}>
-                  Click any marker on the 3D Google Earth globe or a row in the live table to inspect session details.
-                </div>
-              </div>
-            )}
+            <VisitorDetails visitor={activeVisitor} onClose={() => setSelectedVisitor(null)} theme={theme} />
           </div>
         </div>
 
         {/* Live Visitor Data Table */}
         <div
           style={{
-            background: theme.panelStrong,
-            borderRadius: 24,
+            background: '#0a0f1d',
+            borderRadius: 20,
             border: `1px solid ${theme.border}`,
             overflow: 'hidden',
             boxShadow: theme.shadow,
@@ -382,30 +349,6 @@ export default function LiveVisitorMap() {
             onVisitorSelect={setSelectedVisitor}
             theme={theme}
           />
-        </div>
-
-        {/* Floating Socket Connection Status */}
-        <div
-          style={{
-            position: 'fixed',
-            bottom: 20,
-            right: 20,
-            padding: '8px 12px',
-            borderRadius: 12,
-            background: 'rgba(6, 11, 24, 0.9)',
-            border: '1px solid rgba(56, 189, 248, 0.3)',
-            color: '#edf6ff',
-            fontSize: 11,
-            fontWeight: 600,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6,
-            backdropFilter: 'blur(10px)',
-            zIndex: 100,
-          }}
-        >
-          <span style={{ width: 8, height: 8, borderRadius: '50%', background: socketConnected ? '#34d399' : '#f43f5e' }} />
-          {socketConnected ? 'Live Websocket Active' : 'Polling Sync Mode'}
         </div>
       </div>
     </div>
