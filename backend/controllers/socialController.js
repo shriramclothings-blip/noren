@@ -139,7 +139,7 @@ const createPost = async (req, res) => {
 
     const post = postRes.rows[0];
 
-    // Insert post media items
+    // Insert post media items and auto-sync videos to Reels feed
     for (let i = 0; i < media.length; i++) {
       const m = media[i];
       await pool.query(
@@ -147,6 +147,14 @@ const createPost = async (req, res) => {
          VALUES ($1, $2, $3, $4, $5, $6)`,
         [post.id, m.media_type || 'image', m.media_url, m.thumbnail_url || null, m.aspect_ratio || '1:1', i]
       );
+
+      if (m.media_type === 'video' || (m.media_url && m.media_url.match(/\.(mp4|webm|mov)$/i))) {
+        await pool.query(
+          `INSERT INTO src_social_reels (user_id, video_url, thumbnail_url, caption, audio_title, is_hidden)
+           VALUES ($1, $2, $3, $4, $5, FALSE)`,
+          [userId, m.media_url, m.thumbnail_url || null, filteredCaption || null, 'Original Audio']
+        ).catch(err => console.error('Auto reel insert warning:', err.message));
+      }
     }
 
     // Process Hashtags
@@ -563,7 +571,7 @@ const getActiveStories = async (req, res) => {
 
     const userId = req.user.id;
 
-    // Retrieve active unexpired stories from followed users and self
+    // Retrieve active unexpired stories across the platform
     const storiesRes = await pool.query(
       `SELECT s.id, s.user_id, s.media_type, s.media_url, s.text_content, s.background_color,
               s.is_close_friends, s.views_count, s.expires_at, s.created_at,
@@ -572,11 +580,7 @@ const getActiveStories = async (req, res) => {
        FROM src_social_stories s
        JOIN src_users u ON u.id = s.user_id
        WHERE s.expires_at > NOW()
-         AND (
-           s.user_id = $1
-           OR s.user_id IN (SELECT following_id FROM src_social_follows WHERE follower_id = $1 AND status = 'accepted')
-         )
-       ORDER BY is_viewed ASC, s.created_at DESC`,
+       ORDER BY (s.user_id = $1) DESC, is_viewed ASC, s.created_at DESC`,
       [userId]
     );
 

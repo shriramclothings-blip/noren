@@ -60,11 +60,27 @@ export default function DirectMessages({ onInitiateCall }) {
 
   const handleUserSearch = async (val) => {
     setSearchQuery(val);
-    if (val.trim().length >= 2) {
+    const clean = val.trim();
+    if (clean.length >= 1) {
       try {
-        const res = await api.get(`/erp/communications/users/search?q=${encodeURIComponent(val)}`);
-        setSearchResults(res.data);
-      } catch {}
+        const [commRes, socRes] = await Promise.all([
+          api.get(`/erp/communications/users/search?q=${encodeURIComponent(clean)}`).catch(() => ({ data: [] })),
+          api.get(`/social/search?q=${encodeURIComponent(clean)}`).catch(() => ({ data: { users: [] } })),
+        ]);
+        const commUsers = commRes.data || [];
+        const socUsers = socRes.data?.users || [];
+
+        // Merge and deduplicate by user id
+        const userMap = new Map();
+        [...commUsers, ...socUsers].forEach(u => {
+          if (u && u.id && u.id !== user?.id) {
+            userMap.set(u.id, u);
+          }
+        });
+        setSearchResults(Array.from(userMap.values()));
+      } catch {
+        setSearchResults([]);
+      }
     } else {
       setSearchResults([]);
     }
