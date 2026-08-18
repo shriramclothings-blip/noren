@@ -10,12 +10,12 @@ import {
   Float32BufferAttribute,
   TextureLoader,
 } from 'three';
-import { Maximize2, Minimize2, ZoomIn, ZoomOut, RotateCcw, Play, Pause, Globe as GlobeIcon } from 'lucide-react';
+import { Maximize2, Minimize2, ZoomIn, ZoomOut, RotateCcw, Play, Pause, Globe as GlobeIcon, Tag, MapPin } from 'lucide-react';
 
 const EARTH_RADIUS = 2.0;
-const SERVER_LOCATION = { lat: 19.0760, lon: 72.8777, label: 'HQ Server (Mumbai, IN)' };
+const SERVER_LOCATION = { lat: 19.0760, lon: 72.8777, label: 'HQ Server (Mumbai, India)' };
 
-// Fallback coordinate lookup dictionary
+// Comprehensive Geo-lookup dictionary for coordinates
 const GEO_LOOKUP = {
   'mumbai': { lat: 19.0760, lon: 72.8777 },
   'delhi': { lat: 28.6139, lon: 77.2090 },
@@ -55,6 +55,23 @@ const GEO_LOOKUP = {
   'uae': { lat: 23.4241, lon: 53.8478 },
 };
 
+// Major Countries for on-globe typography labels
+const COUNTRY_LABELS = [
+  { name: 'INDIA', lat: 20.5937, lon: 78.9629 },
+  { name: 'UNITED STATES', lat: 37.0902, lon: -95.7129 },
+  { name: 'UNITED KINGDOM', lat: 55.3781, lon: -3.4360 },
+  { name: 'UNITED ARAB EMIRATES', lat: 23.4241, lon: 53.8478 },
+  { name: 'JAPAN', lat: 36.2048, lon: 138.2529 },
+  { name: 'AUSTRALIA', lat: -25.2744, lon: 133.7751 },
+  { name: 'GERMANY', lat: 51.1657, lon: 10.4515 },
+  { name: 'FRANCE', lat: 46.2276, lon: 2.2137 },
+  { name: 'BRAZIL', lat: -14.2350, lon: -51.9253 },
+  { name: 'CANADA', lat: 56.1304, lon: -106.3468 },
+  { name: 'CHINA', lat: 35.8617, lon: 104.1954 },
+  { name: 'RUSSIA', lat: 61.5240, lon: 105.3188 },
+  { name: 'SOUTH AFRICA', lat: -30.5595, lon: 22.9375 },
+];
+
 function resolveCoords(loc) {
   let lat = parseFloat(loc?.latitude);
   let lon = parseFloat(loc?.longitude);
@@ -85,14 +102,14 @@ function latLonToVector3(lat, lon, radius = EARTH_RADIUS) {
   );
 }
 
-// Generate high-resolution realistic Earth map canvas with true continent boundaries
-function createRealisticEarthTexture() {
+// Generate realistic Earth texture map with printed country names & borders directly on canvas
+function createDetailedEarthTexture() {
   const canvas = document.createElement('canvas');
   canvas.width = 4096;
   canvas.height = 2048;
   const ctx = canvas.getContext('2d');
 
-  // Deep space ocean water gradient
+  // Ocean gradient
   const oceanGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
   oceanGradient.addColorStop(0, '#040d1a');
   oceanGradient.addColorStop(0.5, '#0a1d36');
@@ -100,10 +117,9 @@ function createRealisticEarthTexture() {
   ctx.fillStyle = oceanGradient;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // Accurate continent landmass polygons (lat/lon converted to equirectangular coordinates)
   const drawPolygon = (points, fillColor, strokeColor) => {
     ctx.fillStyle = fillColor;
-    ctx.strokeStyle = strokeColor || 'rgba(56, 189, 248, 0.3)';
+    ctx.strokeStyle = strokeColor || 'rgba(56, 189, 248, 0.35)';
     ctx.lineWidth = 2;
     ctx.beginPath();
     points.forEach(([lon, lat], i) => {
@@ -117,8 +133,8 @@ function createRealisticEarthTexture() {
     ctx.stroke();
   };
 
-  const landColor = '#132842';
-  const landHighlight = '#1a385c';
+  const landColor = '#122640';
+  const landHighlight = '#1c395e';
 
   // North America
   drawPolygon([
@@ -134,7 +150,7 @@ function createRealisticEarthTexture() {
   // Greenland
   drawPolygon([
     [-55, 60], [-20, 70], [-20, 83], [-60, 82]
-  ], '#203a5c', landHighlight);
+  ], '#1f385a', landHighlight);
 
   // Europe
   drawPolygon([
@@ -152,10 +168,10 @@ function createRealisticEarthTexture() {
     [125, 30], [140, 35], [170, 65], [170, 75], [70, 75], [50, 55]
   ], landColor, landHighlight);
 
-  // India Detail Highlight
+  // India Detail Outline
   drawPolygon([
     [68, 24], [72, 33], [88, 27], [88, 21], [80, 12], [77, 8], [73, 15]
-  ], '#1e406d', '#38bdf8');
+  ], '#1b3f6c', '#38bdf8');
 
   // Japan
   drawPolygon([
@@ -170,32 +186,21 @@ function createRealisticEarthTexture() {
   // Antarctica
   drawPolygon([
     [-180, -70], [180, -70], [180, -90], [-180, -90]
-  ], '#1e3352', '#3a5a85');
+  ], '#1b3150', '#38557e');
 
-  // City Light Dots (Global urban centers)
-  const lights = [
-    [72.8777, 19.0760], [77.2090, 28.6139], [77.5946, 12.9716], [78.4867, 17.3850], // India
-    [-74.0060, 40.7128], [-122.4194, 37.7749], [-118.2437, 34.0522], [-87.6298, 41.8781], // USA
-    [-0.1278, 51.5074], [2.3522, 48.8566], [13.4050, 52.5200], // Europe
-    [139.6503, 35.6762], [121.4737, 31.2304], [116.4074, 39.9042], // Asia
-    [55.2708, 25.2048], [103.8198, 1.3521], [151.2093, -33.8688] // UAE/Aus
-  ];
+  // Print Country Name Typography Labels on Texture Map
+  ctx.font = 'bold 22px Inter, sans-serif';
+  ctx.fillStyle = 'rgba(148, 163, 184, 0.45)';
+  ctx.textAlign = 'center';
 
-  lights.forEach(([lon, lat]) => {
-    const x = ((lon + 180) / 360) * canvas.width;
-    const y = ((90 - lat) / 180) * canvas.height;
-    const grad = ctx.createRadialGradient(x, y, 0, x, y, 14);
-    grad.addColorStop(0, 'rgba(56, 189, 248, 1)');
-    grad.addColorStop(0.3, 'rgba(168, 85, 247, 0.6)');
-    grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
-    ctx.fillStyle = grad;
-    ctx.beginPath();
-    ctx.arc(x, y, 14, 0, Math.PI * 2);
-    ctx.fill();
+  COUNTRY_LABELS.forEach((c) => {
+    const x = ((c.lon + 180) / 360) * canvas.width;
+    const y = ((90 - c.lat) / 180) * canvas.height;
+    ctx.fillText(c.name, x, y);
   });
 
-  // Grid latitude / longitude lines
-  ctx.strokeStyle = 'rgba(56, 189, 248, 0.07)';
+  // Print Latitude / Longitude coordinate grid overlay
+  ctx.strokeStyle = 'rgba(56, 189, 248, 0.08)';
   ctx.lineWidth = 1;
   for (let lat = -80; lat <= 80; lat += 20) {
     const y = ((90 - lat) / 180) * canvas.height;
@@ -213,6 +218,37 @@ function createRealisticEarthTexture() {
   }
 
   return new CanvasTexture(canvas);
+}
+
+// 3D Country Labels rendered on sphere surface
+function Country3DLabels() {
+  return (
+    <group>
+      {COUNTRY_LABELS.map((country, i) => {
+        const pos = latLonToVector3(country.lat, country.lon, EARTH_RADIUS + 0.01);
+        return (
+          <group key={i} position={pos}>
+            <Html distanceFactor={8} style={{ pointerEvents: 'none' }}>
+              <div
+                style={{
+                  color: 'rgba(226, 232, 240, 0.85)',
+                  fontSize: 9,
+                  fontWeight: 800,
+                  letterSpacing: '0.08em',
+                  textTransform: 'uppercase',
+                  whiteSpace: 'nowrap',
+                  textShadow: '0 0 6px rgba(0,0,0,0.8), 0 0 12px rgba(56, 189, 248, 0.4)',
+                  transform: 'translate(-50%, -50%)',
+                }}
+              >
+                {country.name}
+              </div>
+            </Html>
+          </group>
+        );
+      })}
+    </group>
+  );
 }
 
 // 3D Connection Arcs and Moving Light Particles
@@ -264,7 +300,7 @@ function ConnectionArcs({ locations }) {
 
   return (
     <group>
-      {/* Server HQ Node Marker */}
+      {/* HQ Server Node Marker */}
       <group position={serverPos}>
         <mesh>
           <sphereGeometry args={[0.045, 16, 16]} />
@@ -294,71 +330,91 @@ function ConnectionArcs({ locations }) {
   );
 }
 
-// Glowing Pin Drops for Visitor Locations
+// Precise 3D Pinpoint Drops (with Stem Needles and Glowing Bulbs)
 function GlobeMarkers({ locations, selectedVisitor, onSelect }) {
   return (
     <group>
       {locations.map((loc, idx) => {
         const coords = resolveCoords(loc);
-        const pos = latLonToVector3(coords.lat, coords.lon, EARTH_RADIUS + 0.015);
+        const basePos = latLonToVector3(coords.lat, coords.lon, EARTH_RADIUS + 0.005);
+        const topPos = latLonToVector3(coords.lat, coords.lon, EARTH_RADIUS + 0.08);
+
         const count = loc.visitor_count || 1;
         const intensity = Math.min(1.5, 0.4 + count / 20);
         const isSelected = selectedVisitor && (selectedVisitor.latitude === coords.lat && selectedVisitor.longitude === coords.lon);
 
+        // Stem needle points
+        const stemPositions = new Float32Array([
+          basePos.x, basePos.y, basePos.z,
+          topPos.x, topPos.y, topPos.z
+        ]);
+        const stemGeometry = new BufferGeometry();
+        stemGeometry.setAttribute('position', new Float32BufferAttribute(stemPositions, 3));
+
         return (
-          <group key={idx} position={pos}>
-            <mesh>
-              <sphereGeometry args={[0.045 * intensity, 16, 16]} />
-              <meshStandardMaterial
-                color={isSelected ? '#f43f5e' : '#38bdf8'}
-                emissive={isSelected ? '#f43f5e' : '#38bdf8'}
-                emissiveIntensity={1.8}
-                transparent
-                opacity={0.7}
-                toneMapped={false}
-              />
-            </mesh>
+          <group key={idx}>
+            {/* 3D Pin Stem Line */}
+            <line geometry={stemGeometry}>
+              <lineBasicMaterial attach="material" color={isSelected ? '#f43f5e' : '#38bdf8'} opacity={0.8} transparent linewidth={2} />
+            </line>
 
-            <mesh position={[0, 0, 0.002]}>
-              <sphereGeometry args={[0.022 * intensity, 12, 12]} />
-              <meshStandardMaterial
-                color="#ffffff"
-                emissive={isSelected ? '#fbbf24' : '#67e8f9'}
-                emissiveIntensity={2.2}
-                toneMapped={false}
-              />
-            </mesh>
+            {/* Pin Head Bulb at top position */}
+            <group position={topPos}>
+              <mesh>
+                <sphereGeometry args={[0.04 * intensity, 16, 16]} />
+                <meshStandardMaterial
+                  color={isSelected ? '#f43f5e' : '#38bdf8'}
+                  emissive={isSelected ? '#f43f5e' : '#38bdf8'}
+                  emissiveIntensity={2}
+                  transparent
+                  opacity={0.8}
+                  toneMapped={false}
+                />
+              </mesh>
 
-            <Html distanceFactor={7} style={{ pointerEvents: 'all' }}>
-              <div
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onSelect(loc);
-                }}
-                style={{
-                  padding: '8px 12px',
-                  borderRadius: 10,
-                  background: 'rgba(6, 11, 24, 0.94)',
-                  color: '#edf6ff',
-                  border: isSelected ? '1.5px solid #f43f5e' : '1px solid rgba(56, 189, 248, 0.4)',
-                  boxShadow: '0 12px 32px rgba(0,0,0,0.6)',
-                  backdropFilter: 'blur(12px)',
-                  cursor: 'pointer',
-                  fontSize: 11,
-                  fontWeight: 600,
-                  whiteSpace: 'nowrap',
-                  transform: 'translate(-50%, -120%)',
-                }}
-              >
-                <div style={{ color: isSelected ? '#f43f5e' : '#38bdf8', fontWeight: 700, fontSize: 12 }}>
-                  {loc.city || 'Location'}, {loc.country}
+              <mesh position={[0, 0, 0.002]}>
+                <sphereGeometry args={[0.02 * intensity, 12, 12]} />
+                <meshStandardMaterial
+                  color="#ffffff"
+                  emissive={isSelected ? '#fbbf24' : '#67e8f9'}
+                  emissiveIntensity={2.5}
+                  toneMapped={false}
+                />
+              </mesh>
+
+              {/* Pinpoint Label Tag */}
+              <Html distanceFactor={7} style={{ pointerEvents: 'all' }}>
+                <div
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onSelect(loc);
+                  }}
+                  style={{
+                    padding: '8px 12px',
+                    borderRadius: 10,
+                    background: 'rgba(6, 11, 24, 0.94)',
+                    color: '#edf6ff',
+                    border: isSelected ? '1.5px solid #f43f5e' : '1px solid rgba(56, 189, 248, 0.4)',
+                    boxShadow: '0 12px 32px rgba(0,0,0,0.6)',
+                    backdropFilter: 'blur(12px)',
+                    cursor: 'pointer',
+                    fontSize: 11,
+                    fontWeight: 600,
+                    whiteSpace: 'nowrap',
+                    transform: 'translate(-50%, -120%)',
+                  }}
+                >
+                  <div style={{ color: isSelected ? '#f43f5e' : '#38bdf8', fontWeight: 700, fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <MapPin size={12} color={isSelected ? '#f43f5e' : '#38bdf8'} />
+                    {loc.city || 'Pinpoint'}, {loc.country}
+                  </div>
+                  <div style={{ fontSize: 10, color: '#34d399', marginTop: 2, display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#34d399' }} />
+                    {count} active visitor{count > 1 ? 's' : ''} (Lat: {coords.lat.toFixed(2)}, Lon: {coords.lon.toFixed(2)})
+                  </div>
                 </div>
-                <div style={{ fontSize: 10, color: '#34d399', marginTop: 2, display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#34d399' }} />
-                  {count} active visitor{count > 1 ? 's' : ''}
-                </div>
-              </div>
-            </Html>
+              </Html>
+            </group>
           </group>
         );
       })}
@@ -368,10 +424,9 @@ function GlobeMarkers({ locations, selectedVisitor, onSelect }) {
 
 // 3D Sphere Globe mesh with realistic maps texture
 function EarthGlobe() {
-  const fallbackTexture = useMemo(() => createRealisticEarthTexture(), []);
+  const fallbackTexture = useMemo(() => createDetailedEarthTexture(), []);
   const [loadedTexture, setLoadedTexture] = useState(null);
 
-  // Load real high-res Earth texture from CDN with fallback to procedural high-detail map
   useEffect(() => {
     const loader = new TextureLoader();
     loader.load(
@@ -426,17 +481,16 @@ const DEFAULT_LOCATIONS = [
 
 export default function Globe({ locations = [], selectedVisitor, onLocationSelect }) {
   const [autoRotate, setAutoRotate] = useState(true);
+  const [showLabels, setShowLabels] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const containerRef = useRef(null);
   const controlsRef = useRef(null);
 
-  // Active locations to display (uses real visitor locations or active default global map nodes)
   const activeLocations = useMemo(() => {
     if (locations && locations.length > 0) return locations;
     return DEFAULT_LOCATIONS;
   }, [locations]);
 
-  // Focus globe camera on selected visitor location
   useEffect(() => {
     if (selectedVisitor && controlsRef.current) {
       const coords = resolveCoords(selectedVisitor);
@@ -502,6 +556,8 @@ export default function Globe({ locations = [], selectedVisitor, onLocationSelec
 
         <EarthGlobe />
 
+        {showLabels && <Country3DLabels />}
+
         <ConnectionArcs locations={activeLocations} />
 
         <GlobeMarkers locations={activeLocations} selectedVisitor={selectedVisitor} onSelect={onLocationSelect} />
@@ -543,6 +599,17 @@ export default function Globe({ locations = [], selectedVisitor, onLocationSelec
           <RotateCcw size={16} />
         </button>
         <button
+          onClick={() => setShowLabels(!showLabels)}
+          style={{
+            ...btnStyle,
+            background: showLabels ? 'rgba(56, 189, 248, 0.25)' : 'rgba(15, 23, 42, 0.85)',
+            borderColor: showLabels ? '#38bdf8' : 'rgba(148, 163, 184, 0.2)',
+          }}
+          title="Toggle Country Labels"
+        >
+          <Tag size={16} color={showLabels ? '#38bdf8' : '#94a3b8'} />
+        </button>
+        <button
           onClick={() => setAutoRotate(!autoRotate)}
           style={{
             ...btnStyle,
@@ -579,9 +646,9 @@ export default function Globe({ locations = [], selectedVisitor, onLocationSelec
       >
         <GlobeIcon size={16} color="#38bdf8" />
         <div>
-          <div style={{ fontWeight: 700, fontSize: 12, color: '#38bdf8' }}>Interactive 3D World Map</div>
+          <div style={{ fontWeight: 700, fontSize: 12, color: '#38bdf8' }}>3D World Map with Country Labels</div>
           <div style={{ fontSize: 10, color: '#94a3b8' }}>
-            {activeLocations.length} active visitor region{activeLocations.length === 1 ? '' : 's'} mapped
+            {activeLocations.length} pinpoint location{activeLocations.length === 1 ? '' : 's'} mapped
           </div>
         </div>
       </div>
