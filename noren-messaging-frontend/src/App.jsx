@@ -192,7 +192,7 @@ function MainLayout() {
       <Navbar onOpenCreatePost={() => setShowCreatePost(true)} />
 
       <div className="flex-1 max-w-7xl w-full mx-auto flex gap-6 p-4 lg:p-6">
-        <Sidebar />
+        <Sidebar onOpenCreatePost={() => setShowCreatePost(true)} />
         <main className="flex-1 min-w-0 pb-16 md:pb-0">
           <Routes>
             <Route path="/" element={<HomeFeed onOpenCreatePost={() => setShowCreatePost(true)} />} />

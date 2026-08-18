@@ -1,8 +1,8 @@
 import { NavLink } from 'react-router-dom';
-import { Home, Compass, Video, MessageCircle, Bell, User, Settings, Bookmark, Shield } from 'lucide-react';
+import { Home, Compass, Video, MessageCircle, Bell, User, Settings, Bookmark, Shield, UploadCloud } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
-export default function Sidebar() {
+export default function Sidebar({ onOpenCreatePost }) {
   const { user } = useAuth();
 
   const navItems = [
@@ -39,6 +39,19 @@ export default function Sidebar() {
           );
         })}
       </nav>
+
+      {/* Bulk Upload Action Button */}
+      {onOpenCreatePost && (
+        <div className="pt-3 pb-2 border-t border-white/10">
+          <button
+            onClick={onOpenCreatePost}
+            className="flex items-center justify-center gap-2.5 w-full py-3 rounded-2xl btn-liquid-solid font-black text-xs text-black shadow-xl transition-all hover:scale-[1.02]"
+          >
+            <UploadCloud className="w-4 h-4 text-black" />
+            <span>Bulk Upload Media</span>
+          </button>
+        </div>
+      )}
 
       {/* Admin Panel Access */}
       {user && (user.role === 'admin' || user.role === 'super_admin') && (
