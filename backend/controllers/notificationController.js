@@ -10,12 +10,15 @@ const vapidEnabled = Boolean(vapidPublicKey && vapidPrivateKey);
 if (vapidEnabled) {
   webpush.setVapidDetails(vapidEmail, vapidPublicKey, vapidPrivateKey);
 } else {
-  console.warn('⚠️  VAPID keys missing; push notifications are disabled until VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY are configured.');
+  console.warn('⚠️  Web Push disabled: VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY are required to enable push notifications.');
 }
 
 // ── Helper: send push to a subscription ──────────────────────────────────────
 const sendPush = async (subscription, payload) => {
-  if (!vapidEnabled) return false;
+  if (!vapidEnabled) {
+    console.warn('⚠️  Skipping push send: VAPID not configured');
+    return false;
+  }
   try {
     await webpush.sendNotification(subscription, JSON.stringify(payload));
     return true;
@@ -30,7 +33,10 @@ const sendPush = async (subscription, payload) => {
 
 // ── Get VAPID public key ──────────────────────────────────────────────────────
 const getVapidKey = (req, res) => {
-  res.json({ publicKey: vapidPublicKey || null });
+  if (!vapidPublicKey) {
+    return res.status(503).json({ message: 'VAPID public key not configured' });
+  }
+  res.json({ publicKey: vapidPublicKey });
 };
 
 // ── Subscribe user ────────────────────────────────────────────────────────────
