@@ -11,6 +11,7 @@ import StoriesBar from './components/StoriesBar';
 import PostCard from './components/PostCard';
 import CreatePostModal from './components/CreatePostModal';
 import ReelsView from './components/ReelsView';
+import VideosView from './components/VideosView';
 import DirectMessages from './components/DirectMessages';
 import ProfileView from './components/ProfileView';
 import SearchView from './components/SearchView';
@@ -199,6 +200,7 @@ function MainLayout() {
             <Route path="/explore" element={<SearchView />} />
             <Route path="/search" element={<SearchView />} />
             <Route path="/reels" element={<ReelsView />} />
+            <Route path="/videos" element={<VideosView onOpenUpload={() => setShowCreatePost(true)} />} />
             <Route path="/messages" element={<DirectMessages onInitiateCall={handleInitiateCall} />} />
             <Route path="/notifications" element={<NotificationsView />} />
             <Route path="/bookmarks" element={<BookmarksView />} />

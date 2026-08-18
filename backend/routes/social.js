@@ -61,6 +61,7 @@ router.post('/reels/bulk-upload', auth, upload.any(), socialCtrl.bulkUploadReels
 router.delete('/reels/:id', auth, socialCtrl.deleteReel);
 router.post('/reels/:id/view', optionalAuth, socialCtrl.recordReelView);
 router.get('/explore', optionalAuth, socialCtrl.getExploreFeed);
+router.get('/videos', optionalAuth, socialCtrl.getHorizontalVideos);
 
 // Stories
 router.get('/stories', optionalAuth, socialCtrl.getActiveStories);

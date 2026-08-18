@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { Home, Compass, Video, MessageCircle, Bell, User, Settings, Bookmark, Shield, UploadCloud } from 'lucide-react';
+import { Home, Compass, Video, Tv, MessageCircle, Bell, User, Settings, Bookmark, Shield, UploadCloud } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export default function Sidebar({ onOpenCreatePost }) {
@@ -9,6 +9,7 @@ export default function Sidebar({ onOpenCreatePost }) {
     { label: 'Home Feed', path: '/', icon: Home },
     { label: 'Explore', path: '/explore', icon: Compass },
     { label: 'Reels', path: '/reels', icon: Video },
+    { label: 'Watch Videos', path: '/videos', icon: Tv },
     { label: 'Messages', path: '/messages', icon: MessageCircle },
     { label: 'Notifications', path: '/notifications', icon: Bell },
     { label: 'Bookmarks', path: '/bookmarks', icon: Bookmark },

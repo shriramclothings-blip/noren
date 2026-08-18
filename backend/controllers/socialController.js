@@ -1300,10 +1300,11 @@ const bulkUploadPosts = async (req, res) => {
         );
         const post = postRes.rows[0];
 
+        const targetAspect = req.body.aspect_ratio || (item.media_type === 'video' ? '16:9' : '1:1');
         await pool.query(
           `INSERT INTO src_social_post_media (post_id, media_type, media_url, aspect_ratio, sort_order)
-           VALUES ($1, $2, $3, '1:1', 0)`,
-          [post.id, item.media_type, item.media_url]
+           VALUES ($1, $2, $3, $4, 0)`,
+          [post.id, item.media_type, item.media_url, targetAspect]
         );
 
         createdPosts.push({ ...post, media: [item] });
@@ -1319,10 +1320,11 @@ const bulkUploadPosts = async (req, res) => {
 
       for (let i = 0; i < uploadedMediaList.length; i++) {
         const item = uploadedMediaList[i];
+        const targetAspect = req.body.aspect_ratio || (item.media_type === 'video' ? '16:9' : '1:1');
         await pool.query(
           `INSERT INTO src_social_post_media (post_id, media_type, media_url, aspect_ratio, sort_order)
-           VALUES ($1, $2, $3, '1:1', $4)`,
-          [post.id, item.media_type, item.media_url, i]
+           VALUES ($1, $2, $3, $4, $5)`,
+          [post.id, item.media_type, item.media_url, targetAspect, i]
         );
       }
 
@@ -1342,10 +1344,44 @@ const bulkUploadPosts = async (req, res) => {
   }
 };
 
+const getHorizontalVideos = async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 30;
+
+    const videosRes = await pool.query(
+      `SELECT p.id, p.user_id, p.caption, p.likes_count, p.comments_count, p.views_count, p.created_at,
+              u.name AS author_name, u.username AS author_username, u.avatar_url AS author_avatar, u.is_verified AS author_verified,
+              json_agg(
+                json_build_object(
+                  'id', m.id,
+                  'media_type', m.media_type,
+                  'media_url', m.media_url,
+                  'thumbnail_url', m.thumbnail_url,
+                  'aspect_ratio', m.aspect_ratio
+                ) ORDER BY m.sort_order ASC
+              ) AS media
+       FROM src_social_posts p
+       JOIN src_users u ON u.id = p.user_id
+       JOIN src_social_post_media m ON m.post_id = p.id
+       WHERE m.media_type = 'video' OR m.aspect_ratio = '16:9' OR m.media_url ~* '\\.(mp4|webm|mov)$'
+       GROUP BY p.id, u.id
+       ORDER BY p.created_at DESC
+       LIMIT $1`,
+      [limit]
+    );
+
+    res.json(videosRes.rows);
+  } catch (err) {
+    console.error('getHorizontalVideos error:', err.message);
+    res.status(500).json({ message: 'Failed to fetch horizontal videos' });
+  }
+};
+
 module.exports = {
   getFeed,
   createPost,
   bulkUploadPosts,
+  getHorizontalVideos,
   getPostById,
   updatePost,
   deletePost,

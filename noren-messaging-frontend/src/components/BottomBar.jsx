@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { Home, Compass, Video, MessageCircle, User } from 'lucide-react';
+import { Home, Compass, Video, Tv, MessageCircle, User } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export default function BottomBar() {
@@ -9,6 +9,7 @@ export default function BottomBar() {
     { label: 'Home', path: '/', icon: Home },
     { label: 'Explore', path: '/explore', icon: Compass },
     { label: 'Reels', path: '/reels', icon: Video },
+    { label: 'Watch', path: '/videos', icon: Tv },
     { label: 'Direct', path: '/messages', icon: MessageCircle },
     { label: 'Profile', path: user ? `/profile/${user.user_code || user.username || user.id}` : '/login', icon: User },
   ];

@@ -1,11 +1,12 @@
 import { useState, useRef } from 'react';
-import { X, Upload, Image as ImageIcon, Video, Loader2, Layers, Grid, Trash2, Plus, Sparkles, FolderPlus } from 'lucide-react';
+import { X, Upload, Image as ImageIcon, Video, Loader2, Layers, Grid, Trash2, Plus, Sparkles, FolderPlus, Tv } from 'lucide-react';
 import api from '../utils/api';
 import toast from 'react-hot-toast';
 
 export default function CreatePostModal({ onClose, onPostCreated }) {
-  const [activeTab, setActiveTab] = useState('bulk'); // 'bulk' or 'single'
+  const [activeTab, setActiveTab] = useState('bulk'); // 'bulk', 'video', or 'single'
   const [postMode, setPostMode] = useState('carousel'); // 'carousel' or 'individual'
+  const [aspectRatio, setAspectRatio] = useState('1:1');
   const [caption, setCaption] = useState('');
   const [location, setLocation] = useState('');
   const [selectedFiles, setSelectedFiles] = useState([]);
@@ -20,13 +21,14 @@ export default function CreatePostModal({ onClose, onPostCreated }) {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
 
-    if (activeTab === 'single') {
+    if (activeTab === 'single' || activeTab === 'video') {
       const file = files[0];
       setSelectedFiles([file]);
       const url = URL.createObjectURL(file);
       setSingleMediaUrl(url);
       setSingleMediaType(file.type.startsWith('video') ? 'video' : 'image');
       setPreviews([{ url, type: file.type.startsWith('video') ? 'video' : 'image', name: file.name }]);
+      if (activeTab === 'video') setAspectRatio('16:9');
       return;
     }
 
@@ -57,15 +59,13 @@ export default function CreatePostModal({ onClose, onPostCreated }) {
 
     try {
       if (activeTab === 'single' && singleMediaUrl.startsWith('http')) {
-        // Direct link submission
         await api.post('/social/posts', {
           caption,
           location,
           privacy: 'public',
-          media: [{ media_type: singleMediaType, media_url: singleMediaUrl.trim(), sort_order: 0 }],
+          media: [{ media_type: singleMediaType, media_url: singleMediaUrl.trim(), aspect_ratio: aspectRatio, sort_order: 0 }],
         });
       } else {
-        // Bulk or File Upload
         const formData = new FormData();
         selectedFiles.forEach((file) => {
           formData.append('files', file);
@@ -73,6 +73,7 @@ export default function CreatePostModal({ onClose, onPostCreated }) {
         formData.append('caption', caption);
         formData.append('location', location);
         formData.append('mode', postMode);
+        formData.append('aspect_ratio', activeTab === 'video' ? '16:9' : aspectRatio);
 
         await api.post('/social/posts/bulk-upload', formData, {
           headers: { 'Content-Type': 'multipart/form-data' },
@@ -103,48 +104,54 @@ export default function CreatePostModal({ onClose, onPostCreated }) {
           <div>
             <h3 className="text-xl font-black text-white flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-amber-400" />
-              <span>Create & Bulk Upload</span>
+              <span>Create & Upload Media</span>
             </h3>
-            <p className="text-xs text-neutral-400">Upload multiple photos and videos to Feed & Reels</p>
+            <p className="text-xs text-neutral-400">Bulk upload photos, reels, and YouTube-style 16:9 videos</p>
           </div>
           <button onClick={onClose} className="text-neutral-400 hover:text-white p-1.5 rounded-full hover:bg-white/10 transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Tab Switcher: Bulk Upload vs Single Post */}
-        <div className="grid grid-cols-2 gap-2 p-1.5 rounded-2xl bg-white/5 border border-white/10">
+        {/* Tab Switcher */}
+        <div className="grid grid-cols-3 gap-1.5 p-1.5 rounded-2xl bg-white/5 border border-white/10 text-xs font-extrabold">
           <button
             type="button"
             onClick={() => setActiveTab('bulk')}
-            className={`flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-extrabold transition-all ${
-              activeTab === 'bulk'
-                ? 'btn-liquid-solid text-black shadow-lg scale-[1.02]'
-                : 'text-neutral-400 hover:text-white'
+            className={`py-2.5 rounded-xl transition-all flex items-center justify-center gap-1.5 ${
+              activeTab === 'bulk' ? 'btn-liquid-solid text-black shadow-lg' : 'text-neutral-400 hover:text-white'
             }`}
           >
             <FolderPlus className="w-4 h-4" />
-            <span>📁 Bulk Upload (Multiple Media)</span>
+            <span>📁 Bulk</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => { setActiveTab('video'); setAspectRatio('16:9'); }}
+            className={`py-2.5 rounded-xl transition-all flex items-center justify-center gap-1.5 ${
+              activeTab === 'video' ? 'btn-liquid-solid text-black shadow-lg' : 'text-neutral-400 hover:text-white'
+            }`}
+          >
+            <Tv className="w-4 h-4 text-amber-400" />
+            <span>📺 16:9 Video</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab('single')}
-            className={`flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-extrabold transition-all ${
-              activeTab === 'single'
-                ? 'btn-liquid-solid text-black shadow-lg scale-[1.02]'
-                : 'text-neutral-400 hover:text-white'
+            className={`py-2.5 rounded-xl transition-all flex items-center justify-center gap-1.5 ${
+              activeTab === 'single' ? 'btn-liquid-solid text-black shadow-lg' : 'text-neutral-400 hover:text-white'
             }`}
           >
             <ImageIcon className="w-4 h-4" />
-            <span>📸 Single Post / URL</span>
+            <span>📸 Single</span>
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {activeTab === 'bulk' && (
             <>
-              {/* Bulk Mode Option: Carousel vs Individual */}
               <div className="flex items-center justify-between gap-2 p-2 rounded-2xl bg-black/40 border border-white/10 text-xs">
                 <span className="font-bold text-neutral-300 pl-2">Publish Mode:</span>
                 <div className="flex gap-2">
@@ -169,7 +176,6 @@ export default function CreatePostModal({ onClose, onPostCreated }) {
                 </div>
               </div>
 
-              {/* Bulk File Dropzone */}
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <label className="block text-xs font-bold text-white">
@@ -203,16 +209,15 @@ export default function CreatePostModal({ onClose, onPostCreated }) {
                     <div className="p-3 rounded-full bg-amber-400/20 text-amber-400 ring-4 ring-amber-400/10 group-hover:scale-110 transition-transform">
                       <FolderPlus className="w-7 h-7" />
                     </div>
-                    <p className="text-sm font-black text-white">Choose Multiple Photos & Videos from Device Gallery</p>
+                    <p className="text-sm font-black text-white">Choose Multiple Photos & Videos from Gallery</p>
                     <p className="text-xs text-amber-300/80 font-semibold">Select 1 to 20+ files at once (Up to 1GB per file)</p>
                   </div>
                 </div>
 
-                {/* Previews Grid */}
                 {previews.length > 0 && (
                   <div className="space-y-2 mt-3">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-neutral-400">Selected Media Items:</span>
+                      <span className="text-xs font-bold text-neutral-400">Selected Items:</span>
                       <button
                         type="button"
                         onClick={() => fileInputRef.current?.click()}
@@ -245,6 +250,37 @@ export default function CreatePostModal({ onClose, onPostCreated }) {
                 )}
               </div>
             </>
+          )}
+
+          {activeTab === 'video' && (
+            <div>
+              <label className="block text-xs font-bold text-amber-400 mb-2 flex items-center gap-1.5">
+                <Tv className="w-4 h-4" /> Upload Widescreen 16:9 Horizontal Video (YouTube Style)
+              </label>
+
+              <input
+                type="file"
+                ref={fileInputRef}
+                accept="video/*"
+                onChange={handleFileChange}
+                className="hidden"
+              />
+
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full aspect-video rounded-2xl border-2 border-dashed border-amber-400/50 hover:border-amber-400 bg-amber-400/10 transition-all flex flex-col items-center justify-center p-4 cursor-pointer text-center relative overflow-hidden"
+              >
+                {singleMediaUrl ? (
+                  <video src={singleMediaUrl} controls className="w-full h-full object-contain bg-black" />
+                ) : (
+                  <div className="flex flex-col items-center gap-2 text-amber-300">
+                    <Video className="w-8 h-8 text-amber-400 animate-bounce" />
+                    <p className="text-sm font-black text-white">Click to Select Widescreen 16:9 Video from Device</p>
+                    <p className="text-xs text-neutral-400">Optimized for horizontal watching on NOREN Watch</p>
+                  </div>
+                )}
+              </div>
+            </div>
           )}
 
           {activeTab === 'single' && (
@@ -292,7 +328,7 @@ export default function CreatePostModal({ onClose, onPostCreated }) {
             <label className="block text-xs font-semibold text-neutral-300 mb-1">Caption & Hashtags</label>
             <textarea
               rows="3"
-              placeholder="Write a caption... #NOREN #Fashion"
+              placeholder="Write a title/caption... #NOREN #Watch"
               value={caption}
               onChange={(e) => setCaption(e.target.value)}
               className="w-full px-3.5 py-2.5 text-sm rounded-xl glass-input text-white"
@@ -312,7 +348,7 @@ export default function CreatePostModal({ onClose, onPostCreated }) {
 
           <button
             type="submit"
-            disabled={submitting || (activeTab === 'bulk' && !selectedFiles.length)}
+            disabled={submitting || (activeTab === 'bulk' && !selectedFiles.length) || (activeTab === 'video' && !selectedFiles.length && !singleMediaUrl)}
             className="w-full py-3.5 rounded-xl btn-liquid-solid font-black text-sm transition-all shadow-xl disabled:opacity-50 flex items-center justify-center gap-2 text-black"
           >
             {submitting ? (
@@ -321,7 +357,7 @@ export default function CreatePostModal({ onClose, onPostCreated }) {
                 <span>Publishing ({uploadProgress}%)</span>
               </>
             ) : (
-              <span>Publish {selectedFiles.length ? `${selectedFiles.length} Media Items` : 'Post'}</span>
+              <span>Publish {activeTab === 'video' ? 'Widescreen Video' : selectedFiles.length ? `${selectedFiles.length} Media Items` : 'Post'}</span>
             )}
           </button>
         </form>
