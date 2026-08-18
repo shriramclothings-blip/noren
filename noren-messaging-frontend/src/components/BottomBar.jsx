@@ -10,7 +10,7 @@ export default function BottomBar() {
     { label: 'Explore', path: '/explore', icon: Compass },
     { label: 'Reels', path: '/reels', icon: Video },
     { label: 'Direct', path: '/messages', icon: MessageCircle },
-    { label: 'Profile', path: user ? `/profile/${user.username || user.id}` : '/login', icon: User },
+    { label: 'Profile', path: user ? `/profile/${user.user_code || user.username || user.id}` : '/login', icon: User },
   ];
 
   return (

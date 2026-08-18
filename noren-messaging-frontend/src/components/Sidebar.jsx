@@ -12,7 +12,7 @@ export default function Sidebar() {
     { label: 'Messages', path: '/messages', icon: MessageCircle },
     { label: 'Notifications', path: '/notifications', icon: Bell },
     { label: 'Bookmarks', path: '/bookmarks', icon: Bookmark },
-    { label: 'Profile', path: user ? `/profile/${user.username || user.id}` : '/login', icon: User },
+    { label: 'Profile', path: user ? `/profile/${user.user_code || user.username || user.id}` : '/login', icon: User },
     { label: 'Settings', path: '/settings', icon: Settings },
   ];
 

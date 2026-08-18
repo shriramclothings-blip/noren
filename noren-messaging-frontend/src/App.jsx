@@ -202,6 +202,7 @@ function MainLayout() {
             <Route path="/messages" element={<DirectMessages onInitiateCall={handleInitiateCall} />} />
             <Route path="/notifications" element={<NotificationsView />} />
             <Route path="/bookmarks" element={<BookmarksView />} />
+            <Route path="/profile" element={<ProfileView />} />
             <Route path="/profile/:username" element={<ProfileView />} />
             <Route path="/settings" element={<SettingsView />} />
             <Route path="*" element={<Navigate to="/" replace />} />

@@ -16,18 +16,23 @@ export default function ProfileView() {
 
   useEffect(() => {
     fetchProfile();
-  }, [username]);
+  }, [username, currentUser]);
 
   const fetchProfile = async () => {
+    const target = username || currentUser?.username || currentUser?.user_code || currentUser?.id;
+    if (!target) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
-      const target = username || currentUser?.username || currentUser?.id;
-      const res = await api.get(`/social/profile/${target}`);
+      const res = await api.get(`/social/profile/${encodeURIComponent(target)}`);
       setProfile(res.data.profile);
-      setPosts(res.data.posts);
+      setPosts(res.data.posts || []);
       setCanView(res.data.can_view_content);
-      setIsFollowing(res.data.profile.is_following);
-    } catch {
+      setIsFollowing(res.data.profile?.is_following || false);
+    } catch (err) {
+      console.error('fetchProfile error:', err);
       toast.error('Failed to load profile');
     } finally {
       setLoading(false);
