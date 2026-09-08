@@ -26,6 +26,7 @@ const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:5174', // seller portal dev
   'http://localhost:5175', // noren messaging dev
+  'http://localhost:5176', // support portal dev
   'http://localhost:3000',
 ].map(normalizeOrigin);
 
@@ -160,6 +161,9 @@ app.use('/api/admin/sellers', require('./routes/adminSeller'));
 app.use('/api/social',        require('./routes/social'));
 app.use('/api/social',        require('./routes/socialMessaging')); // Messaging, notifications, settings
 app.use('/api/admin/social',  require('./routes/adminSocial'));
+
+// ── Support Portal API ────────────────────────────────────────────────────
+app.use('/api/support', require('./routes/support'));
 
 // ── Sitemap in-memory cache (one DB query per 24 hours) ──────────────────
 const SITEMAP_CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
