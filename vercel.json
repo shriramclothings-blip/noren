@@ -1,9 +1,8 @@
 {
-  "version": 2,
   "buildCommand": "cd noren-messaging-frontend && npm install --legacy-peer-deps && npm run build",
   "outputDirectory": "noren-messaging-frontend/dist",
-  "installCommand": "cd noren-messaging-frontend && npm install --legacy-peer-deps",
-  "framework": "vite",
+  "installCommand": "echo skip",
+  "framework": null,
   "headers": [
     {
       "source": "/assets/(.*)",
@@ -16,10 +15,6 @@
     {
       "source": "/sitemap.xml",
       "destination": "https://noren-iqk3.onrender.com/sitemap.xml"
-    },
-    {
-      "source": "/(.*\\.(?:js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|webp|avif|map|json|txt|xml))",
-      "destination": "/$1"
     },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
