@@ -1,9 +1,21 @@
 User-agent: *
 Allow: /
+
+# Block private/account pages from indexing
 Disallow: /admin/
 Disallow: /api/
+Disallow: /cart
+Disallow: /checkout
+Disallow: /orders
+Disallow: /profile
+Disallow: /wishlist
+Disallow: /order-success
+Disallow: /order-failed
 
+# Sitemap index (main store + seller portal)
+Sitemap: https://www.norenfastion.shop/sitemap_index.xml
 Sitemap: https://www.norenfastion.shop/sitemap.xml
+Sitemap: https://noren-iqk3.onrender.com/sitemap-seller.xml
 
 # NOREN Fashion House
 # https://www.norenfastion.shop

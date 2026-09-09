@@ -165,121 +165,285 @@ app.use('/api/admin/social',  require('./routes/adminSocial'));
 // ── Support Portal API ────────────────────────────────────────────────────
 app.use('/api/support', require('./routes/support'));
 
-// ── Sitemap in-memory cache (one DB query per 24 hours) ──────────────────
-const SITEMAP_CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
-let _sitemapCache = null;   // { xml: string, builtAt: number }
+// ════════════════════════════════════════════════════════════════════════════
+//  SEO: SITEMAP INDEX + PRODUCT / STATIC SITEMAPS  (v3 — with image tags)
+// ════════════════════════════════════════════════════════════════════════════
+const SITEMAP_CACHE_TTL_MS = 6 * 60 * 60 * 1000;  // refresh every 6 hours
+let _sitemapMainCache   = null;  // { xml, builtAt }
+let _sitemapIndexCache  = null;  // { xml, builtAt }
 
-// ── Public: Dynamic sitemap.xml ──
-app.get('/sitemap.xml', async (req, res) => {
-  // Serve from cache if still fresh — NO DB hit
-  if (_sitemapCache && (Date.now() - _sitemapCache.builtAt) < SITEMAP_CACHE_TTL_MS) {
-    res.setHeader('X-SRC-Sitemap', 'v2-cached');
+const SITE_URL    = 'https://www.norenfastion.shop';
+const SELLER_URL  = 'https://seller.norenfastion.shop';
+const API_BACKEND = 'https://noren-iqk3.onrender.com';
+
+const escapeXml = (s = '') =>
+  String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+
+const toLastMod = (value) => {
+  if (!value) return null;
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? null : d.toISOString().split('T')[0];
+};
+
+const today = () => new Date().toISOString().split('T')[0];
+
+// ── sitemap_index.xml ─────────────────────────────────────────────────────
+app.get('/sitemap_index.xml', (req, res) => {
+  if (_sitemapIndexCache && (Date.now() - _sitemapIndexCache.builtAt) < SITEMAP_CACHE_TTL_MS) {
     res.setHeader('Content-Type', 'application/xml; charset=utf-8');
-    // Tell crawlers & CDN they can cache this for 24 h too
-    res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=3600');
-    return res.status(200).send(_sitemapCache.xml);
+    res.setHeader('Cache-Control', 'public, max-age=21600');
+    return res.status(200).send(_sitemapIndexCache.xml);
+  }
+  const t = today();
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <sitemap>
+    <loc>${SITE_URL}/sitemap.xml</loc>
+    <lastmod>${t}</lastmod>
+  </sitemap>
+  <sitemap>
+    <loc>${API_BACKEND}/sitemap-seller.xml</loc>
+    <lastmod>${t}</lastmod>
+  </sitemap>
+</sitemapindex>`;
+  _sitemapIndexCache = { xml, builtAt: Date.now() };
+  res.setHeader('Content-Type', 'application/xml; charset=utf-8');
+  res.setHeader('Cache-Control', 'public, max-age=21600');
+  return res.status(200).send(xml);
+});
+
+// ── sitemap.xml — main store (static pages + all products WITH images) ───
+app.get('/sitemap.xml', async (req, res) => {
+  if (_sitemapMainCache && (Date.now() - _sitemapMainCache.builtAt) < SITEMAP_CACHE_TTL_MS) {
+    res.setHeader('X-Sitemap', 'v3-cached');
+    res.setHeader('Content-Type', 'application/xml; charset=utf-8');
+    res.setHeader('Cache-Control', 'public, max-age=21600, stale-while-revalidate=3600');
+    return res.status(200).send(_sitemapMainCache.xml);
   }
 
-  const escapeXml = (s = '') =>
-    String(s)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&apos;');
-
-  const toLastMod = (value) => {
-    if (!value) return null;
-    const d = new Date(value);
-    if (Number.isNaN(d.getTime())) return null;
-    return d.toISOString().split('T')[0]; // YYYY-MM-DD
-  };
-
-  // Hardcoded — never depend on env vars for the sitemap domain
-  const SITE_URL = 'https://www.norenfastion.shop';
-
-  const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+  const t = today();
 
   const staticRoutes = [
-    { path: '/',              changefreq: 'daily',   priority: 1.0, lastmod: today },
-    { path: '/shop',          changefreq: 'daily',   priority: 0.9, lastmod: today },
-    { path: '/contact',       changefreq: 'monthly', priority: 0.6 },
-    { path: '/login',         changefreq: 'monthly', priority: 0.5 },
-    { path: '/register',      changefreq: 'monthly', priority: 0.5 },
-    { path: '/privacy',       changefreq: 'yearly',  priority: 0.3 },
-    { path: '/terms',         changefreq: 'yearly',  priority: 0.3 },
-    { path: '/refund',        changefreq: 'yearly',  priority: 0.3 },
-    { path: '/return-policy', changefreq: 'yearly',  priority: 0.3 },
-    { path: '/shipping',      changefreq: 'yearly',  priority: 0.3 },
-    { path: '/cancellation',  changefreq: 'yearly',  priority: 0.3 },
-    { path: '/cookies',       changefreq: 'yearly',  priority: 0.3 },
-    { path: '/disclaimer',    changefreq: 'yearly',  priority: 0.3 },
-    { path: '/legal',         changefreq: 'yearly',  priority: 0.3 },
+    { path: '/',                              changefreq: 'daily',   priority: 1.0, lastmod: t },
+    { path: '/shop',                          changefreq: 'daily',   priority: 0.9, lastmod: t },
+    { path: '/shop?gender=women',             changefreq: 'daily',   priority: 0.85, lastmod: t },
+    { path: '/shop?gender=men',               changefreq: 'daily',   priority: 0.85, lastmod: t },
+    { path: '/shop?category=kurtis',          changefreq: 'weekly',  priority: 0.8 },
+    { path: '/shop?category=anarkali-suits',  changefreq: 'weekly',  priority: 0.8 },
+    { path: '/shop?category=salwar-suits',    changefreq: 'weekly',  priority: 0.8 },
+    { path: '/shop?category=t-shirts',        changefreq: 'weekly',  priority: 0.8 },
+    { path: '/shop?category=shirts',          changefreq: 'weekly',  priority: 0.8 },
+    { path: '/shop?category=jeans',           changefreq: 'weekly',  priority: 0.75 },
+    { path: '/shop?category=jackets',         changefreq: 'weekly',  priority: 0.75 },
+    { path: '/shop?category=ethnic-wear',     changefreq: 'weekly',  priority: 0.75 },
+    { path: '/contact',                       changefreq: 'monthly', priority: 0.6 },
+    { path: '/login',                         changefreq: 'monthly', priority: 0.4 },
+    { path: '/register',                      changefreq: 'monthly', priority: 0.4 },
+    { path: '/privacy',                       changefreq: 'yearly',  priority: 0.3 },
+    { path: '/terms',                         changefreq: 'yearly',  priority: 0.3 },
+    { path: '/refund',                        changefreq: 'yearly',  priority: 0.3 },
+    { path: '/return-policy',                 changefreq: 'yearly',  priority: 0.3 },
+    { path: '/shipping',                      changefreq: 'yearly',  priority: 0.3 },
+    { path: '/cancellation',                  changefreq: 'yearly',  priority: 0.3 },
+    { path: '/cookies',                       changefreq: 'yearly',  priority: 0.3 },
+    { path: '/disclaimer',                    changefreq: 'yearly',  priority: 0.3 },
+    { path: '/legal',                         changefreq: 'yearly',  priority: 0.3 },
   ];
 
-  const makeUrlEntry = ({ loc, lastmod, changefreq, priority }) => {
-    const parts = [
-      '  <url>',
-      `    <loc>${escapeXml(loc)}</loc>`,
-    ];
-    if (lastmod) parts.push(`    <lastmod>${escapeXml(lastmod)}</lastmod>`);
-    if (changefreq) parts.push(`    <changefreq>${escapeXml(changefreq)}</changefreq>`);
-    if (priority !== undefined && priority !== null) parts.push(`    <priority>${priority}</priority>`);
+  // Build one <url> entry, optionally with <image:image> blocks
+  const makeUrlEntry = ({ loc, lastmod, changefreq, priority, images }) => {
+    const parts = ['  <url>',
+      `    <loc>${escapeXml(loc)}</loc>`];
+    if (lastmod)   parts.push(`    <lastmod>${lastmod}</lastmod>`);
+    if (changefreq) parts.push(`    <changefreq>${changefreq}</changefreq>`);
+    if (priority != null) parts.push(`    <priority>${priority}</priority>`);
+    // Google image sitemap extension
+    if (images && images.length) {
+      for (const img of images) {
+        parts.push('    <image:image>');
+        parts.push(`      <image:loc>${escapeXml(img.url)}</image:loc>`);
+        if (img.title)   parts.push(`      <image:title>${escapeXml(img.title)}</image:title>`);
+        if (img.caption) parts.push(`      <image:caption>${escapeXml(img.caption)}</image:caption>`);
+        parts.push('    </image:image>');
+      }
+    }
     parts.push('  </url>');
     return parts.join('\n');
   };
 
-  const buildXml = (urls) =>
-    `<?xml version="1.0" encoding="UTF-8"?>\n` +
-    `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
-    urls.map(makeUrlEntry).join('\n') +
-    `\n</urlset>\n`;
-
   try {
     const { pool } = require('./config/db');
 
-    const productsRes = await pool.query(
-      `SELECT id, created_at
-       FROM src_products
-       WHERE status = 'approved' AND deleted_at IS NULL
-       ORDER BY created_at DESC`
-    );
+    // Fetch all approved products with ALL their images (for image sitemap)
+    const productsRes = await pool.query(`
+      SELECT
+        p.id, p.title, p.description, p.gender, p.updated_at, p.created_at,
+        c.name AS category_name,
+        COALESCE(
+          json_agg(
+            json_build_object('url', pi.image_url, 'primary', pi.is_primary)
+            ORDER BY pi.is_primary DESC, pi.sort_order ASC
+          ) FILTER (WHERE pi.image_url IS NOT NULL),
+          '[]'
+        ) AS images
+      FROM src_products p
+      LEFT JOIN src_categories c ON c.id = p.category_id
+      LEFT JOIN src_product_images pi ON pi.product_id = p.id
+      WHERE p.status = 'approved' AND p.deleted_at IS NULL
+      GROUP BY p.id, p.title, p.description, p.gender, p.updated_at, p.created_at, c.name
+      ORDER BY COALESCE(p.updated_at, p.created_at) DESC
+    `);
 
-    const urls = [
-      ...staticRoutes.map(r => ({
-        loc: `${SITE_URL}${r.path}`,
-        changefreq: r.changefreq,
-        priority: r.priority,
-      })),
-      ...productsRes.rows.map(p => ({
-        loc: `${SITE_URL}/product/${encodeURIComponent(p.id)}`,
-        lastmod: toLastMod(p.created_at),
-        changefreq: 'weekly',
-        priority: 0.7,
-      })),
-    ];
-
-    const xml = buildXml(urls);
-
-    // Store in cache — next requests within 24 h skip the DB entirely
-    _sitemapCache = { xml, builtAt: Date.now() };
-
-    res.setHeader('X-SRC-Sitemap', 'v2-fresh');
-    res.setHeader('Content-Type', 'application/xml; charset=utf-8');
-    res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=3600');
-    return res.status(200).send(xml);
-  } catch (err) {
-    console.error('Sitemap error:', err.message);
-    // Fallback: static URLs only — do NOT cache this so next request retries DB
-    const fallbackUrls = staticRoutes.map(r => ({
+    const staticEntries = staticRoutes.map(r => ({
       loc: `${SITE_URL}${r.path}`,
+      lastmod: r.lastmod,
       changefreq: r.changefreq,
       priority: r.priority,
     }));
-    res.setHeader('X-SRC-Sitemap', 'v2-fallback');
+
+    const productEntries = productsRes.rows.map(p => {
+      const genderLabel = p.gender === 'women' ? "Women's" : p.gender === 'men' ? "Men's" : 'Unisex';
+      const imgObjects  = (p.images || []).slice(0, 10).map(img => ({
+        url:     img.url,
+        title:   `${p.title} - ${genderLabel} ${p.category_name || 'Fashion'} | NOREN`,
+        caption: `${p.title} by NOREN${p.description ? ' — ' + p.description.slice(0, 80).replace(/\s+/g, ' ') : ''}`,
+      }));
+      return {
+        loc:        `${SITE_URL}/product/${p.id}`,
+        lastmod:    toLastMod(p.updated_at || p.created_at),
+        changefreq: 'weekly',
+        priority:   0.8,
+        images:     imgObjects,
+      };
+    });
+
+    const xml =
+      `<?xml version="1.0" encoding="UTF-8"?>\n` +
+      `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"\n` +
+      `        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">\n` +
+      [...staticEntries, ...productEntries].map(makeUrlEntry).join('\n') +
+      `\n</urlset>\n`;
+
+    _sitemapMainCache = { xml, builtAt: Date.now() };
+    res.setHeader('X-Sitemap', 'v3-fresh');
+    res.setHeader('Content-Type', 'application/xml; charset=utf-8');
+    res.setHeader('Cache-Control', 'public, max-age=21600, stale-while-revalidate=3600');
+    return res.status(200).send(xml);
+
+  } catch (err) {
+    console.error('[sitemap] error:', err.message);
+    // Fallback — static pages only, no cache so next request retries DB
+    const fallback =
+      `<?xml version="1.0" encoding="UTF-8"?>\n` +
+      `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
+      staticRoutes.map(r => `  <url>\n    <loc>${escapeXml(SITE_URL + r.path)}</loc>\n    <changefreq>${r.changefreq}</changefreq>\n    <priority>${r.priority}</priority>\n  </url>`).join('\n') +
+      `\n</urlset>\n`;
+    res.setHeader('X-Sitemap', 'v3-fallback');
     res.setHeader('Content-Type', 'application/xml; charset=utf-8');
     res.setHeader('Cache-Control', 'no-store');
-    return res.status(200).send(buildXml(fallbackUrls));
+    return res.status(200).send(fallback);
+  }
+});
+
+// ── sitemap-seller.xml — seller portal pages ────────────────────────────
+app.get('/sitemap-seller.xml', (req, res) => {
+  const t = today();
+  const sellerStaticRoutes = [
+    { path: '/',            changefreq: 'monthly', priority: 0.7 },
+    { path: '/login',       changefreq: 'monthly', priority: 0.5 },
+    { path: '/register',    changefreq: 'monthly', priority: 0.6 },
+    { path: '/dashboard',   changefreq: 'weekly',  priority: 0.8 },
+    { path: '/products',    changefreq: 'weekly',  priority: 0.7 },
+    { path: '/orders',      changefreq: 'daily',   priority: 0.7 },
+    { path: '/kyc',         changefreq: 'monthly', priority: 0.5 },
+    { path: '/payouts',     changefreq: 'weekly',  priority: 0.5 },
+    { path: '/help',        changefreq: 'monthly', priority: 0.4 },
+  ];
+  const xml =
+    `<?xml version="1.0" encoding="UTF-8"?>\n` +
+    `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
+    sellerStaticRoutes.map(r =>
+      `  <url>\n    <loc>${escapeXml(SELLER_URL + r.path)}</loc>\n    <lastmod>${t}</lastmod>\n    <changefreq>${r.changefreq}</changefreq>\n    <priority>${r.priority}</priority>\n  </url>`
+    ).join('\n') +
+    `\n</urlset>\n`;
+  res.setHeader('Content-Type', 'application/xml; charset=utf-8');
+  res.setHeader('Cache-Control', 'public, max-age=86400');
+  return res.status(200).send(xml);
+});
+
+// ── OG / Social preview endpoint: /og/product/:id ──────────────────────
+// Returns product data optimised for Open Graph crawlers.
+// WhatsApp, Telegram, Slack, Facebook, Google all hit this on link share.
+app.get('/og/product/:id', async (req, res) => {
+  try {
+    const { pool } = require('./config/db');
+    const { id } = req.params;
+    if (!/^\d+$/.test(id)) return res.status(400).json({ message: 'Invalid id' });
+
+    const r = await pool.query(`
+      SELECT
+        p.id, p.title, p.description, p.price, p.discount_percent, p.gender,
+        c.name AS category_name,
+        (SELECT image_url FROM src_product_images
+         WHERE product_id = p.id AND is_primary = TRUE LIMIT 1) AS primary_image,
+        (SELECT image_url FROM src_product_images
+         WHERE product_id = p.id ORDER BY is_primary DESC, sort_order ASC LIMIT 1) AS first_image,
+        COALESCE(
+          (SELECT json_agg(image_url ORDER BY is_primary DESC, sort_order ASC)
+           FROM src_product_images WHERE product_id = p.id),
+          '[]'
+        ) AS all_images,
+        (SELECT AVG(rating)::NUMERIC(3,1) FROM src_reviews WHERE product_id=p.id AND is_hidden=FALSE) as avg_rating,
+        (SELECT COUNT(*) FROM src_reviews WHERE product_id=p.id AND is_hidden=FALSE) as review_count
+      FROM src_products p
+      LEFT JOIN src_categories c ON c.id = p.category_id
+      WHERE p.id = $1 AND p.deleted_at IS NULL AND p.status = 'approved'
+    `, [id]);
+
+    if (!r.rows.length) return res.status(404).json({ message: 'Product not found' });
+    const p = r.rows[0];
+
+    const price       = parseFloat(p.price || 0);
+    const disc        = parseFloat(p.discount_percent || 0);
+    const finalPrice  = disc > 0 ? (price * (1 - disc / 100)).toFixed(0) : price.toFixed(0);
+    const genderLabel = p.gender === 'women' ? "Women's " : p.gender === 'men' ? "Men's " : '';
+    const ogImage     = p.primary_image || p.first_image || `${SITE_URL}/og-image.jpg`;
+    const productUrl  = `${SITE_URL}/product/${p.id}`;
+
+    const desc = p.description && p.description.trim().length > 20
+      ? p.description.trim().slice(0, 110) + `... ₹${finalPrice}. Free delivery. 7-day returns.`
+      : `Buy ${p.title} at NOREN - ${genderLabel}${p.category_name || 'Fashion'}. ₹${finalPrice}. Free delivery across India.`;
+
+    res.json({
+      id:           p.id,
+      title:        p.title,
+      description:  desc.slice(0, 155),
+      price:        finalPrice,
+      currency:     'INR',
+      image:        ogImage,
+      images:       p.all_images || [],
+      url:          productUrl,
+      category:     p.category_name,
+      gender:       p.gender,
+      avg_rating:   p.avg_rating,
+      review_count: p.review_count,
+      og: {
+        title:       `${p.title} | NOREN`,
+        description: desc.slice(0, 155),
+        image:       ogImage,
+        url:         productUrl,
+        type:        'product',
+        site_name:   'NOREN',
+      },
+    });
+  } catch (err) {
+    console.error('[og/product]', err.message);
+    res.status(500).json({ message: err.message });
   }
 });
 
