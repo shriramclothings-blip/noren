@@ -29,15 +29,24 @@ export function SiteSettingsProvider({ children }) {
   const [loaded, setLoaded]     = useState(false);
 
   const fetchSettings = useCallback(async () => {
-    try {
-      const res = await api.get('/homepage/settings');
-      const data = res.data || {};
-      setSettings({ ...DEFAULTS, ...data });
-    } catch {
-      // Keep defaults on error — do not crash
-    } finally {
-      setLoaded(true);
-    }
+    const tryFetch = async (attempt = 1) => {
+      try {
+        const res = await api.get('/homepage/settings');
+        const data = res.data || {};
+        setSettings({ ...DEFAULTS, ...data });
+        return true;
+      } catch {
+        // Render free tier cold start can take 30-60s — retry once after 12s
+        if (attempt < 3) {
+          await new Promise(r => setTimeout(r, attempt * 12000));
+          return tryFetch(attempt + 1);
+        }
+        // All retries exhausted — keep defaults, don't crash
+        return false;
+      }
+    };
+    await tryFetch();
+    setLoaded(true);
   }, []);
 
   useEffect(() => { fetchSettings(); }, [fetchSettings]);

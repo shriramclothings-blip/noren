@@ -450,6 +450,31 @@ app.get('/og/product/:id', async (req, res) => {
 app.get('/api/health', (_, res) => res.json({ status: 'ok', brand: 'NOREN', timestamp: new Date() }));
 app.get('/', (_, res) => res.json({ name: 'NOREN API', status: 'running', version: '1.0.0' }));
 
+// ── Self keep-alive ping (prevents Render free tier from spinning down) ───────
+// Pings /api/health every 14 minutes so the dyno never goes cold.
+// Only runs in production and only if SELF_URL is set or we can build it.
+(function startKeepAlive() {
+  const selfUrl = process.env.RENDER_EXTERNAL_URL || process.env.SELF_URL;
+  if (!selfUrl) return; // not on Render / env not configured — skip silently
+  const https = require('https');
+  const http  = require('http');
+  const pingUrl = `${selfUrl}/api/health`;
+  const INTERVAL_MS = 14 * 60 * 1000; // 14 minutes
+
+  const ping = () => {
+    const client = pingUrl.startsWith('https') ? https : http;
+    client.get(pingUrl, (res) => {
+      res.resume(); // drain the response
+    }).on('error', () => {}); // silently ignore — server may briefly be busy
+  };
+
+  // First ping after 1 minute (give server time to fully init)
+  setTimeout(() => {
+    ping();
+    setInterval(ping, INTERVAL_MS);
+  }, 60 * 1000);
+})();
+
 app.use((err, req, res, next) => {
   // ── Multer / upload errors ──────────────────────────────────────────────
   if (err.code === 'LIMIT_FILE_SIZE') {
