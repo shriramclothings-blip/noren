@@ -74,6 +74,89 @@ module.exports = {
   `),
 
   // ─────────────────────────────────────────────────────────────
+  // ADMIN RECOVERY: OTP sent on behalf of user by admin
+  // ─────────────────────────────────────────────────────────────
+  adminRecoveryOTP: (name, otp, adminNote = '') => wrap(`
+    ${badge('Account Recovery · Admin Assisted', '#c9a96e')}
+    ${h2(`Hi ${name},`)}
+    ${para('A NOREN support administrator has initiated a password reset on your behalf. Use the OTP below to regain access to your account.')}
+    ${otpBox(otp)}
+    ${adminNote ? `<div style="background:#fff7ed;border-left:3px solid #c9a96e;padding:14px 18px;margin-bottom:20px;border-radius:2px"><p style="color:#5a5750;font-size:13px;margin:0"><strong style="color:#1a1a18;">Note from support:</strong> ${adminNote}</p></div>` : ''}
+    ${para('Use this OTP on the <a href="${process.env.FRONTEND_URL || \'https://www.norenfashion.shop\'}/forgot-password" style="color:#c9a96e">password reset page</a> to set your new password.')}
+    ${divider()}
+    <p style="color:#b8a898;font-size:12px;margin:0">If you did not request this, please contact us immediately at <a href="mailto:supportnoren1@gmail.com" style="color:#c9a96e">supportnoren1@gmail.com</a></p>
+  `),
+
+  // ─────────────────────────────────────────────────────────────
+  // ADMIN RECOVERY: Magic recovery link sent by admin
+  // ─────────────────────────────────────────────────────────────
+  adminRecoveryLink: (name, recoveryUrl, expiresIn = '24 hours', adminNote = '') => wrap(`
+    ${badge('Account Recovery Link', '#c9a96e')}
+    ${h2(`Hi ${name},`)}
+    ${para('A NOREN support administrator has generated a secure recovery link for your account. Click the button below to set a new password.')}
+    ${adminNote ? `<div style="background:#fff7ed;border-left:3px solid #c9a96e;padding:14px 18px;margin-bottom:20px;border-radius:2px"><p style="color:#5a5750;font-size:13px;margin:0"><strong style="color:#1a1a18;">Note from support:</strong> ${adminNote}</p></div>` : ''}
+    ${btn('Reset My Password', recoveryUrl)}
+    <p style="color:#9e9a94;font-size:12px;margin-bottom:16px">Or copy this link: <span style="color:#1a1a18;word-break:break-all">${recoveryUrl}</span></p>
+    ${infoBox([['Link expires in', expiresIn], ['Use only once', 'Yes — this link is single-use']])}
+    ${divider()}
+    <p style="color:#b8a898;font-size:12px;margin:0">If you did not request this, please contact us immediately at <a href="mailto:supportnoren1@gmail.com" style="color:#c9a96e">supportnoren1@gmail.com</a></p>
+  `),
+
+  // ─────────────────────────────────────────────────────────────
+  // ADMIN RECOVERY: Recovery key delivered to user
+  // ─────────────────────────────────────────────────────────────
+  adminRecoveryKey: (name, recoveryKey, expiresAt, adminNote = '') => wrap(`
+    ${badge('Account Recovery Key', '#c9a96e')}
+    ${h2(`Hi ${name},`)}
+    ${para('A NOREN support administrator has generated a one-time recovery key for your account. Use this key on the recovery page to access your account and set a new password.')}
+    ${adminNote ? `<div style="background:#fff7ed;border-left:3px solid #c9a96e;padding:14px 18px;margin-bottom:20px;border-radius:2px"><p style="color:#5a5750;font-size:13px;margin:0"><strong style="color:#1a1a18;">Note from support:</strong> ${adminNote}</p></div>` : ''}
+    <div style="background:#0f172a;padding:24px;text-align:center;margin:24px 0;border-radius:2px">
+      <p style="color:#94a3b8;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;margin:0 0 10px">Your Recovery Key</p>
+      <div style="font-family:monospace;font-size:18px;font-weight:700;letter-spacing:0.12em;color:#c9a96e;word-break:break-all;padding:0 10px">${recoveryKey}</div>
+      <p style="color:#64748b;font-size:11px;margin:10px 0 0">Valid until <strong style="color:#faf9f7">${expiresAt}</strong> · Single use only</p>
+    </div>
+    ${btn('Use Recovery Key', `${process.env.FRONTEND_URL || 'https://www.norenfashion.shop'}/recover-account`)}
+    ${divider()}
+    <p style="color:#b8a898;font-size:12px;margin:0">Keep this key confidential. Never share it with anyone. If you did not request this, contact <a href="mailto:supportnoren1@gmail.com" style="color:#c9a96e">supportnoren1@gmail.com</a> immediately.</p>
+  `),
+
+  // ─────────────────────────────────────────────────────────────
+  // ADMIN RECOVERY: Admin force-reset password notification
+  // ─────────────────────────────────────────────────────────────
+  adminForcedPasswordReset: (name, time, tempPassword = null) => wrap(`
+    ${badge('Security Notice · Password Reset by Admin', '#dc2626')}
+    ${h2(`Hi ${name},`)}
+    ${para(`Your NOREN account password was reset by a support administrator on <strong style="color:#1a1a18">${time} IST</strong>.`)}
+    ${tempPassword ? `
+    <div style="background:#f5f0e8;padding:20px 24px;margin-bottom:24px;border-radius:2px;border-left:3px solid #c9a96e">
+      <p style="color:#9e9a94;font-size:11px;letter-spacing:0.14em;text-transform:uppercase;margin:0 0 8px">Temporary Password</p>
+      <p style="font-family:monospace;font-size:18px;font-weight:700;color:#1a1a18;margin:0;letter-spacing:0.1em">${tempPassword}</p>
+      <p style="color:#9e9a94;font-size:11px;margin:8px 0 0">Please change this immediately after logging in.</p>
+    </div>` : ''}
+    ${btn('Sign In Now', `${process.env.FRONTEND_URL || 'https://www.norenfashion.shop'}/login`)}
+    ${divider()}
+    <p style="color:#b8a898;font-size:12px;margin:0">If you did not request this reset or believe your account was accessed without your permission, contact us immediately at <a href="mailto:supportnoren1@gmail.com" style="color:#c9a96e">supportnoren1@gmail.com</a></p>
+  `),
+
+  // ─────────────────────────────────────────────────────────────
+  // ADMIN RECOVERY: Recovery query submitted confirmation
+  // ─────────────────────────────────────────────────────────────
+  recoveryQueryConfirm: (name, ticketId, issueType) => wrap(`
+    ${badge('Support Ticket Created')}
+    ${h2(`Hi ${name},`)}
+    ${para(`Your account recovery request has been received. Our support team will review it and reach out to you within 24 hours.`)}
+    ${infoBox([
+      ['Ticket ID', `#${ticketId}`],
+      ['Issue Type', issueType],
+      ['Status', 'Open — Under Review'],
+      ['Contact', 'supportnoren1@gmail.com'],
+    ])}
+    ${para('Please keep an eye on your email for updates. You can also mention your Ticket ID when contacting support.')}
+    ${divider()}
+    <p style="color:#b8a898;font-size:12px;margin:0">Do not share your password or OTPs with anyone claiming to be NOREN support.</p>
+  `),
+
+  // ─────────────────────────────────────────────────────────────
   // AUTH: Password changed confirmation
   // ─────────────────────────────────────────────────────────────
   passwordChanged: (name, time) => wrap(`

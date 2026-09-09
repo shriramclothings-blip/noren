@@ -9,7 +9,7 @@ import {
   MapPinned, Menu, MessageCircle, MessageSquare, Package, Phone,
   ReceiptText, ScanLine, Settings, ShieldCheck, ShoppingCart, Sparkles,
   Star, Store, Tag, Truck, Undo2, UsersRound, Video, Wallet, Warehouse,
-  AlertTriangle, ChevronDown, RefreshCw, Link2, X, Megaphone,
+  AlertTriangle, ChevronDown, RefreshCw, Link2, X, Megaphone, ShieldAlert,
 } from 'lucide-react';
 import api from '../../utils/api';
 import AdminOverview from './AdminOverview';
@@ -29,6 +29,7 @@ import AdminModuleWorkspace from './AdminModuleWorkspace';
 import AdminPaymentSettings from './AdminPaymentSettings';
 import AdminOrders from './AdminOrders';
 import AdminLoginSessions from './AdminLoginSessions';
+import AdminAccountRecovery from './AdminAccountRecovery';
 const AdminUTMTracker          = lazy(() => import('./erp/AdminUTMTracker'));
 const AdminLiveVisitorMap      = lazy(() => import('./erp/LiveVisitorMap/LiveVisitorMap.jsx'));
 const AdminAIAssistant         = lazy(() => import('./erp/AdminAIAssistant'));
@@ -81,7 +82,7 @@ const iconMap = {
   BriefcaseBusiness, CalendarClock, DollarSign, Wallet, Bell, Settings,
   Building2, Store, ShieldCheck, KeyRound, FileClock, Crown, Layout,
   MapPinned, MessageSquare, MessageCircle, Video, Phone, Star, Tag,
-  Cloud, Eye, Mail, Link2, Sparkles, Megaphone,
+  Cloud, Eye, Mail, Link2, Sparkles, Megaphone, ShieldAlert,
 };
 
 const MOBILE_TABS = [
@@ -164,6 +165,7 @@ function renderSection(section, user, navigate) {
     case 'cloud':             return <AdminCloudStorage />;
     case 'reviews':           return <AdminReviews />;
     case 'user-management':   return <AdminUsers />;
+    case 'account-recovery':  return <AdminAccountRecovery />;
     case 'queries':           return <AdminQueries />;
     case 'notifications':     return <AdminNotifications />;
     case 'categories':        return <AdminCategories />;

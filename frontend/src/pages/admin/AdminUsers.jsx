@@ -2,6 +2,7 @@
 import { Search, Ban, Trash2, Eye, Download, Send, X, ShieldCheck, ShoppingBag, Heart, MapPin, Package, Globe, Truck } from 'lucide-react';
 import api, { downloadFile } from '../../utils/api';
 import toast from 'react-hot-toast';
+import { UserRecoveryPanel } from './AdminAccountRecovery';
 
 const inp = { width: '100%', padding: '9px 12px', fontSize: 13, border: '1.5px solid #e5e7eb', borderRadius: 8, outline: 'none', fontFamily: 'inherit', color: '#111827', background: '#fff' };
 
@@ -411,6 +412,11 @@ export default function AdminUsers() {
                     style={{ flex: 1, padding: '9px', borderRadius: 10, border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600, background: '#fef2f2', color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
                     <Trash2 size={14} /> Delete
                   </button>
+                </div>
+
+                {/* ── Account Recovery ── */}
+                <div style={{ borderTop: '1px solid #f3f4f6', paddingTop: 14 }}>
+                  <UserRecoveryPanel user={selected} />
                 </div>
               </div>
             )}

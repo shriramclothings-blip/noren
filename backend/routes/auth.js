@@ -15,4 +15,8 @@ router.post('/forgot-password', authRateLimit, forgotPassword);
 router.post('/verify-otp',      authRateLimit, verifyOTP);
 router.post('/reset-password',  authRateLimit, resetPassword);
 
+// ── Recovery key login (user enters admin-generated key to set new password) ──
+const { useRecoveryKey } = require('../controllers/adminRecoveryController');
+router.post('/recover-with-key', authRateLimit, useRecoveryKey);
+
 module.exports = router;

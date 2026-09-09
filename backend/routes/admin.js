@@ -90,4 +90,22 @@ router.put('/cloud/files/:id/restore', ...guard, cloud.restoreFile);
 router.get('/cloud/analytics', ...guard, cloud.getAnalytics);
 router.get('/cloud/upload-signature', ...guard, cloud.getUploadSignature);
 
+// ── Account Recovery (admin-side) ────────────────────────────────────────────
+const recovery = require('../controllers/adminRecoveryController');
+
+// Stats
+router.get('/recovery/stats',                      ...guard, recovery.getRecoveryStats);
+// Per-user actions
+router.post('/recovery/users/:id/force-reset',     ...guard, recovery.forceResetPassword);
+router.post('/recovery/users/:id/send-otp',        ...guard, recovery.sendRecoveryOTP);
+router.post('/recovery/users/:id/generate-link',   ...guard, recovery.generateRecoveryLink);
+router.post('/recovery/users/:id/generate-key',    ...guard, recovery.generateRecoveryKey);
+router.get('/recovery/users/:id/keys',             ...guard, recovery.listRecoveryKeys);
+// Key management
+router.delete('/recovery/keys/:keyId',             ...guard, recovery.revokeRecoveryKey);
+// Recovery queries (public submit + admin manage)
+router.post('/recovery/query',                             recovery.submitRecoveryQuery);  // public
+router.get('/recovery/queries',                    ...guard, recovery.listRecoveryQueries);
+router.put('/recovery/queries/:qid',               ...guard, recovery.updateRecoveryQuery);
+
 module.exports = router;

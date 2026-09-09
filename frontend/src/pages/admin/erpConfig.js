@@ -77,6 +77,7 @@ export const ERP_NAV_GROUPS = [
     label: 'Security & Audit',
     items: [
       { key: 'login-sessions', label: 'Login Sessions', icon: 'ShieldCheck', componentKey: 'login-sessions', roles: ['admin', 'super_admin'], description: 'Full login audit — IP, location, device, browser, and session status for every user.' },
+      { key: 'account-recovery', label: 'Account Recovery', icon: 'ShieldAlert', componentKey: 'account-recovery', roles: ['admin', 'super_admin'], description: 'Help users regain access — force-reset passwords, send OTPs, generate magic links and recovery keys. Manage recovery queries.' },
       { key: 'utm-tracker',    label: 'UTM Tracking', icon: 'Link2',       componentKey: 'utm-tracker',    roles: ['admin', 'super_admin'], description: 'UTM link management, analytics, and tracking.' },
       { key: 'utm-live-map',   label: 'Live Visitor Map', icon: 'MapPinned', componentKey: 'utm-live-map',  roles: ['admin', 'super_admin'], description: '3D globe visualization of real-time visitor locations and traffic.' },
       { key: 'ai-assistant',   label: 'AI Assistant',     icon: 'Sparkles',    componentKey: 'ai-assistant',   roles: ['admin', 'super_admin'], description: 'Gemini AI — live business briefings, revenue, users, inventory alerts by voice or text.' },

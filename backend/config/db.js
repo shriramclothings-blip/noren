@@ -494,6 +494,44 @@ const initDB = async () => {
         created_at TIMESTAMP DEFAULT NOW()
       );
 
+      -- ── Account Recovery Keys (admin-generated long-lived tokens) ──────────
+      CREATE TABLE IF NOT EXISTS src_recovery_keys (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES src_users(id) ON DELETE CASCADE NOT NULL,
+        key_hash VARCHAR(255) NOT NULL,
+        key_prefix VARCHAR(10) NOT NULL,
+        label VARCHAR(100) DEFAULT 'Admin Generated',
+        expires_at TIMESTAMP NOT NULL,
+        used BOOLEAN DEFAULT FALSE,
+        used_at TIMESTAMP,
+        revoked BOOLEAN DEFAULT FALSE,
+        revoked_by INTEGER REFERENCES src_users(id) ON DELETE SET NULL,
+        created_by INTEGER REFERENCES src_users(id) ON DELETE SET NULL NOT NULL,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_recovery_keys_user ON src_recovery_keys(user_id);
+      CREATE INDEX IF NOT EXISTS idx_recovery_keys_prefix ON src_recovery_keys(key_prefix);
+
+      -- ── Admin Recovery Queries (user-submitted recovery requests) ─────────
+      CREATE TABLE IF NOT EXISTS src_admin_recovery_queries (
+        id SERIAL PRIMARY KEY,
+        ticket_id VARCHAR(20) UNIQUE NOT NULL,
+        user_email VARCHAR(150) NOT NULL,
+        user_name VARCHAR(150),
+        issue_type VARCHAR(50) DEFAULT 'forgot_password' CHECK (issue_type IN ('forgot_password','account_compromised','no_otp','account_locked','other')),
+        description TEXT,
+        status VARCHAR(20) DEFAULT 'open' CHECK (status IN ('open','in_progress','resolved','closed')),
+        resolution_method VARCHAR(50),
+        resolved_by INTEGER REFERENCES src_users(id) ON DELETE SET NULL,
+        resolved_at TIMESTAMP,
+        admin_notes TEXT,
+        user_id INTEGER REFERENCES src_users(id) ON DELETE SET NULL,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_recovery_queries_email ON src_admin_recovery_queries(user_email);
+      CREATE INDEX IF NOT EXISTS idx_recovery_queries_status ON src_admin_recovery_queries(status);
+
       CREATE TABLE IF NOT EXISTS src_banners (
         id SERIAL PRIMARY KEY,
         heading VARCHAR(200),
