@@ -117,6 +117,60 @@ function UserSearchBox({ onSelect }) {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
+   SUB-COMPONENT: ALTERNATE EMAIL FIELD
+   Reusable across all 4 recovery tabs. Shown whenever admin wants to send
+   to a different inbox than the user's registered account email.
+══════════════════════════════════════════════════════════════════════ */
+function AltEmailField({ value, onChange, accountEmail }) {
+  const [expanded, setExpanded] = useState(!!value);
+
+  return (
+    <div style={{ borderRadius: 9, border: '1.5px solid #e5e7eb', overflow: 'hidden' }}>
+      {/* Toggle header */}
+      <button type="button" onClick={() => { setExpanded(e => !e); if (expanded) onChange(''); }}
+        style={{
+          width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '9px 13px', background: expanded ? '#fffbeb' : '#f9fafb',
+          border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+          borderBottom: expanded ? '1.5px solid #fde68a' : 'none',
+        }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12, fontWeight: 600, color: expanded ? '#b45309' : '#374151' }}>
+          <Mail size={13} />
+          User can't access their registered email? Send to a different inbox
+        </div>
+        {expanded ? <ChevronUp size={14} color="#b45309" /> : <ChevronDown size={14} color="#9ca3af" />}
+      </button>
+
+      {/* Alternate email input */}
+      {expanded && (
+        <div style={{ padding: '12px 13px', background: '#fffbeb', display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div style={{ background: '#fff7ed', borderRadius: 7, padding: '8px 12px', fontSize: 11, color: '#92400e', display: 'flex', gap: 6, alignItems: 'flex-start' }}>
+            <AlertTriangle size={12} style={{ marginTop: 1, flexShrink: 0 }} />
+            <span>
+              The OTP / link / key will be <strong>delivered to this alternate email</strong> but will still unlock the account associated with <strong>{accountEmail}</strong>.
+              This action is logged to the audit trail.
+            </span>
+          </div>
+          <div>
+            <span style={{ ...lbl, color: '#b45309' }}>Alternate Delivery Email</span>
+            <input
+              type="email"
+              value={value}
+              onChange={e => onChange(e.target.value)}
+              placeholder="e.g. friend@gmail.com, personal@email.com"
+              style={{ ...inp, borderColor: '#fde68a', background: '#fff' }}
+            />
+            <p style={{ fontSize: 10, color: '#9ca3af', margin: '5px 0 0' }}>
+              Leave blank to send to the registered account email ({accountEmail})
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
    SUB-COMPONENT: RECOVERY ACTIONS PANEL (all 4 tools in tabs)
 ══════════════════════════════════════════════════════════════════════ */
 export function UserRecoveryPanel({ user, onDone }) {
@@ -126,6 +180,7 @@ export function UserRecoveryPanel({ user, onDone }) {
   const [newPw, setNewPw]     = useState('');
   const [showPw, setShowPw]   = useState(false);
   const [sendEmail, setSendEmail] = useState(true);
+  const [altEmail, setAltEmail] = useState('');      // ← alternate delivery email
   const [expiryH, setExpiryH] = useState(24);
   const [expiryD, setExpiryD] = useState(7);
   const [keyLabel, setKeyLabel] = useState('');
@@ -145,7 +200,7 @@ export function UserRecoveryPanel({ user, onDone }) {
   }, [user?.id]);
 
   useEffect(() => { if (tab === 'key') loadKeys(); }, [tab, loadKeys]);
-  useEffect(() => { setResult(null); setNote(''); }, [tab, user?.id]);
+  useEffect(() => { setResult(null); setNote(''); setAltEmail(''); }, [tab, user?.id]);
 
   const copy = (text, id) => {
     navigator.clipboard.writeText(text).then(() => {
@@ -157,14 +212,16 @@ export function UserRecoveryPanel({ user, onDone }) {
   /* ── Force Reset ── */
   const doForceReset = async () => {
     if (newPw && newPw.length < 6) return toast.error('Password must be at least 6 characters');
+    if (altEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(altEmail)) return toast.error('Invalid alternate email');
     setBusy(true);
     try {
       const res = await api.post(`/admin/recovery/users/${user.id}/force-reset`, {
         newPassword: newPw || undefined, sendEmail, adminNote: note,
+        alternateEmail: altEmail || undefined,
       });
       setResult({ type: 'reset', data: res.data });
       toast.success('Password reset successfully');
-      setNewPw(''); setNote('');
+      setNewPw(''); setNote(''); setAltEmail('');
       onDone?.();
     } catch (err) { toast.error(err.response?.data?.message || 'Failed'); }
     finally { setBusy(false); }
@@ -172,40 +229,47 @@ export function UserRecoveryPanel({ user, onDone }) {
 
   /* ── Send OTP ── */
   const doSendOTP = async () => {
+    if (altEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(altEmail)) return toast.error('Invalid alternate email');
     setBusy(true);
     try {
-      const res = await api.post(`/admin/recovery/users/${user.id}/send-otp`, { adminNote: note });
+      const res = await api.post(`/admin/recovery/users/${user.id}/send-otp`, {
+        adminNote: note, alternateEmail: altEmail || undefined,
+      });
       setResult({ type: 'otp', data: res.data });
       toast.success(res.data.message);
-      setNote('');
+      setNote(''); setAltEmail('');
     } catch (err) { toast.error(err.response?.data?.message || 'Failed'); }
     finally { setBusy(false); }
   };
 
   /* ── Magic Link ── */
   const doMagicLink = async () => {
+    if (altEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(altEmail)) return toast.error('Invalid alternate email');
     setBusy(true);
     try {
       const res = await api.post(`/admin/recovery/users/${user.id}/generate-link`, {
         expiryHours: expiryH, adminNote: note, sendEmail,
+        alternateEmail: altEmail || undefined,
       });
       setResult({ type: 'link', data: res.data });
       toast.success('Recovery link generated');
-      setNote('');
+      setNote(''); setAltEmail('');
     } catch (err) { toast.error(err.response?.data?.message || 'Failed'); }
     finally { setBusy(false); }
   };
 
   /* ── Recovery Key ── */
   const doGenKey = async () => {
+    if (altEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(altEmail)) return toast.error('Invalid alternate email');
     setBusy(true);
     try {
       const res = await api.post(`/admin/recovery/users/${user.id}/generate-key`, {
         expiryDays: expiryD, label: keyLabel || undefined, adminNote: note, sendEmail,
+        alternateEmail: altEmail || undefined,
       });
       setResult({ type: 'key', data: res.data });
       toast.success('Recovery key generated');
-      setNote(''); setKeyLabel('');
+      setNote(''); setKeyLabel(''); setAltEmail('');
       loadKeys();
     } catch (err) { toast.error(err.response?.data?.message || 'Failed'); }
     finally { setBusy(false); }
@@ -302,6 +366,8 @@ export function UserRecoveryPanel({ user, onDone }) {
               <span style={lbl}>Admin Note <span style={{ color: '#9ca3af', fontWeight: 400, textTransform: 'none' }}>(included in user email)</span></span>
               <input value={note} onChange={e => setNote(e.target.value)} placeholder="e.g. Reset per your support ticket request" style={inp} />
             </div>
+            {/* Alternate email */}
+            <AltEmailField value={altEmail} onChange={setAltEmail} accountEmail={user.email} />
             <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: '#374151', cursor: 'pointer', userSelect: 'none' }}>
               <input type="checkbox" checked={sendEmail} onChange={e => setSendEmail(e.target.checked)} style={{ width: 15, height: 15, accentColor: '#111827' }} />
               Notify user by email (recommended)
@@ -341,7 +407,7 @@ export function UserRecoveryPanel({ user, onDone }) {
               <div style={{ display: 'flex', gap: 6, fontWeight: 700 }}><Zap size={13} />What this does:</div>
               <ul style={{ margin: 0, paddingLeft: 20, lineHeight: 1.8 }}>
                 <li>Generates a fresh <strong>6-digit OTP</strong> on behalf of this user</li>
-                <li>Sends it directly to <strong>{user.email}</strong></li>
+                <li>Sends it to the registered email <strong>{user.email}</strong> — or to an alternate email you specify below</li>
                 <li>Valid for <strong>15 minutes</strong></li>
                 <li>User enters it on the <strong>Forgot Password</strong> page to reset their password</li>
               </ul>
@@ -351,17 +417,22 @@ export function UserRecoveryPanel({ user, onDone }) {
               <input value={note} onChange={e => setNote(e.target.value)}
                 placeholder="e.g. As requested in your support ticket RCV-XXXXX" style={inp} />
             </div>
+            {/* Alternate email */}
+            <AltEmailField value={altEmail} onChange={setAltEmail} accountEmail={user.email} />
             <button onClick={doSendOTP} disabled={busy} style={{ ...solidBtn('#1d4ed8', '#fff', { width: '100%', justifyContent: 'center', padding: '11px', opacity: busy ? 0.6 : 1 }) }}>
-              {busy ? <><Spin /> Sending OTP…</> : <><Send size={14} /> Send OTP to {user.email}</>}
+              {busy ? <><Spin /> Sending OTP…</> : <><Send size={14} /> Send OTP to {altEmail.trim() || user.email}</>}
             </button>
             {result?.type === 'otp' && (
               <div style={{ background: '#eff6ff', borderRadius: 10, padding: 14, border: '1px solid #bfdbfe', display: 'flex', alignItems: 'flex-start', gap: 8 }}>
                 <CheckCircle2 size={15} color="#1d4ed8" style={{ marginTop: 1, flexShrink: 0 }} />
                 <div>
                   <p style={{ fontSize: 12, fontWeight: 700, color: '#1d4ed8', margin: '0 0 4px' }}>OTP sent successfully</p>
-                  <p style={{ fontSize: 12, color: '#1e40af', margin: 0 }}>
-                    A 6-digit OTP has been sent to <strong>{user.email}</strong>.
-                    Ask the user to check their inbox and use it on the Forgot Password page.
+                  <p style={{ fontSize: 12, color: '#1e40af', margin: '0 0 4px' }}>
+                    Delivered to: <strong>{result.data.deliveredTo}</strong>
+                    {result.data.isAlternate && <span style={{ color: '#f59e0b', marginLeft: 6, fontWeight: 700 }}>⚠ Alternate inbox</span>}
+                  </p>
+                  <p style={{ fontSize: 11, color: '#3b82f6', margin: 0 }}>
+                    User must enter this OTP at the Forgot Password page using their account email: <strong>{user.email}</strong>
                   </p>
                 </div>
               </div>
@@ -399,6 +470,8 @@ export function UserRecoveryPanel({ user, onDone }) {
               <span style={lbl}>Admin Note <span style={{ color: '#9ca3af', fontWeight: 400, textTransform: 'none' }}>(sent in email)</span></span>
               <input value={note} onChange={e => setNote(e.target.value)} placeholder="Optional note to user…" style={inp} />
             </div>
+            {/* Alternate email */}
+            <AltEmailField value={altEmail} onChange={setAltEmail} accountEmail={user.email} />
             <button onClick={doMagicLink} disabled={busy} style={{ ...solidBtn('#7e22ce', '#fff', { width: '100%', justifyContent: 'center', padding: '11px', opacity: busy ? 0.6 : 1 }) }}>
               {busy ? <><Spin /> Generating…</> : <><Link2 size={14} /> Generate Magic Link</>}
             </button>
@@ -415,7 +488,9 @@ export function UserRecoveryPanel({ user, onDone }) {
                 </div>
                 <p style={{ fontSize: 10, color: '#9ca3af', margin: '6px 0 0' }}>
                   Expires: {new Date(result.data.expiresAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}
-                  {result.data.emailSent ? ' · Email sent to user' : ' · Copy & share manually'}
+                  {result.data.deliveredTo
+                    ? <> · Sent to <strong style={{ color: result.data.isAlternate ? '#f59e0b' : '#374151' }}>{result.data.deliveredTo}</strong>{result.data.isAlternate && ' ⚠ alternate'}</>
+                    : ' · Copy & share manually'}
                 </p>
               </div>
             )}
@@ -450,6 +525,8 @@ export function UserRecoveryPanel({ user, onDone }) {
               <span style={lbl}>Admin Note <span style={{ color: '#9ca3af', fontWeight: 400, textTransform: 'none' }}>(sent in key email)</span></span>
               <input value={note} onChange={e => setNote(e.target.value)} placeholder="Optional note to user…" style={inp} />
             </div>
+            {/* Alternate email */}
+            <AltEmailField value={altEmail} onChange={setAltEmail} accountEmail={user.email} />
             <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: '#374151', cursor: 'pointer', userSelect: 'none' }}>
               <input type="checkbox" checked={sendEmail} onChange={e => setSendEmail(e.target.checked)} style={{ width: 15, height: 15, accentColor: '#b45309' }} />
               Email key directly to user
@@ -474,8 +551,15 @@ export function UserRecoveryPanel({ user, onDone }) {
                 <p style={{ fontSize: 10, color: '#9ca3af', margin: '8px 0 0' }}>
                   Prefix: <strong style={{ color: '#374151' }}>{result.data.prefix}</strong> ·
                   Expires: {new Date(result.data.expiresAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}
-                  {result.data.emailSent ? ' · Email sent to user' : ''}
+                  {result.data.deliveredTo
+                    ? <> · Sent to <strong style={{ color: result.data.isAlternate ? '#f59e0b' : '#374151' }}>{result.data.deliveredTo}</strong>{result.data.isAlternate && ' ⚠ alternate'}</>
+                    : ''}
                 </p>
+                {result.data.isAlternate && (
+                  <p style={{ fontSize: 11, color: '#b45309', margin: '6px 0 0', background: '#fff7ed', padding: '7px 10px', borderRadius: 6 }}>
+                    ⚠ User must enter this key with their account email <strong>{user.email}</strong> on the recover page — not the alternate email.
+                  </p>
+                )}
               </div>
             )}
 

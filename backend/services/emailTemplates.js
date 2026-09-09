@@ -123,10 +123,11 @@ module.exports = {
   // ─────────────────────────────────────────────────────────────
   // ADMIN RECOVERY: Admin force-reset password notification
   // ─────────────────────────────────────────────────────────────
-  adminForcedPasswordReset: (name, time, tempPassword = null) => wrap(`
+  adminForcedPasswordReset: (name, time, tempPassword = null, adminNote = '') => wrap(`
     ${badge('Security Notice · Password Reset by Admin', '#dc2626')}
     ${h2(`Hi ${name},`)}
     ${para(`Your NOREN account password was reset by a support administrator on <strong style="color:#1a1a18">${time} IST</strong>.`)}
+    ${adminNote ? `<div style="background:#fff7ed;border-left:3px solid #c9a96e;padding:14px 18px;margin-bottom:20px;border-radius:2px"><p style="color:#5a5750;font-size:13px;margin:0"><strong style="color:#1a1a18;">Note from support:</strong> ${adminNote}</p></div>` : ''}
     ${tempPassword ? `
     <div style="background:#f5f0e8;padding:20px 24px;margin-bottom:24px;border-radius:2px;border-left:3px solid #c9a96e">
       <p style="color:#9e9a94;font-size:11px;letter-spacing:0.14em;text-transform:uppercase;margin:0 0 8px">Temporary Password</p>

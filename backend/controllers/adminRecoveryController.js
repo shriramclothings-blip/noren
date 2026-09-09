@@ -39,12 +39,18 @@ const generateTicketId = () => {
 // ─────────────────────────────────────────────────────────────────────────────
 // 1. FORCE RESET PASSWORD
 //    POST /api/admin/recovery/users/:id/force-reset
-//    Body: { newPassword?, sendEmail?, adminNote? }
+//    Body: { newPassword?, sendEmail?, adminNote?, alternateEmail? }
 //    If newPassword is omitted, a random temp password is generated.
+//    alternateEmail: send the notification/temp password to a different inbox.
 // ─────────────────────────────────────────────────────────────────────────────
 const forceResetPassword = async (req, res) => {
   const { id } = req.params;
-  const { newPassword, sendEmail = true, adminNote = '' } = req.body;
+  const { newPassword, sendEmail = true, adminNote = '', alternateEmail = '' } = req.body;
+
+  const altEmail = alternateEmail.trim().toLowerCase();
+  if (altEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(altEmail)) {
+    return res.status(400).json({ message: 'Invalid alternate email address' });
+  }
 
   try {
     const userRes = await pool.query(
@@ -59,7 +65,6 @@ const forceResetPassword = async (req, res) => {
     const plain    = newPassword || crypto.randomBytes(6).toString('base64').replace(/[^a-zA-Z0-9]/g, '').slice(0, 10);
     const hashed   = await bcrypt.hash(plain, 12);
 
-    // Update password, also reset auth_provider to local to re-enable password login
     await pool.query(
       `UPDATE src_users SET password=$1, auth_provider=CASE WHEN auth_provider='google' THEN 'local' ELSE auth_provider END WHERE id=$2`,
       [hashed, id]
@@ -68,19 +73,24 @@ const forceResetPassword = async (req, res) => {
     // Invalidate any outstanding reset tokens for this user
     await pool.query('DELETE FROM src_password_resets WHERE email=$1', [user.email]).catch(() => {});
 
-    // Log
     await logAction(req.user.id, 'admin_force_reset_password', id,
-      `Password force-reset by admin. Temp=${isTemp}. Note: ${adminNote || 'none'}`);
+      `Password force-reset by admin. Temp=${isTemp}. Delivery: ${altEmail || user.email}${altEmail ? ' (ALTERNATE)' : ''}. Note: ${adminNote || 'none'}`);
 
-    // Send email notification
     if (sendEmail) {
+      const deliveryEmail = (altEmail && altEmail !== user.email.toLowerCase()) ? altEmail : user.email;
+      const isAlternate   = deliveryEmail !== user.email.toLowerCase();
       const timeStr = new Date().toLocaleString('en-IN', {
         timeZone: 'Asia/Kolkata', dateStyle: 'medium', timeStyle: 'short',
       });
+      const noteWithContext = [
+        adminNote,
+        isAlternate ? `[Notification sent to alternate email. Account: ${user.email}]` : '',
+      ].filter(Boolean).join(' — ');
+
       sendMail(
-        user.email,
+        deliveryEmail,
         'Your NOREN Account Password Was Reset',
-        adminForcedPasswordReset(user.name, timeStr, isTemp ? plain : null)
+        adminForcedPasswordReset(user.name, timeStr, isTemp ? plain : null, noteWithContext)
       ).catch(() => {});
     }
 
@@ -98,11 +108,20 @@ const forceResetPassword = async (req, res) => {
 // ─────────────────────────────────────────────────────────────────────────────
 // 2. SEND RECOVERY OTP ON BEHALF OF USER
 //    POST /api/admin/recovery/users/:id/send-otp
-//    Body: { adminNote? }
+//    Body: { adminNote?, alternateEmail? }
+//    alternateEmail: if user cannot access their registered inbox, send to this
+//    email instead. The OTP still works on the account — only the delivery
+//    address changes. Both addresses are logged for security audit.
 // ─────────────────────────────────────────────────────────────────────────────
 const sendRecoveryOTP = async (req, res) => {
   const { id } = req.params;
-  const { adminNote = '' } = req.body;
+  const { adminNote = '', alternateEmail = '' } = req.body;
+
+  // Validate alternate email format if provided
+  const altEmail = alternateEmail.trim().toLowerCase();
+  if (altEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(altEmail)) {
+    return res.status(400).json({ message: 'Invalid alternate email address' });
+  }
 
   try {
     const userRes = await pool.query(
@@ -113,26 +132,38 @@ const sendRecoveryOTP = async (req, res) => {
     const user = userRes.rows[0];
 
     const otp     = generateOTP();
-    const expires = new Date(Date.now() + 15 * 60 * 1000); // 15 min (extra time since admin-initiated)
+    const expires = new Date(Date.now() + 15 * 60 * 1000); // 15 min
 
-    // Clear old resets for this email and insert fresh OTP
+    // OTP is always linked to the account email (used for verification)
     await pool.query('DELETE FROM src_password_resets WHERE email=$1', [user.email]).catch(() => {});
     await pool.query(
       'INSERT INTO src_password_resets (email, token, expires_at, used) VALUES ($1,$2,$3,FALSE)',
       [user.email, otp, expires]
     );
 
-    // Send email
+    // Delivery: use alternate if provided, otherwise registered email
+    const deliveryEmail = altEmail || user.email;
+    const isAlternate   = Boolean(altEmail && altEmail !== user.email.toLowerCase());
+
+    const noteWithContext = [
+      adminNote,
+      isAlternate ? `[Delivered to alternate email: ${deliveryEmail}. Account email: ${user.email}]` : '',
+    ].filter(Boolean).join(' — ');
+
     await sendMail(
-      user.email,
+      deliveryEmail,
       'NOREN Account Recovery OTP — Support Initiated',
-      adminRecoveryOTP(user.name, otp, adminNote)
+      adminRecoveryOTP(user.name, otp, noteWithContext)
     );
 
     await logAction(req.user.id, 'admin_sent_recovery_otp', id,
-      `Recovery OTP sent to ${user.email}. Note: ${adminNote || 'none'}`);
+      `Recovery OTP sent. Delivery: ${deliveryEmail}${isAlternate ? ' (ALTERNATE — account: ' + user.email + ')' : ''}. Note: ${adminNote || 'none'}`);
 
-    res.json({ message: `Recovery OTP sent to ${user.email}` });
+    res.json({
+      message: `Recovery OTP sent to ${deliveryEmail}`,
+      deliveredTo: deliveryEmail,
+      isAlternate,
+    });
   } catch (err) {
     console.error('[sendRecoveryOTP]', err);
     res.status(500).json({ message: err.message });
@@ -142,11 +173,18 @@ const sendRecoveryOTP = async (req, res) => {
 // ─────────────────────────────────────────────────────────────────────────────
 // 3. GENERATE RECOVERY LINK (magic link via password_resets token)
 //    POST /api/admin/recovery/users/:id/generate-link
-//    Body: { expiryHours?, adminNote? }
+//    Body: { expiryHours?, adminNote?, sendEmail?, alternateEmail? }
+//    alternateEmail: deliver the link to a different inbox while the token
+//    remains tied to the account email.
 // ─────────────────────────────────────────────────────────────────────────────
 const generateRecoveryLink = async (req, res) => {
   const { id } = req.params;
-  const { expiryHours = 24, adminNote = '', sendEmail = true } = req.body;
+  const { expiryHours = 24, adminNote = '', sendEmail = true, alternateEmail = '' } = req.body;
+
+  const altEmail = alternateEmail.trim().toLowerCase();
+  if (altEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(altEmail)) {
+    return res.status(400).json({ message: 'Invalid alternate email address' });
+  }
 
   try {
     const userRes = await pool.query(
@@ -160,6 +198,7 @@ const generateRecoveryLink = async (req, res) => {
     const hours   = Math.min(Math.max(parseInt(expiryHours) || 24, 1), 72);
     const expires = new Date(Date.now() + hours * 60 * 60 * 1000);
 
+    // Token is always linked to account email for password update
     await pool.query('DELETE FROM src_password_resets WHERE email=$1', [user.email]).catch(() => {});
     await pool.query(
       'INSERT INTO src_password_resets (email, token, expires_at, used) VALUES ($1,$2,$3,FALSE)',
@@ -169,22 +208,32 @@ const generateRecoveryLink = async (req, res) => {
     const site = process.env.FRONTEND_URL || 'https://www.norenfashion.shop';
     const recoveryUrl = `${site}/reset-password?token=${token}&email=${encodeURIComponent(user.email)}`;
 
+    const deliveryEmail = (altEmail && altEmail !== user.email.toLowerCase()) ? altEmail : user.email;
+    const isAlternate   = deliveryEmail !== user.email.toLowerCase();
+
     if (sendEmail) {
+      const noteWithContext = [
+        adminNote,
+        isAlternate ? `[Sent to alternate email. This link resets the account: ${user.email}]` : '',
+      ].filter(Boolean).join(' — ');
+
       await sendMail(
-        user.email,
+        deliveryEmail,
         'NOREN Account Recovery Link — Support Initiated',
-        adminRecoveryLink(user.name, recoveryUrl, `${hours} hours`, adminNote)
+        adminRecoveryLink(user.name, recoveryUrl, `${hours} hours`, noteWithContext)
       ).catch(() => {});
     }
 
     await logAction(req.user.id, 'admin_generated_recovery_link', id,
-      `Recovery link generated. Expires in ${hours}h. Email sent: ${sendEmail}. Note: ${adminNote || 'none'}`);
+      `Recovery link generated. Delivery: ${deliveryEmail}${isAlternate ? ' (ALTERNATE — account: ' + user.email + ')' : ''}. Expires in ${hours}h. Note: ${adminNote || 'none'}`);
 
     res.json({
       message: 'Recovery link generated.',
       recoveryUrl,
       expiresAt: expires.toISOString(),
       emailSent: sendEmail,
+      deliveredTo: sendEmail ? deliveryEmail : null,
+      isAlternate,
     });
   } catch (err) {
     console.error('[generateRecoveryLink]', err);
@@ -195,11 +244,18 @@ const generateRecoveryLink = async (req, res) => {
 // ─────────────────────────────────────────────────────────────────────────────
 // 4. GENERATE RECOVERY KEY (long-lived single-use key stored in src_recovery_keys)
 //    POST /api/admin/recovery/users/:id/generate-key
-//    Body: { label?, expiryDays?, adminNote?, sendEmail? }
+//    Body: { label?, expiryDays?, adminNote?, sendEmail?, alternateEmail? }
+//    alternateEmail: deliver the key to a different inbox. Key still unlocks
+//    the user's account when used on /recover-account.
 // ─────────────────────────────────────────────────────────────────────────────
 const generateRecoveryKey = async (req, res) => {
   const { id } = req.params;
-  const { label = 'Admin Generated', expiryDays = 7, adminNote = '', sendEmail = true } = req.body;
+  const { label = 'Admin Generated', expiryDays = 7, adminNote = '', sendEmail = true, alternateEmail = '' } = req.body;
+
+  const altEmail = alternateEmail.trim().toLowerCase();
+  if (altEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(altEmail)) {
+    return res.status(400).json({ message: 'Invalid alternate email address' });
+  }
 
   try {
     const userRes = await pool.query(
@@ -209,8 +265,8 @@ const generateRecoveryKey = async (req, res) => {
     if (!userRes.rows.length) return res.status(404).json({ message: 'User not found' });
     const user = userRes.rows[0];
 
-    const rawKey   = generateToken(); // 64-char hex
-    const prefix   = rawKey.slice(0, 8).toUpperCase(); // displayed prefix for identification
+    const rawKey   = generateToken();
+    const prefix   = rawKey.slice(0, 8).toUpperCase();
     const keyHash  = await bcrypt.hash(rawKey, 10);
     const days     = Math.min(Math.max(parseInt(expiryDays) || 7, 1), 30);
     const expires  = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
@@ -225,23 +281,33 @@ const generateRecoveryKey = async (req, res) => {
       timeZone: 'Asia/Kolkata', dateStyle: 'medium', timeStyle: 'short',
     });
 
+    const deliveryEmail = (altEmail && altEmail !== user.email.toLowerCase()) ? altEmail : user.email;
+    const isAlternate   = deliveryEmail !== user.email.toLowerCase();
+
     if (sendEmail) {
+      const noteWithContext = [
+        adminNote,
+        isAlternate ? `[Key sent to alternate email. Enter it with account email: ${user.email} on the recover page]` : '',
+      ].filter(Boolean).join(' — ');
+
       sendMail(
-        user.email,
+        deliveryEmail,
         'NOREN Account Recovery Key — Keep Confidential',
-        adminRecoveryKey(user.name, rawKey, expiresStr, adminNote)
+        adminRecoveryKey(user.name, rawKey, expiresStr, noteWithContext)
       ).catch(() => {});
     }
 
     await logAction(req.user.id, 'admin_generated_recovery_key', id,
-      `Recovery key generated. Prefix=${prefix}. Expires in ${days}d. Email sent: ${sendEmail}. Note: ${adminNote || 'none'}`);
+      `Recovery key generated. Prefix=${prefix}. Delivery: ${deliveryEmail}${isAlternate ? ' (ALTERNATE — account: ' + user.email + ')' : ''}. Expires in ${days}d. Note: ${adminNote || 'none'}`);
 
     res.json({
-      message:    'Recovery key generated.',
+      message:     'Recovery key generated.',
       recoveryKey: rawKey,
       prefix,
-      expiresAt:  expires.toISOString(),
-      emailSent:  sendEmail,
+      expiresAt:   expires.toISOString(),
+      emailSent:   sendEmail,
+      deliveredTo: sendEmail ? deliveryEmail : null,
+      isAlternate,
     });
   } catch (err) {
     console.error('[generateRecoveryKey]', err);
