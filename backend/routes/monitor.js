@@ -30,10 +30,19 @@ const MONITOR_SECRET = process.env.MONITOR_SECRET || null;
 
 // Guard for write operations (switch, copy, shutdown)
 function guardWrite(req, res, next) {
-  if (!MONITOR_SECRET) return next();
+  if (!MONITOR_SECRET) {
+    console.log('[Monitor] No MONITOR_SECRET set - allowing request');
+    return next();
+  }
   const token = req.headers['x-monitor-key'] || req.query.key || req.body?.secret;
+  console.log('[Monitor] guardWrite check:', { 
+    hasHeader: !!req.headers['x-monitor-key'], 
+    hasQuery: !!req.query.key, 
+    hasBody: !!req.body?.secret,
+    secretMatch: token === MONITOR_SECRET 
+  });
   if (token === MONITOR_SECRET) return next();
-  return res.status(401).json({ error: 'Unauthorized — x-monitor-key required' });
+  return res.status(401).json({ error: 'Unauthorized — x-monitor-key required', hint: 'Set MONITOR_SECRET in .env and provide it in request body as "secret"' });
 }
 
 // Read-only endpoints are open, write operations are protected
