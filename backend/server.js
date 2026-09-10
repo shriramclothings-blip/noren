@@ -448,7 +448,7 @@ app.get('/og/product/:id', async (req, res) => {
 });
 
 app.get('/api/health', (_, res) => res.json({ status: 'ok', brand: 'NOREN', timestamp: new Date() }));
-app.get('/', (_, res) => res.json({ name: 'NOREN API', status: 'running', version: '1.0.0' }));
+app.get('/', (_, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 
 // ── Self keep-alive ping (prevents Render free tier from spinning down) ───────
 // Pings /api/health every 14 minutes so the dyno never goes cold.
