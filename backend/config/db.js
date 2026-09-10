@@ -2288,6 +2288,191 @@ const logAudit = async (db, { adminId = null, action, targetType = null, targetI
   }
 };
 
-module.exports = { pool, initDB, logAudit };
+// ─── Monitor / Control API exports ────────────────────────────────────────────
+
+/**
+ * forceSwitch(targetIndex)
+ * Hard-switch the active DB to the given 0-based index.
+ * Returns { from, to, ok, error }.
+ */
+async function forceSwitch(targetIndex) {
+  const idx = parseInt(targetIndex, 10);
+  if (isNaN(idx) || idx < 0 || idx >= RAW_URLS.length) {
+    return { ok: false, error: `Invalid target index ${targetIndex}. Available: 0–${RAW_URLS.length - 1}` };
+  }
+  const from = activeIndex;
+  try {
+    // Rebuild a fresh pool for the target node to guarantee a clean connection
+    await pools[idx].end().catch(() => {});
+    pools[idx] = makePool(idx);
+    const client = await pools[idx].connect();
+    await client.query('SELECT 1');
+    client.release();
+    activeIndex        = idx;
+    queryCountOnBackup = idx === 0 ? 0 : queryCountOnBackup;
+    lastRecoveryAttempt = 0; // reset recovery timer
+    console.log(`🎛️  Manual DB switch: DB${from + 1} → DB${idx + 1}`);
+    return { ok: true, from: from + 1, to: idx + 1 };
+  } catch (e) {
+    return { ok: false, from: from + 1, to: idx + 1, error: e.message };
+  }
+}
+
+/**
+ * pingAllNodes()
+ * Tests every configured DB node and returns latency + status.
+ */
+async function pingAllNodes() {
+  return Promise.all(
+    RAW_URLS.map(async (_, i) => {
+      const start = Date.now();
+      try {
+        const p = makePool(i);  // fresh pool so we don't corrupt active one
+        const c = await p.connect();
+        const r = await c.query('SELECT NOW() AS t, version() AS v');
+        c.release();
+        await p.end().catch(() => {});
+        return {
+          node:       i + 1,
+          status:     'ok',
+          latencyMs:  Date.now() - start,
+          serverTime: r.rows[0].t,
+          pgVersion:  r.rows[0].v.split(' ').slice(0, 2).join(' '),
+          active:     i === activeIndex,
+        };
+      } catch (e) {
+        return { node: i + 1, status: 'error', error: e.message, latencyMs: Date.now() - start, active: i === activeIndex };
+      }
+    })
+  );
+}
+
+/**
+ * copyDatabase(fromIndex, toIndex, onProgress)
+ * Copies every table from source DB to destination DB.
+ * onProgress(msg) is called with progress strings.
+ * ⚠️  This is a logical copy (table-by-table INSERT SELECT equivalent via JS).
+ *     Works across Neon projects with no shell access required.
+ */
+async function copyDatabase(fromIndex, toIndex, onProgress = () => {}) {
+  const fi = parseInt(fromIndex, 10);
+  const ti = parseInt(toIndex, 10);
+  if (fi === ti) return { ok: false, error: 'Source and destination are the same node.' };
+  if (fi < 0 || fi >= RAW_URLS.length) return { ok: false, error: `Invalid source index ${fi}` };
+  if (ti < 0 || ti >= RAW_URLS.length) return { ok: false, error: `Invalid target index ${ti}` };
+
+  onProgress(`Starting copy DB${fi + 1} → DB${ti + 1}`);
+
+  // Build dedicated pools for this operation
+  const srcPool = makePool(fi);
+  const dstPool = makePool(ti);
+
+  try {
+    // 1. Get list of all user tables from source
+    const tablesRes = await srcPool.query(`
+      SELECT tablename FROM pg_tables
+      WHERE schemaname = 'public'
+      ORDER BY tablename
+    `);
+    const tables = tablesRes.rows.map(r => r.tablename);
+    onProgress(`Found ${tables.length} tables in DB${fi + 1}`);
+
+    let copied = 0, skipped = 0, errors = 0;
+    const log = [];
+
+    for (const table of tables) {
+      try {
+        // Get row count
+        const cntRes = await srcPool.query(`SELECT COUNT(*) FROM "${table}"`);
+        const cnt = parseInt(cntRes.rows[0].count, 10);
+
+        if (cnt === 0) {
+          onProgress(`⏭ ${table} — empty, skipping`);
+          skipped++;
+          log.push({ table, status: 'skipped', rows: 0 });
+          continue;
+        }
+
+        // Get column names
+        const colRes = await srcPool.query(`
+          SELECT column_name, data_type FROM information_schema.columns
+          WHERE table_schema='public' AND table_name=$1
+          ORDER BY ordinal_position
+        `, [table]);
+        const cols = colRes.rows.map(r => r.column_name);
+        const colList = cols.map(c => `"${c}"`).join(', ');
+
+        // Fetch all rows from source in batches of 500
+        const BATCH = 500;
+        let offset = 0, rowsCopied = 0;
+
+        // Truncate destination table first
+        await dstPool.query(`TRUNCATE TABLE "${table}" CASCADE`).catch(() => {});
+
+        while (offset < cnt) {
+          const rows = await srcPool.query(
+            `SELECT ${colList} FROM "${table}" ORDER BY 1 LIMIT $1 OFFSET $2`,
+            [BATCH, offset]
+          );
+          if (!rows.rows.length) break;
+
+          // Build bulk insert
+          const values = [];
+          const params = [];
+          let pi = 1;
+          for (const row of rows.rows) {
+            const placeholders = cols.map(() => `$${pi++}`).join(', ');
+            values.push(`(${placeholders})`);
+            params.push(...cols.map(c => row[c]));
+          }
+
+          await dstPool.query(
+            `INSERT INTO "${table}" (${colList}) VALUES ${values.join(', ')} ON CONFLICT DO NOTHING`,
+            params
+          );
+
+          rowsCopied += rows.rows.length;
+          offset += BATCH;
+        }
+
+        onProgress(`✅ ${table} — ${rowsCopied} rows`);
+        copied++;
+        log.push({ table, status: 'copied', rows: rowsCopied });
+      } catch (e) {
+        onProgress(`❌ ${table} — ${e.message}`);
+        errors++;
+        log.push({ table, status: 'error', error: e.message });
+      }
+    }
+
+    onProgress(`Copy complete: ${copied} tables copied, ${skipped} skipped, ${errors} errors`);
+    return { ok: true, copied, skipped, errors, tables: tables.length, log };
+  } finally {
+    await srcPool.end().catch(() => {});
+    await dstPool.end().catch(() => {});
+  }
+}
+
+/**
+ * getPoolStats()
+ * Returns runtime stats about each pool.
+ */
+function getPoolStats() {
+  return RAW_URLS.map((_, i) => {
+    const p = pools[i];
+    return {
+      node:       i + 1,
+      active:     i === activeIndex,
+      totalCount: p?.totalCount ?? null,
+      idleCount:  p?.idleCount  ?? null,
+      waitingCount: p?.waitingCount ?? null,
+    };
+  });
+}
+
+// Expose activeIndex as a readable property
+Object.defineProperty(module, '_activeIndex', { get: () => activeIndex });
+
+module.exports = { pool, initDB, logAudit, forceSwitch, pingAllNodes, copyDatabase, getPoolStats, RAW_URLS, get activeIndex() { return activeIndex; } };
 
 

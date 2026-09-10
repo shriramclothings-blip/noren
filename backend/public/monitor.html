@@ -1,844 +1,634 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-<title>NOREN — Live Server Monitor</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>NOREN — Server Control Center</title>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@300;400;500&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
 <style>
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
 :root{
-  --bg:#020509;--bg2:#060c14;--surface:#0a1220;--surface2:#0d1628;
-  --border:rgba(0,200,255,.1);--border2:rgba(0,200,255,.22);
-  --cyan:#00c8ff;--cyan2:#00eaff;--green:#00ff9d;--gold:#f5c518;
-  --red:#ff4757;--orange:#ff8c42;--purple:#9b5de5;
-  --text:#dde8f4;--dim:#607a99;--muted:#2a3d55;
-  --glow:0 0 24px rgba(0,200,255,.12);
+  --bg:#020509;--bg2:#060c14;--surface:#0a1220;--s2:#0d1628;--s3:#111e35;
+  --border:rgba(0,200,255,.08);--b2:rgba(0,200,255,.18);--b3:rgba(0,200,255,.3);
+  --cyan:#00c8ff;--c2:#00eaff;--green:#00ff9d;--gold:#f5c518;
+  --red:#ff4757;--orange:#ff8c42;--purple:#9b5de5;--pink:#ff6b9d;
+  --text:#dde8f4;--dim:#607a99;--muted:#2a3d55;--faint:#111e2e;
 }
 html{scroll-behavior:smooth}
-body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-size:13px;overflow-x:hidden}
-body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,200,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(0,200,255,.025) 1px,transparent 1px);background-size:48px 48px;pointer-events:none;z-index:0;animation:gridMove 25s linear infinite}
-@keyframes gridMove{0%{background-position:0 0,0 0}100%{background-position:0 48px,48px 0}}
-.page{position:relative;z-index:1;min-height:100vh;padding:52px 0 40px}
-
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-size:13px;overflow-x:hidden;min-height:100vh}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,200,255,.022) 1px,transparent 1px),linear-gradient(90deg,rgba(0,200,255,.022) 1px,transparent 1px);background-size:52px 52px;pointer-events:none;z-index:0;animation:gridMove 28s linear infinite}
+@keyframes gridMove{0%{background-position:0 0,0 0}100%{background-position:0 52px,52px 0}}
+.wrap{position:relative;z-index:1;padding:52px 0 60px}
 /* TOPBAR */
-.topbar{position:fixed;top:0;left:0;right:0;height:52px;background:rgba(2,5,9,.92);border-bottom:1px solid var(--border);backdrop-filter:blur(16px);display:flex;align-items:center;gap:16px;padding:0 20px;z-index:100}
-.topbar-brand{font-family:'Orbitron',sans-serif;font-size:14px;font-weight:700;letter-spacing:4px;color:var(--cyan)}
-.topbar-sep{width:1px;height:20px;background:var(--border2)}
-.topbar-label{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:3px;color:var(--dim);text-transform:uppercase}
-.topbar-right{margin-left:auto;display:flex;align-items:center;gap:16px}
-.conn-badge{display:flex;align-items:center;gap:6px;font-family:'JetBrains Mono',monospace;font-size:11px;padding:4px 12px;border-radius:100px;border:1px solid var(--border);transition:.3s}
-.conn-badge.connected{color:var(--green);border-color:rgba(0,255,157,.3)}
-.conn-badge.disconnected{color:var(--red);border-color:rgba(255,71,87,.3)}
-.conn-dot{width:6px;height:6px;border-radius:50%;background:currentColor;animation:pulse 2s ease-in-out infinite}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
-.ts-label{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim)}
-
-/* LAYOUT */
-.container{max-width:1400px;margin:0 auto;padding:20px 16px}
-.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
-.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px}
-.grid-2{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:16px}
-.grid-2-1{display:grid;grid-template-columns:2fr 1fr;gap:12px;margin-bottom:16px}
-.grid-1-2{display:grid;grid-template-columns:1fr 2fr;gap:12px;margin-bottom:16px}
-@media(max-width:1100px){.grid-4{grid-template-columns:repeat(2,1fr)}.grid-3{grid-template-columns:repeat(2,1fr)}.grid-2-1,.grid-1-2{grid-template-columns:1fr}}
-@media(max-width:640px){.grid-4,.grid-3,.grid-2{grid-template-columns:1fr}.topbar-label{display:none}}
-
-/* CARDS */
+.topbar{position:fixed;top:0;left:0;right:0;height:52px;background:rgba(2,5,9,.96);border-bottom:1px solid var(--border);backdrop-filter:blur(20px);display:flex;align-items:center;gap:12px;padding:0 20px;z-index:200}
+.tb-brand{font-family:'Orbitron',sans-serif;font-size:14px;font-weight:700;letter-spacing:4px;color:var(--cyan)}
+.tb-sep{width:1px;height:18px;background:var(--border)}
+.tb-label{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:3px;color:var(--dim);text-transform:uppercase}
+.tb-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.live-badge{display:flex;align-items:center;gap:5px;font-family:'JetBrains Mono',monospace;font-size:10px;padding:4px 12px;border-radius:100px;border:1px solid var(--border);transition:.3s}
+.live-badge.on{color:var(--green);border-color:rgba(0,255,157,.3)}
+.live-badge.off{color:var(--red);border-color:rgba(255,71,87,.3)}
+.live-dot{width:6px;height:6px;border-radius:50%;background:currentColor;animation:blink 2s ease-in-out infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+.tb-clock{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim)}
+/* TABS */
+.tabs{display:flex;gap:2px;padding:16px 20px 0;max-width:1500px;margin:0 auto}
+.tab{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;padding:8px 18px;border-radius:8px 8px 0 0;border:1px solid transparent;cursor:pointer;color:var(--dim);transition:.2s;background:transparent}
+.tab:hover{color:var(--text);background:var(--surface)}
+.tab.active{color:var(--cyan);border-color:var(--b2);border-bottom-color:var(--bg);background:var(--surface)}
+.tab-content{display:none}.tab-content.active{display:block}
+/* CONTAINER */
+.con{max-width:1500px;margin:0 auto;padding:0 20px 20px}
+/* GRID */
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px}
+.g2{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:14px}
+.g21{display:grid;grid-template-columns:2fr 1fr;gap:12px;margin-bottom:14px}
+@media(max-width:1100px){.g4{grid-template-columns:repeat(2,1fr)}.g3{grid-template-columns:1fr 1fr}.g21{grid-template-columns:1fr}}
+@media(max-width:640px){.g4,.g3,.g2,.g21{grid-template-columns:1fr}}
+/* CARD */
 .card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px;position:relative;overflow:hidden;transition:border-color .3s}
-.card:hover{border-color:var(--border2)}
-.card::before{content:'';position:absolute;inset:0;border-radius:14px;background:linear-gradient(135deg,rgba(0,200,255,.03),transparent);pointer-events:none}
-.card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
-.card-title{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--dim)}
-.card-icon{font-size:16px}
-
-/* STAT CARDS */
-.stat-val{font-family:'Orbitron',sans-serif;font-size:28px;font-weight:700;color:var(--cyan);line-height:1;margin-bottom:4px;transition:.5s}
-.stat-val.green{color:var(--green)}
-.stat-val.gold{color:var(--gold)}
-.stat-val.red{color:var(--red)}
-.stat-val.purple{color:var(--purple)}
-.stat-sub{font-size:11px;color:var(--dim);margin-bottom:8px}
-.stat-delta{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--green)}
-.stat-delta.neg{color:var(--red)}
-
-/* MINI BAR CHART */
-.mini-chart{display:flex;align-items:flex-end;gap:2px;height:32px;margin-top:8px}
-.mini-bar{flex:1;background:rgba(0,200,255,.15);border-radius:2px 2px 0 0;transition:height .4s ease,background .3s;min-height:2px}
-.mini-bar.active{background:var(--cyan)}
-
-/* STATUS BAND */
-.status-band{display:flex;gap:8px;margin-bottom:16px}
-.band-item{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:8px;font-size:12px;transition:.3s}
-.band-item:hover{border-color:var(--border2)}
-.band-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
-.band-dot.ok{background:var(--green);box-shadow:0 0 8px var(--green)}
-.band-dot.warn{background:var(--orange);box-shadow:0 0 8px var(--orange)}
-.band-dot.error{background:var(--red);box-shadow:0 0 8px var(--red);animation:pulse 1.5s infinite}
-.band-dot.checking{background:var(--dim)}
-.band-name{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:1px;color:var(--text);flex:1}
-.band-latency{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim)}
-
-/* LOG STREAM */
-.log-stream{height:280px;overflow-y:auto;font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.6}
-.log-stream::-webkit-scrollbar{width:4px}
-.log-stream::-webkit-scrollbar-track{background:transparent}
-.log-stream::-webkit-scrollbar-thumb{background:var(--muted);border-radius:2px}
-.log-entry{display:flex;gap:8px;padding:3px 0;border-bottom:1px solid rgba(255,255,255,.03);animation:fadeIn .3s ease}
-@keyframes fadeIn{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:none}}
-.log-ts{color:var(--muted);white-space:nowrap;font-size:10px;min-width:68px}
-.log-method{min-width:50px;text-align:center;border-radius:3px;padding:0 4px;font-size:9px;font-weight:700;letter-spacing:.5px}
-.log-method.GET{color:var(--green);background:rgba(0,255,157,.08)}
-.log-method.POST{color:var(--cyan);background:rgba(0,200,255,.08)}
-.log-method.PUT{color:var(--gold);background:rgba(245,197,24,.08)}
-.log-method.PATCH{color:var(--purple);background:rgba(155,93,229,.08)}
-.log-method.DELETE{color:var(--red);background:rgba(255,71,87,.08)}
-.log-path{color:var(--dim);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.log-path span{color:var(--cyan)}
-.log-status{min-width:34px;text-align:right;font-weight:600}
-.log-status.s2{color:var(--green)}
-.log-status.s3{color:var(--gold)}
-.log-status.s4{color:var(--orange)}
-.log-status.s5{color:var(--red)}
-.log-ms{min-width:44px;text-align:right;color:var(--muted);font-size:10px}
-
-/* ACTIVITY STREAM */
-.activity-stream{height:260px;overflow-y:auto}
-.activity-stream::-webkit-scrollbar{width:4px}
-.activity-stream::-webkit-scrollbar-thumb{background:var(--muted);border-radius:2px}
-.act-entry{display:flex;gap:10px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.04);animation:fadeIn .3s ease}
-.act-icon{font-size:14px;width:20px;text-align:center;flex-shrink:0;margin-top:1px}
-.act-body{flex:1;min-width:0}
-.act-label{font-size:12px;font-weight:500;color:var(--text)}
-.act-label.success{color:var(--green)}
-.act-label.error{color:var(--red)}
-.act-label.warn{color:var(--orange)}
-.act-detail{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.act-ts{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);white-space:nowrap;margin-top:2px}
-
-/* ERROR LOG */
-.err-log{height:240px;overflow-y:auto}
-.err-log::-webkit-scrollbar{width:4px}
-.err-log::-webkit-scrollbar-thumb{background:var(--muted);border-radius:2px}
-.err-entry{background:rgba(255,71,87,.05);border:1px solid rgba(255,71,87,.12);border-radius:8px;padding:8px 12px;margin-bottom:6px;animation:fadeIn .3s ease}
-.err-entry .e-top{display:flex;gap:8px;align-items:center;margin-bottom:4px}
-.err-entry .e-status{font-family:'Orbitron',monospace;font-size:11px;font-weight:700;color:var(--red)}
-.err-entry .e-method{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--orange)}
-.err-entry .e-path{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.err-entry .e-ts{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted)}
-.err-entry .e-ms{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted)}
-
-/* TOP ROUTES TABLE */
-.routes-table{width:100%;border-collapse:collapse}
-.routes-table th{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);padding:6px 8px;text-align:left;border-bottom:1px solid var(--border)}
-.routes-table td{padding:7px 8px;border-bottom:1px solid rgba(255,255,255,.03);font-family:'JetBrains Mono',monospace;font-size:11px}
-.routes-table tr:hover td{background:rgba(0,200,255,.03)}
-.rt-route{color:var(--dim)}
-.rt-route span{color:var(--cyan)}
-.rt-bar-wrap{display:flex;align-items:center;gap:8px}
-.rt-bar{height:4px;background:rgba(0,200,255,.15);border-radius:2px;flex:1}
-.rt-bar-fill{height:100%;background:var(--cyan);border-radius:2px;transition:width .6s ease}
-.rt-hits{color:var(--text);min-width:30px;text-align:right}
-
-/* DB PANEL */
-.db-nodes{display:flex;gap:10px;margin-bottom:14px}
-.db-node{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 14px;text-align:center;transition:.3s}
-.db-node.active-node{border-color:rgba(0,255,157,.4);box-shadow:0 0 16px rgba(0,255,157,.08)}
-.db-node .dn-label{font-family:'Orbitron',sans-serif;font-size:11px;font-weight:700;color:var(--text);margin-bottom:4px}
-.db-node .dn-status{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1px;text-transform:uppercase}
-.db-node .dn-status.ok{color:var(--green)}
-.db-node .dn-status.standby{color:var(--dim)}
-.db-node .dn-status.error{color:var(--red)}
-.db-meta{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim);line-height:2}
-.db-meta span{color:var(--text)}
-
-/* ORDERS TABLE */
-.orders-table{width:100%;border-collapse:collapse}
-.orders-table th{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);padding:6px 8px;text-align:left;border-bottom:1px solid var(--border)}
-.orders-table td{padding:7px 8px;border-bottom:1px solid rgba(255,255,255,.03);font-size:12px}
-.orders-table tr:hover td{background:rgba(0,200,255,.03)}
+.card:hover{border-color:var(--b2)}
+.card::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(0,200,255,.025),transparent);pointer-events:none;border-radius:14px}
+.ch{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.ct{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--dim)}
+/* STAT */
+.sv{font-family:'Orbitron',sans-serif;font-size:26px;font-weight:700;color:var(--cyan);line-height:1;margin-bottom:3px;transition:.4s}
+.sv.g{color:var(--green)}.sv.go{color:var(--gold)}.sv.r{color:var(--red)}.sv.p{color:var(--purple)}.sv.o{color:var(--orange)}
+.ss{font-size:11px;color:var(--dim);margin-bottom:5px}
+.sd{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--green)}
+.sd.neg{color:var(--red)}
+/* BAND */
+.band{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.bi{flex:1;min-width:120px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:9px 13px;display:flex;align-items:center;gap:7px;transition:.3s}
+.bi:hover{border-color:var(--b2)}
+.bd{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.bd.ok{background:var(--green);box-shadow:0 0 7px var(--green)}
+.bd.warn{background:var(--orange);box-shadow:0 0 7px var(--orange)}
+.bd.error{background:var(--red);box-shadow:0 0 7px var(--red);animation:blink 1.5s infinite}
+.bd.idle{background:var(--muted)}
+.bn{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1px;color:var(--text);flex:1}
+.bl{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim)}
+/* LOG */
+.logbox{height:270px;overflow-y:auto;font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.65}
+.logbox::-webkit-scrollbar{width:3px}
+.logbox::-webkit-scrollbar-thumb{background:var(--muted);border-radius:2px}
+.le{display:flex;gap:7px;padding:3px 0;border-bottom:1px solid rgba(255,255,255,.025);animation:fi .25s ease}
+@keyframes fi{from{opacity:0;transform:translateX(-4px)}to{opacity:1;transform:none}}
+.lts{color:var(--muted);font-size:9px;min-width:65px;white-space:nowrap}
+.lm{min-width:48px;text-align:center;border-radius:3px;padding:0 4px;font-size:9px;font-weight:700;letter-spacing:.5px}
+.lm.GET{color:var(--green);background:rgba(0,255,157,.07)}
+.lm.POST{color:var(--cyan);background:rgba(0,200,255,.07)}
+.lm.PUT{color:var(--gold);background:rgba(245,197,24,.07)}
+.lm.PATCH{color:var(--purple);background:rgba(155,93,229,.07)}
+.lm.DELETE{color:var(--red);background:rgba(255,71,87,.07)}
+.lp{color:var(--dim);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lp b{color:var(--cyan)}
+.lst{min-width:32px;text-align:right;font-weight:600}
+.lst.s2{color:var(--green)}.lst.s3{color:var(--gold)}.lst.s4{color:var(--orange)}.lst.s5{color:var(--red)}
+.lms{min-width:42px;text-align:right;color:var(--muted);font-size:9px}
+/* ACTIVITY */
+.actbox{height:260px;overflow-y:auto}
+.actbox::-webkit-scrollbar{width:3px}
+.actbox::-webkit-scrollbar-thumb{background:var(--muted);border-radius:2px}
+.ae{display:flex;gap:9px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.03);animation:fi .25s ease}
+.ai{font-size:14px;width:20px;text-align:center;flex-shrink:0;margin-top:1px}
+.ab{flex:1;min-width:0}
+.al{font-size:12px;font-weight:500;color:var(--text)}
+.al.success{color:var(--green)}.al.error{color:var(--red)}.al.warn{color:var(--orange)}
+.ad{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ats{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted)}
+/* ERROR BOX */
+.errbox{height:240px;overflow-y:auto}
+.errbox::-webkit-scrollbar{width:3px}
+.errbox::-webkit-scrollbar-thumb{background:var(--muted);border-radius:2px}
+.ee{background:rgba(255,71,87,.04);border:1px solid rgba(255,71,87,.1);border-radius:8px;padding:8px 11px;margin-bottom:6px;animation:fi .25s ease}
+.ee .et{display:flex;gap:7px;align-items:center;margin-bottom:3px}
+.ee .es{font-family:'Orbitron',monospace;font-size:11px;font-weight:700;color:var(--red)}
+.ee .em{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--orange)}
+.ee .ep{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ee .ei{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted)}
+/* TABLE */
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);padding:6px 8px;text-align:left;border-bottom:1px solid var(--border)}
+.tbl td{padding:7px 8px;border-bottom:1px solid rgba(255,255,255,.025);font-size:12px}
+.tbl tr:hover td{background:rgba(0,200,255,.025)}
+/* BADGE */
 .badge{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1px;text-transform:uppercase;padding:2px 8px;border-radius:4px;font-weight:600}
 .badge.pending{background:rgba(245,197,24,.1);color:var(--gold)}
 .badge.confirmed,.badge.processing{background:rgba(0,200,255,.1);color:var(--cyan)}
 .badge.shipped{background:rgba(155,93,229,.1);color:var(--purple)}
-.badge.delivered{background:rgba(0,255,157,.1);color:var(--green)}
-.badge.cancelled{background:rgba(255,71,87,.1);color:var(--red)}
-.badge.paid{background:rgba(0,255,157,.1);color:var(--green)}
-.badge.failed{background:rgba(255,71,87,.1);color:var(--red)}
-
+.badge.delivered,.badge.ok,.badge.paid{background:rgba(0,255,157,.1);color:var(--green)}
+.badge.cancelled,.badge.error,.badge.failed{background:rgba(255,71,87,.1);color:var(--red)}
+.badge.standby,.badge.configured{background:rgba(0,200,255,.07);color:var(--cyan)}
+.badge.unconfigured{background:rgba(42,61,85,.4);color:var(--dim)}
+.badge.warn{background:rgba(255,140,66,.1);color:var(--orange)}
+/* BTN */
+.btn{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:1px;padding:7px 16px;border-radius:8px;border:1px solid var(--b2);background:rgba(0,200,255,.07);color:var(--cyan);cursor:pointer;transition:.2s;text-transform:uppercase}
+.btn:hover{background:rgba(0,200,255,.15);border-color:var(--b3)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn.red{border-color:rgba(255,71,87,.35);background:rgba(255,71,87,.07);color:var(--red)}
+.btn.red:hover{background:rgba(255,71,87,.15)}
+.btn.gold{border-color:rgba(245,197,24,.35);background:rgba(245,197,24,.07);color:var(--gold)}
+.btn.gold:hover{background:rgba(245,197,24,.15)}
+.btn.green{border-color:rgba(0,255,157,.35);background:rgba(0,255,157,.07);color:var(--green)}
+.btn.green:hover{background:rgba(0,255,157,.15)}
+.btn.lg{padding:10px 24px;font-size:11px}
+/* DB NODE CARD */
+.dbnode{background:var(--s2);border:1px solid var(--border);border-radius:12px;padding:14px 16px;position:relative;transition:.3s;cursor:pointer}
+.dbnode:hover{border-color:var(--b2)}
+.dbnode.active-node{border-color:rgba(0,255,157,.4);box-shadow:0 0 18px rgba(0,255,157,.07)}
+.dbnode.error-node{border-color:rgba(255,71,87,.35)}
+.dnn{font-family:'Orbitron',sans-serif;font-size:13px;font-weight:700;margin-bottom:4px}
+.dns{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px}
+.dns.ok{color:var(--green)}.dns.error{color:var(--red)}.dns.standby{color:var(--dim)}.dns.active{color:var(--green)}
+.dnl{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);line-height:1.8}
+.dnl span{color:var(--text)}
+.dna{position:absolute;top:10px;right:10px;font-size:8px;letter-spacing:2px;font-family:'JetBrains Mono',monospace;padding:2px 8px;border-radius:100px;background:rgba(0,255,157,.1);color:var(--green);text-transform:uppercase}
+/* MINI CHART */
+.mchart{display:flex;align-items:flex-end;gap:2px;height:30px;margin-top:8px}
+.mb{flex:1;background:rgba(0,200,255,.12);border-radius:2px 2px 0 0;transition:height .4s;min-height:2px}
+.mb.cur{background:var(--cyan)}
+/* RING */
+.ring-wrap{display:flex;gap:16px;align-items:center}
+.ring{position:relative;width:68px;height:68px;flex-shrink:0}
+.ring svg{transform:rotate(-90deg)}
+.rv{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'Orbitron',sans-serif;font-size:11px;font-weight:700}
+.rstat{flex:1}
+.rr{display:flex;justify-content:space-between;margin-bottom:5px;font-family:'JetBrains Mono',monospace;font-size:10px}
+/* MODAL */
+.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(8px);z-index:500;display:none;align-items:center;justify-content:center}
+.modal-backdrop.show{display:flex}
+.modal{background:var(--s2);border:1px solid var(--b2);border-radius:18px;padding:28px;max-width:500px;width:100%;margin:20px;position:relative;box-shadow:0 0 60px rgba(0,0,0,.5)}
+.modal-title{font-family:'Orbitron',sans-serif;font-size:16px;font-weight:700;margin-bottom:6px}
+.modal-sub{font-size:12px;color:var(--dim);margin-bottom:20px;line-height:1.6}
+.modal-close{position:absolute;top:14px;right:16px;font-size:18px;cursor:pointer;color:var(--dim);background:none;border:none;transition:.2s}
+.modal-close:hover{color:var(--text)}
+/* SELECT / INPUT */
+.sel,.inp{background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:12px;padding:8px 12px;width:100%;margin-bottom:12px;outline:none;transition:.2s}
+.sel:focus,.inp:focus{border-color:var(--b2)}
+.sel option{background:#0a1220}
+/* PROGRESS STREAM */
+.progbox{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px;height:180px;overflow-y:auto;font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.7;margin-bottom:14px}
+.progbox::-webkit-scrollbar{width:3px}
+.progbox::-webkit-scrollbar-thumb{background:var(--muted)}
+.prog-line{padding:1px 0;animation:fi .2s ease}
+.prog-ok{color:var(--green)}.prog-err{color:var(--red)}.prog-info{color:var(--cyan)}.prog-warn{color:var(--gold)}
+/* PROGRESS BAR */
+.pbar-wrap{background:var(--surface);border:1px solid var(--border);border-radius:100px;overflow:hidden;height:6px;margin-bottom:12px}
+.pbar-fill{height:100%;background:linear-gradient(90deg,var(--cyan),var(--green));border-radius:100px;transition:width .5s ease;width:0%}
+/* SVC GRID */
+.svcgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:8px}
+.sc{background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;display:flex;align-items:center;gap:8px;transition:.3s}
+.sc:hover{border-color:var(--b2)}
+.scd{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.scd.ok{background:var(--green);box-shadow:0 0 7px var(--green)}
+.scd.configured{background:var(--cyan);box-shadow:0 0 5px var(--cyan)}
+.scd.unconfigured{background:var(--muted)}
+.scd.error{background:var(--red);animation:blink 1.5s infinite}
+.scn{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);flex:1}
+.scs{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1px;text-transform:uppercase}
+.scs.ok{color:var(--green)}.scs.configured{color:var(--cyan)}.scs.unconfigured{color:var(--muted)}.scs.error{color:var(--red)}
+/* HEALTH BARS */
+.hbar{margin-bottom:10px}
+.hbar-top{display:flex;justify-content:space-between;font-family:'JetBrains Mono',monospace;font-size:10px;margin-bottom:3px}
+.hbar-track{height:5px;background:rgba(255,255,255,.06);border-radius:3px}
+.hbar-fill{height:100%;border-radius:3px;transition:width .6s ease}
+/* ENV CHECK */
+.env-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:6px}
+.env-item{display:flex;align-items:center;gap:8px;font-family:'JetBrains Mono',monospace;font-size:11px;padding:6px 10px;background:var(--s2);border-radius:7px;border:1px solid var(--border)}
+.env-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.env-dot.set{background:var(--green)}.env-dot.unset{background:var(--red)}
+.env-key{color:var(--dim);flex:1}.env-val{color:var(--dim);font-size:9px}
+.env-val.set{color:var(--green)}.env-val.unset{color:var(--red)}
 /* SECTION LABEL */
-.section-eyebrow{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--cyan);margin-bottom:10px}
-
-/* CHART CANVAS */
-.chart-wrap{position:relative;height:80px;margin-top:8px}
-canvas{width:100%!important}
-
-/* RATE RING */
-.rate-ring-wrap{display:flex;align-items:center;gap:16px}
-.rate-ring{position:relative;width:70px;height:70px;flex-shrink:0}
-.rate-ring svg{transform:rotate(-90deg)}
-.rate-ring .ring-val{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'Orbitron',sans-serif;font-size:12px;font-weight:700}
-.rate-stats{flex:1}
-.rate-row{display:flex;justify-content:space-between;margin-bottom:6px;font-family:'JetBrains Mono',monospace;font-size:11px}
-.rate-label{color:var(--dim)}
-.rate-val{color:var(--text)}
-
-/* UPTIME DISPLAY */
-.uptime-big{font-family:'Orbitron',sans-serif;font-size:22px;font-weight:700;color:var(--green);letter-spacing:2px;margin:8px 0 4px}
-
-/* EMPTY STATE */
-.empty{text-align:center;padding:32px 0;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)}
-
-/* REFRESH BTN */
-.btn-refresh{background:rgba(0,200,255,.08);border:1px solid var(--border2);border-radius:8px;padding:5px 14px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--cyan);cursor:pointer;transition:.2s;letter-spacing:1px}
-.btn-refresh:hover{background:rgba(0,200,255,.15)}
-
-/* SERVICES GRID */
-.svc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px}
-.svc-card{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;display:flex;align-items:center;gap:8px;transition:.3s}
-.svc-card:hover{border-color:var(--border2)}
-.svc-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
-.svc-dot.ok{background:var(--green);box-shadow:0 0 8px var(--green)}
-.svc-dot.configured{background:var(--cyan);box-shadow:0 0 6px var(--cyan)}
-.svc-dot.unconfigured{background:var(--muted)}
-.svc-dot.error{background:var(--red);animation:pulse 1.5s infinite}
-.svc-name{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);flex:1}
-.svc-status{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1px;text-transform:uppercase}
-.svc-status.ok{color:var(--green)}
-.svc-status.configured{color:var(--cyan)}
-.svc-status.unconfigured{color:var(--muted)}
-.svc-status.error{color:var(--red)}
-
-/* PAUSED OVERLAY */
-.paused-banner{display:none;position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:rgba(245,197,24,.12);border:1px solid rgba(245,197,24,.3);border-radius:100px;padding:8px 24px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--gold);z-index:200}
-.paused-banner.show{display:block}
+.sl{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--cyan);margin-bottom:10px;margin-top:4px}
+/* DANGER ZONE */
+.danger-zone{border:1px solid rgba(255,71,87,.2);border-radius:14px;padding:20px;background:rgba(255,71,87,.03)}
+.dz-title{font-family:'Orbitron',sans-serif;font-size:14px;font-weight:700;color:var(--red);margin-bottom:6px}
+.dz-desc{font-size:12px;color:var(--dim);margin-bottom:16px;line-height:1.6}
+.dz-actions{display:flex;gap:10px;flex-wrap:wrap}
+/* UPTIME */
+.upbig{font-family:'Orbitron',sans-serif;font-size:22px;font-weight:700;color:var(--green);letter-spacing:2px;margin:6px 0 3px}
+/* EMPTY */
+.empty{text-align:center;padding:28px 0;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)}
+/* TABLE SCROLL WRAP */
+.tscroll{overflow-x:auto;overflow-y:auto;max-height:320px}
+.tscroll::-webkit-scrollbar{width:3px;height:3px}
+.tscroll::-webkit-scrollbar-thumb{background:var(--muted);border-radius:2px}
+/* COPY WIZARD STEPS */
+.step{display:none}.step.active{display:block}
+.step-ind{display:flex;gap:6px;margin-bottom:18px}
+.step-dot{width:28px;height:4px;border-radius:2px;background:var(--muted);transition:.3s}
+.step-dot.done{background:var(--green)}.step-dot.cur{background:var(--cyan)}
+/* TOAST */
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--s2);border:1px solid var(--b2);border-radius:100px;padding:10px 24px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text);z-index:999;opacity:0;transition:opacity .3s;pointer-events:none}
+#toast.show{opacity:1}
+#toast.err{border-color:rgba(255,71,87,.4);color:var(--red)}
+#toast.ok{border-color:rgba(0,255,157,.4);color:var(--green)}
 </style>
 </head>
 <body>
+
+<!-- TOPBAR -->
 <nav class="topbar">
-  <span class="topbar-brand">NOREN</span>
-  <span class="topbar-sep"></span>
-  <span class="topbar-label">Live Server Monitor</span>
-  <div class="topbar-right">
-    <span class="ts-label" id="clock">--:--:--</span>
-    <span class="ts-label" id="ist-label">IST</span>
-    <div class="conn-badge disconnected" id="conn-badge">
-      <span class="conn-dot"></span>
-      <span id="conn-text">CONNECTING</span>
-    </div>
-    <button class="btn-refresh" onclick="hardRefresh()">↻ REFRESH</button>
+  <span class="tb-brand">NOREN</span>
+  <span class="tb-sep"></span>
+  <span class="tb-label">Control Center</span>
+  <div class="tb-right">
+    <span class="tb-clock" id="clock">--:--:--</span>
+    <div class="live-badge off" id="live-badge"><span class="live-dot"></span><span id="live-txt">CONNECTING</span></div>
   </div>
 </nav>
 
-<div class="paused-banner" id="paused-banner">⏸ STREAM PAUSED — click anywhere to resume</div>
+<div class="wrap">
+<!-- TABS -->
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('overview')">Overview</div>
+  <div class="tab" onclick="switchTab('logs')">Live Logs</div>
+  <div class="tab" onclick="switchTab('database')">Database</div>
+  <div class="tab" onclick="switchTab('system')">System</div>
+  <div class="tab" onclick="switchTab('services')">Services</div>
+  <div class="tab" onclick="switchTab('danger')">⚠ Controls</div>
+</div>
 
-<div class="page">
-<div class="container">
-
-  <!-- SERVICE STATUS BAND -->
-  <div class="status-band" id="service-band">
-    <div class="band-item"><span class="band-dot checking" id="bd-db"></span><span class="band-name">DATABASE</span><span class="band-latency" id="bd-db-lat">—</span></div>
-    <div class="band-item"><span class="band-dot checking" id="bd-cloud"></span><span class="band-name">CLOUDINARY</span><span class="band-latency" id="bd-cloud-lat">—</span></div>
-    <div class="band-item"><span class="band-dot checking" id="bd-email"></span><span class="band-name">EMAIL (RESEND)</span><span class="band-latency" id="bd-email-lat">—</span></div>
-    <div class="band-item"><span class="band-dot checking" id="bd-push"></span><span class="band-name">PUSH (VAPID)</span><span class="band-latency" id="bd-push-lat">—</span></div>
-    <div class="band-item"><span class="band-dot checking" id="bd-ship"></span><span class="band-name">DELHIVERY</span><span class="band-latency" id="bd-ship-lat">—</span></div>
-    <div class="band-item"><span class="band-dot checking" id="bd-pay"></span><span class="band-name">PAYTM</span><span class="band-latency" id="bd-pay-lat">—</span></div>
+<!-- ═══════ TAB: OVERVIEW ═══════ -->
+<div class="tab-content active" id="tab-overview">
+<div class="con">
+  <!-- SERVICE BAND -->
+  <div class="band" id="svc-band">
+    <div class="bi"><span class="bd idle" id="bd-db"></span><span class="bn">DATABASE</span><span class="bl" id="bd-db-l">—</span></div>
+    <div class="bi"><span class="bd idle" id="bd-cloud"></span><span class="bn">CLOUDINARY</span><span class="bl" id="bd-cloud-l">—</span></div>
+    <div class="bi"><span class="bd idle" id="bd-email"></span><span class="bn">EMAIL</span><span class="bl" id="bd-email-l">—</span></div>
+    <div class="bi"><span class="bd idle" id="bd-push"></span><span class="bn">PUSH</span><span class="bl" id="bd-push-l">—</span></div>
+    <div class="bi"><span class="bd idle" id="bd-ship"></span><span class="bn">DELHIVERY</span><span class="bl" id="bd-ship-l">—</span></div>
+    <div class="bi"><span class="bd idle" id="bd-pay"></span><span class="bn">PAYTM</span><span class="bl" id="bd-pay-l">—</span></div>
   </div>
-
-  <!-- TOP STAT CARDS -->
-  <div class="grid-4">
+  <!-- KPI ROW 1 -->
+  <div class="g4">
     <div class="card">
-      <div class="card-header"><span class="card-title">UPTIME</span><span class="card-icon">⏱</span></div>
-      <div class="uptime-big" id="stat-uptime">—</div>
-      <div class="stat-sub">Since last deploy</div>
-      <div class="mini-chart" id="mini-req-chart"></div>
+      <div class="ch"><span class="ct">Uptime</span><span>⏱</span></div>
+      <div class="upbig" id="s-uptime">—</div>
+      <div class="ss">Server session</div>
+      <div class="mchart" id="rpm-chart"></div>
     </div>
     <div class="card">
-      <div class="card-header"><span class="card-title">REQUESTS / MIN</span><span class="card-icon">⚡</span></div>
-      <div class="stat-val" id="stat-rpm">—</div>
-      <div class="stat-sub">Current minute</div>
-      <div class="stat-delta" id="stat-rpm-delta"></div>
+      <div class="ch"><span class="ct">Req / Min</span><span>⚡</span></div>
+      <div class="sv" id="s-rpm">—</div>
+      <div class="ss">Current minute</div>
+      <div class="sd" id="s-rpm-d"></div>
     </div>
     <div class="card">
-      <div class="card-header"><span class="card-title">ERROR RATE</span><span class="card-icon">🎯</span></div>
-      <div class="stat-val red" id="stat-errrate">—</div>
-      <div class="stat-sub">4xx + 5xx / total</div>
-      <div class="stat-delta" id="stat-errtotal"></div>
+      <div class="ch"><span class="ct">Error Rate</span><span>🎯</span></div>
+      <div class="sv r" id="s-errrate">—</div>
+      <div class="ss">4xx + 5xx / total</div>
+      <div class="sd" id="s-errtot"></div>
     </div>
     <div class="card">
-      <div class="card-header"><span class="card-title">TOTAL REQUESTS</span><span class="card-icon">📡</span></div>
-      <div class="stat-val" id="stat-total-req">—</div>
-      <div class="stat-sub">This session</div>
-      <div class="stat-delta" id="stat-req-breakdown"></div>
-    </div>
-  </div>
-
-  <!-- DB STATS ROW -->
-  <div class="grid-4">
-    <div class="card">
-      <div class="card-header"><span class="card-title">ORDERS TODAY</span><span class="card-icon">🛒</span></div>
-      <div class="stat-val gold" id="stat-orders-today">—</div>
-      <div class="stat-sub">Revenue: <span id="stat-revenue-today">—</span></div>
-      <div class="stat-delta" id="stat-orders-pending"></div>
-    </div>
-    <div class="card">
-      <div class="card-header"><span class="card-title">TOTAL USERS</span><span class="card-icon">👥</span></div>
-      <div class="stat-val purple" id="stat-users">—</div>
-      <div class="stat-sub">+<span id="stat-users-today">—</span> today</div>
-    </div>
-    <div class="card">
-      <div class="card-header"><span class="card-title">PRODUCTS</span><span class="card-icon">📦</span></div>
-      <div class="stat-val green" id="stat-products">—</div>
-      <div class="stat-sub"><span id="stat-prod-pending">—</span> pending review</div>
-    </div>
-    <div class="card">
-      <div class="card-header"><span class="card-title">SELLERS ACTIVE</span><span class="card-icon">🏪</span></div>
-      <div class="stat-val" id="stat-sellers">—</div>
-      <div class="stat-sub">Open queries: <span id="stat-queries">—</span></div>
+      <div class="ch"><span class="ct">Total Requests</span><span>📡</span></div>
+      <div class="sv" id="s-total">—</div>
+      <div class="ss">This session</div>
+      <div class="sd" id="s-total-d"></div>
     </div>
   </div>
-
-  <!-- LIVE REQUEST LOG + ACTIVITY STREAM -->
-  <div class="grid-2">
+  <!-- KPI ROW 2 — LIVE DB -->
+  <div class="g4">
     <div class="card">
-      <div class="card-header">
-        <span class="card-title">// LIVE REQUEST LOG</span>
-        <div style="display:flex;gap:8px;align-items:center">
-          <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim)" id="req-count">0 requests</span>
-          <button class="btn-refresh" onclick="togglePause()" id="pause-btn">⏸ PAUSE</button>
-        </div>
-      </div>
-      <div class="log-stream" id="live-log">
-        <div class="empty">Waiting for requests…</div>
-      </div>
+      <div class="ch"><span class="ct">Orders Today</span><span>🛒</span></div>
+      <div class="sv go" id="s-ord-today">—</div>
+      <div class="ss">Revenue: <span id="s-rev-today">—</span></div>
+      <div class="sd" id="s-ord-pend"></div>
     </div>
     <div class="card">
-      <div class="card-header"><span class="card-title">// ACTIVITY STREAM</span><span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim)" id="act-count">0 events</span></div>
-      <div class="activity-stream" id="activity-log">
-        <div class="empty">Waiting for events…</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ERROR LOG + TOP ROUTES -->
-  <div class="grid-2">
-    <div class="card">
-      <div class="card-header"><span class="card-title">// ERROR LOG</span><span class="conn-badge" id="err-badge" style="font-size:10px;padding:2px 8px">0 errors</span></div>
-      <div class="err-log" id="error-log">
-        <div class="empty">No errors detected 🟢</div>
-      </div>
+      <div class="ch"><span class="ct">Total Users</span><span>👥</span></div>
+      <div class="sv p" id="s-users">—</div>
+      <div class="ss">+<span id="s-users-today">—</span> registered today</div>
     </div>
     <div class="card">
-      <div class="card-header"><span class="card-title">// TOP ROUTES</span><span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim)">by hits</span></div>
-      <div style="overflow-y:auto;max-height:240px">
-        <table class="routes-table">
-          <thead><tr><th>Route</th><th>Hits</th><th style="min-width:100px">Traffic</th></tr></thead>
-          <tbody id="routes-tbody"><tr><td colspan="3" class="empty">—</td></tr></tbody>
-        </table>
-      </div>
+      <div class="ch"><span class="ct">Active Products</span><span>📦</span></div>
+      <div class="sv g" id="s-prods">—</div>
+      <div class="ss"><span id="s-prods-pend">—</span> pending review</div>
+    </div>
+    <div class="card">
+      <div class="ch"><span class="ct">Active Sellers</span><span>🏪</span></div>
+      <div class="sv" id="s-sellers">—</div>
+      <div class="ss">Open queries: <span id="s-queries">—</span></div>
     </div>
   </div>
-
-  <!-- STATUS CODE BREAKDOWN + METHOD BREAKDOWN -->
-  <div class="grid-2">
+  <!-- STATUS + METHODS -->
+  <div class="g2">
     <div class="card">
-      <div class="card-header"><span class="card-title">// STATUS CODES</span></div>
-      <div class="rate-ring-wrap">
-        <div class="rate-ring">
-          <svg width="70" height="70" viewBox="0 0 70 70">
-            <circle cx="35" cy="35" r="28" fill="none" stroke="rgba(255,255,255,.06)" stroke-width="6"/>
-            <circle cx="35" cy="35" r="28" fill="none" stroke="var(--red)" stroke-width="6" stroke-dasharray="176" id="err-ring-circle" stroke-dashoffset="176" stroke-linecap="round" style="transition:.6s"/>
+      <div class="ch"><span class="ct">// Status Codes</span></div>
+      <div class="ring-wrap">
+        <div class="ring">
+          <svg width="68" height="68" viewBox="0 0 68 68">
+            <circle cx="34" cy="34" r="27" fill="none" stroke="rgba(255,255,255,.06)" stroke-width="6"/>
+            <circle cx="34" cy="34" r="27" fill="none" stroke="var(--green)" stroke-width="6" stroke-dasharray="170" stroke-dashoffset="170" stroke-linecap="round" style="transition:.6s" id="err-circle"/>
           </svg>
-          <div class="ring-val red" id="err-ring-val">0%</div>
+          <div class="rv" id="err-pct" style="color:var(--green)">0%</div>
         </div>
-        <div class="rate-stats">
-          <div class="rate-row"><span class="rate-label">2xx OK</span><span class="rate-val green" id="sc-2xx">0</span></div>
-          <div class="rate-row"><span class="rate-label">3xx Redirect</span><span class="rate-val gold" id="sc-3xx">0</span></div>
-          <div class="rate-row"><span class="rate-label">4xx Client Error</span><span class="rate-val" style="color:var(--orange)" id="sc-4xx">0</span></div>
-          <div class="rate-row"><span class="rate-label">5xx Server Error</span><span class="rate-val red" id="sc-5xx">0</span></div>
+        <div class="rstat">
+          <div class="rr"><span style="color:var(--dim)">2xx OK</span><span style="color:var(--green)" id="sc-2">0</span></div>
+          <div class="rr"><span style="color:var(--dim)">3xx Redir</span><span style="color:var(--gold)" id="sc-3">0</span></div>
+          <div class="rr"><span style="color:var(--dim)">4xx Client</span><span style="color:var(--orange)" id="sc-4">0</span></div>
+          <div class="rr"><span style="color:var(--dim)">5xx Server</span><span style="color:var(--red)" id="sc-5">0</span></div>
         </div>
       </div>
     </div>
     <div class="card">
-      <div class="card-header"><span class="card-title">// HTTP METHODS</span></div>
-      <div id="method-bars" style="padding-top:4px"></div>
+      <div class="ch"><span class="ct">// HTTP Methods</span></div>
+      <div id="method-bars"></div>
     </div>
   </div>
-
-  <!-- DB STATUS -->
-  <div class="section-eyebrow">// DATABASE STATUS</div>
-  <div class="card" style="margin-bottom:16px">
-    <div class="card-header"><span class="card-title">FAILOVER NODES</span><button class="btn-refresh" onclick="loadDB()">↻ CHECK</button></div>
-    <div class="db-nodes" id="db-nodes">
-      <div class="db-node"><div class="dn-label">DB1</div><div class="dn-status checking">CHECKING…</div></div>
-      <div class="db-node"><div class="dn-label">DB2</div><div class="dn-status standby">STANDBY</div></div>
-      <div class="db-node"><div class="dn-label">DB3</div><div class="dn-status standby">STANDBY</div></div>
-    </div>
-    <div class="db-meta" id="db-meta">Loading database info…</div>
-  </div>
-
-  <!-- RECENT ORDERS TABLE -->
-  <div class="section-eyebrow">// RECENT ORDERS (LIVE DB)</div>
-  <div class="card" style="margin-bottom:16px">
-    <div class="card-header"><span class="card-title">LAST 10 ORDERS</span><button class="btn-refresh" onclick="loadStats()">↻ REFRESH</button></div>
-    <div style="overflow-x:auto">
-      <table class="orders-table">
-        <thead><tr><th>Order ID</th><th>Customer</th><th>Amount</th><th>Status</th><th>Payment</th><th>Time</th></tr></thead>
-        <tbody id="orders-tbody"><tr><td colspan="6" class="empty">Loading…</td></tr></tbody>
+  <!-- RECENT ORDERS -->
+  <div class="sl">// Recent Orders (Live DB)</div>
+  <div class="card" style="margin-bottom:14px">
+    <div class="ch"><span class="ct">Last 10 Orders</span><button class="btn" onclick="loadStats()">↻ Refresh</button></div>
+    <div class="tscroll">
+      <table class="tbl">
+        <thead><tr><th>Order ID</th><th>Customer</th><th>Amount</th><th>Status</th><th>Payment</th><th>When</th></tr></thead>
+        <tbody id="orders-tb"><tr><td colspan="6" class="empty">Loading…</td></tr></tbody>
       </table>
     </div>
   </div>
+</div>
+</div><!-- /tab-overview -->
 
-  <!-- SERVICES HEALTH -->
-  <div class="section-eyebrow">// EXTERNAL SERVICES</div>
-  <div class="card" style="margin-bottom:16px">
-    <div class="card-header"><span class="card-title">SERVICE HEALTH</span><button class="btn-refresh" onclick="loadServices()">↻ CHECK ALL</button></div>
-    <div class="svc-grid" id="svc-grid"><div class="empty">Checking services…</div></div>
+<!-- ═══════ TAB: LIVE LOGS ═══════ -->
+<div class="tab-content" id="tab-logs">
+<div class="con">
+  <div class="g2">
+    <div class="card">
+      <div class="ch">
+        <span class="ct">// Live Request Stream</span>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim)" id="req-cnt">0</span>
+          <button class="btn" id="pause-btn" onclick="togglePause()">⏸ Pause</button>
+          <button class="btn" onclick="clearLog()">✕ Clear</button>
+        </div>
+      </div>
+      <div class="logbox" id="live-log"><div class="empty">Waiting for requests…</div></div>
+    </div>
+    <div class="card">
+      <div class="ch"><span class="ct">// Activity Stream</span><span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim)" id="act-cnt">0 events</span></div>
+      <div class="actbox" id="act-log"><div class="empty">Waiting for events…</div></div>
+    </div>
   </div>
+  <div class="card">
+    <div class="ch"><span class="ct">// Error Log</span><span class="badge error" id="err-badge">0 errors</span></div>
+    <div class="errbox" id="err-log"><div class="empty">No errors 🟢</div></div>
+  </div>
+  <div class="card">
+    <div class="ch"><span class="ct">// Top Routes by Hits</span></div>
+    <div class="tscroll">
+      <table class="tbl">
+        <thead><tr><th>Route</th><th>Hits</th><th style="min-width:120px">Traffic</th></tr></thead>
+        <tbody id="routes-tb"><tr><td colspan="3" class="empty">—</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+</div><!-- /tab-logs -->
 
-</div><!-- container -->
-</div><!-- page -->
+<!-- ═══════ TAB: DATABASE ═══════ -->
+<div class="tab-content" id="tab-database">
+<div class="con">
+  <!-- DB NODE CARDS -->
+  <div class="sl">// Failover Nodes</div>
+  <div class="g3" id="db-nodes-grid">
+    <div class="dbnode"><div class="dnn">DB1</div><div class="dns idle">CHECKING…</div></div>
+    <div class="dbnode"><div class="dnn">DB2</div><div class="dns standby">STANDBY</div></div>
+    <div class="dbnode"><div class="dnn">DB3</div><div class="dns standby">STANDBY</div></div>
+  </div>
+  <div class="card" style="margin-bottom:14px">
+    <div class="ch"><span class="ct">Connection Info</span><button class="btn" onclick="loadDB()">↻ Ping Active</button></div>
+    <div id="db-meta" style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim);line-height:2">Loading…</div>
+  </div>
+  <!-- DB CONTROL ACTIONS -->
+  <div class="sl">// Database Controls</div>
+  <div class="g3">
+    <div class="card">
+      <div class="ch"><span class="ct">Force Switch Node</span><span>🎛️</span></div>
+      <p style="font-size:12px;color:var(--dim);margin-bottom:14px;line-height:1.6">Immediately redirect all queries to a specific DB node. The chosen node is tested before switching.</p>
+      <select class="sel" id="sw-target">
+        <option value="1">DB1 — Primary</option>
+        <option value="2">DB2 — Secondary</option>
+        <option value="3">DB3 — Tertiary</option>
+      </select>
+      <button class="btn gold lg" style="width:100%" onclick="openSwitchModal()">⚡ Switch Now</button>
+    </div>
+    <div class="card">
+      <div class="ch"><span class="ct">Ping All Nodes</span><span>📡</span></div>
+      <p style="font-size:12px;color:var(--dim);margin-bottom:14px;line-height:1.6">Simultaneously test connectivity and measure latency for every configured database node.</p>
+      <button class="btn green lg" style="width:100%;margin-bottom:10px" onclick="pingAllNodes()">▶ Ping All Nodes</button>
+      <div id="ping-results"></div>
+    </div>
+    <div class="card">
+      <div class="ch"><span class="ct">Pool Statistics</span><span>📊</span></div>
+      <div id="pool-stats" style="font-family:'JetBrains Mono',monospace;font-size:11px;line-height:2;color:var(--dim)">Loading…</div>
+      <button class="btn" style="margin-top:10px;width:100%" onclick="loadPoolStats()">↻ Refresh</button>
+    </div>
+  </div>
+  <!-- COPY DATABASE -->
+  <div class="sl">// Copy Database</div>
+  <div class="card" style="margin-bottom:14px">
+    <div class="ch"><span class="ct">Copy All Data Between Nodes</span><span>📋</span></div>
+    <p style="font-size:12px;color:var(--dim);margin-bottom:18px;line-height:1.6">Copies every table and all rows from one database node to another. The destination tables are truncated first. This operation streams live progress below.</p>
+    <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
+      <div style="flex:1;min-width:140px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:2px;color:var(--dim);margin-bottom:6px">SOURCE (FROM)</div>
+        <select class="sel" id="copy-from" style="margin-bottom:0">
+          <option value="1">DB1 — Primary</option>
+          <option value="2">DB2 — Secondary</option>
+          <option value="3">DB3 — Tertiary</option>
+        </select>
+      </div>
+      <div style="font-size:20px;color:var(--cyan);padding-bottom:10px">→</div>
+      <div style="flex:1;min-width:140px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:2px;color:var(--dim);margin-bottom:6px">DESTINATION (TO)</div>
+        <select class="sel" id="copy-to" style="margin-bottom:0">
+          <option value="1">DB1 — Primary</option>
+          <option value="2" selected>DB2 — Secondary</option>
+          <option value="3">DB3 — Tertiary</option>
+        </select>
+      </div>
+      <button class="btn gold lg" onclick="openCopyModal()" style="flex-shrink:0;margin-bottom:1px">📋 Start Copy</button>
+    </div>
+    <div id="copy-progress-wrap" style="display:none;margin-top:16px">
+      <div style="display:flex;justify-content:space-between;font-family:'JetBrains Mono',monospace;font-size:10px;margin-bottom:6px">
+        <span style="color:var(--dim)" id="copy-status">Initialising…</span>
+        <span style="color:var(--cyan)" id="copy-pct">0%</span>
+      </div>
+      <div class="pbar-wrap"><div class="pbar-fill" id="copy-pbar"></div></div>
+      <div class="progbox" id="copy-log"></div>
+    </div>
+  </div>
+  <!-- TABLE VIEWER -->
+  <div class="sl">// Table Browser (Active DB)</div>
+  <div class="card" style="margin-bottom:14px">
+    <div class="ch"><span class="ct">All Tables</span><button class="btn" onclick="loadTables()">↻ Load</button></div>
+    <div class="tscroll" id="tables-wrap">
+      <div class="empty">Click Load to fetch table list</div>
+    </div>
+  </div>
+</div>
+</div><!-- /tab-database -->
+
+<!-- ═══════ TAB: SYSTEM ═══════ -->
+<div class="tab-content" id="tab-system">
+<div class="con">
+  <div class="g2">
+    <div class="card">
+      <div class="ch"><span class="ct">Memory Usage</span><button class="btn" onclick="loadHealth()">↻ Refresh</button></div>
+      <div id="mem-bars">
+        <div class="hbar"><div class="hbar-top"><span style="color:var(--dim)">Heap Used</span><span id="mem-heap-used">—</span></div><div class="hbar-track"><div class="hbar-fill" id="mem-heap-bar" style="background:var(--cyan);width:0%"></div></div></div>
+        <div class="hbar"><div class="hbar-top"><span style="color:var(--dim)">RSS</span><span id="mem-rss">—</span></div><div class="hbar-track"><div class="hbar-fill" id="mem-rss-bar" style="background:var(--purple);width:0%"></div></div></div>
+        <div class="hbar"><div class="hbar-top"><span style="color:var(--dim)">Heap Total</span><span id="mem-heap-total">—</span></div><div class="hbar-track"><div class="hbar-fill" id="mem-heap-total-bar" style="background:var(--gold);width:0%"></div></div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="ch"><span class="ct">Process Info</span></div>
+      <div id="proc-info" style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim);line-height:2.1">Loading…</div>
+    </div>
+  </div>
+  <div class="card" style="margin-bottom:14px">
+    <div class="ch"><span class="ct">OS Info</span></div>
+    <div id="os-info" style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim);line-height:2.1;display:grid;grid-template-columns:1fr 1fr;gap:4px">Loading…</div>
+  </div>
+  <div class="sl">// Environment Variables Check</div>
+  <div class="card" style="margin-bottom:14px">
+    <div class="ch"><span class="ct">Config Status (Values Hidden)</span></div>
+    <div class="env-grid" id="env-grid"><div class="empty">Loading…</div></div>
+  </div>
+</div>
+</div><!-- /tab-system -->
+
+<!-- ═══════ TAB: SERVICES ═══════ -->
+<div class="tab-content" id="tab-services">
+<div class="con">
+  <div class="card" style="margin-bottom:14px">
+    <div class="ch"><span class="ct">External Service Health</span><button class="btn" onclick="loadServices()">↻ Check All</button></div>
+    <div class="svcgrid" id="svc-grid"><div class="empty">Checking…</div></div>
+  </div>
+</div>
+</div><!-- /tab-services -->
+
+<!-- ═══════ TAB: CONTROLS / DANGER ZONE ═══════ -->
+<div class="tab-content" id="tab-danger">
+<div class="con">
+  <div class="danger-zone" style="margin-bottom:16px">
+    <div class="dz-title">⚠ System Controls</div>
+    <div class="dz-desc">All actions below are irreversible or destructive. Each requires explicit confirmation. Use with extreme caution in production.</div>
+    <div class="dz-actions">
+      <button class="btn red lg" onclick="openShutdownModal()">🔴 Graceful Shutdown</button>
+      <button class="btn gold lg" onclick="switchTab('database')">🎛️ DB Switch / Copy</button>
+      <button class="btn lg" onclick="loadHealth();switchTab('system')">💊 System Health</button>
+    </div>
+  </div>
+  <div class="card" style="margin-bottom:14px">
+    <div class="ch"><span class="ct">// Shutdown Info</span></div>
+    <p style="font-size:12px;color:var(--dim);line-height:1.7">
+      Graceful shutdown sends <code style="color:var(--cyan);background:var(--surface);padding:1px 6px;border-radius:4px">process.exit(0)</code> after a 3-second drain window. On Render, the dyno will restart automatically. You can use this to force a clean restart after environment variable changes.<br><br>
+      Requires <code style="color:var(--gold);background:var(--surface);padding:1px 6px;border-radius:4px">MONITOR_SECRET</code> to be set in your <code style="color:var(--cyan);background:var(--surface);padding:1px 6px;border-radius:4px">.env</code> file. Without it, shutdown is disabled.
+    </p>
+  </div>
+  <div class="card">
+    <div class="ch"><span class="ct">// Recent Control Actions</span></div>
+    <div class="actbox" id="ctrl-log"><div class="empty">No control actions yet</div></div>
+  </div>
+</div>
+</div><!-- /tab-danger -->
+
+</div><!-- /wrap -->
+<div id="toast"></div>
+
+<!-- ═══════ MODALS ═══════ -->
+
+<!-- DB SWITCH CONFIRM -->
+<div class="modal-backdrop" id="modal-switch">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('modal-switch')">✕</button>
+    <div class="modal-title" style="color:var(--gold)">⚡ Confirm DB Switch</div>
+    <div class="modal-sub" id="switch-modal-sub">You are about to force-switch the active database node. All new queries will route to the new node immediately. Current in-flight queries will complete on the old node.</div>
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button class="btn" onclick="closeModal('modal-switch')">Cancel</button>
+      <button class="btn gold" onclick="execSwitch()">⚡ Confirm Switch</button>
+    </div>
+  </div>
+</div>
+
+<!-- DB COPY CONFIRM -->
+<div class="modal-backdrop" id="modal-copy">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('modal-copy')">✕</button>
+    <div class="modal-title" style="color:var(--gold)">📋 Confirm Database Copy</div>
+    <div class="modal-sub" id="copy-modal-sub">This will TRUNCATE all tables on the destination node and copy every row from the source. This is irreversible. Estimated time: 1–10 minutes depending on data size.</div>
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button class="btn" onclick="closeModal('modal-copy')">Cancel</button>
+      <button class="btn gold" onclick="execCopy()">📋 Start Copy</button>
+    </div>
+  </div>
+</div>
+
+<!-- SHUTDOWN CONFIRM -->
+<div class="modal-backdrop" id="modal-shutdown">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('modal-shutdown')">✕</button>
+    <div class="modal-title" style="color:var(--red)">🔴 Graceful Server Shutdown</div>
+    <div class="modal-sub">Enter your MONITOR_SECRET and a reason. The server will drain for 3 seconds then exit. On Render, it will auto-restart.</div>
+    <input class="inp" type="password" id="shutdown-secret" placeholder="MONITOR_SECRET"/>
+    <input class="inp" type="text" id="shutdown-reason" placeholder="Reason (e.g. env update, maintenance)"/>
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button class="btn" onclick="closeModal('modal-shutdown')">Cancel</button>
+      <button class="btn red" onclick="execShutdown()">🔴 Shutdown Server</button>
+    </div>
+  </div>
+</div>
 
 <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 <script>
 'use strict';
-/* ═══════════════════════════════════════════════════════════════════════
-   NOREN Monitor Dashboard — Real-time Client
-   Connects to /monitor Socket.IO namespace
-   Polls /api/monitor/stats every 15s for DB-level metrics
-═══════════════════════════════════════════════════════════════════════ */
-
-// ── State ───────────────────────────────────────────────────────────────────
-let reqCount   = 0;
-let actCount   = 0;
-let errCount   = 0;
-let paused     = false;
-let perMinData = new Array(60).fill(0);
-let socket     = null;
-
-const MAX_LOG_ROWS = 200;
-
-// ── Helpers ─────────────────────────────────────────────────────────────────
-const qs  = id => document.getElementById(id);
-const fmt = n  => n == null ? '—' : Number(n).toLocaleString('en-IN');
-const fmtINR = n => n == null ? '—' : '₹' + Number(n).toLocaleString('en-IN', { maximumFractionDigits: 0 });
-const fmtTime = iso => {
-  if (!iso) return '—';
-  const d = new Date(iso);
-  return d.toLocaleTimeString('en-IN', { hour12: false, timeZone: 'Asia/Kolkata' });
-};
-const fmtRelative = iso => {
-  if (!iso) return '—';
-  const diff = Date.now() - new Date(iso).getTime();
-  if (diff < 60000)  return Math.floor(diff/1000) + 's ago';
-  if (diff < 3600000) return Math.floor(diff/60000) + 'm ago';
-  return Math.floor(diff/3600000) + 'h ago';
-};
-const fmtUptime = s => {
-  const d = Math.floor(s/86400), h = Math.floor((s%86400)/3600),
-        m = Math.floor((s%3600)/60), sec = s%60;
-  if (d) return `${d}d ${h}h ${m}m`;
-  if (h) return `${h}h ${m}m ${sec}s`;
-  return `${m}m ${sec}s`;
-};
-
-const ACTIVITY_ICONS = {
-  order:'🛒', email:'📧', otp:'🔐', login:'🔑', signup:'👤',
-  crash:'💥', server_error:'❌', error:'⚠️', event:'📌',
-};
-const getActIcon = type => ACTIVITY_ICONS[type] || '📌';
-
-// ── Clock ────────────────────────────────────────────────────────────────────
-setInterval(() => {
-  qs('clock').textContent = new Date().toLocaleTimeString('en-IN', { hour12: false, timeZone: 'Asia/Kolkata' });
-}, 1000);
-
-// ── Connection badge ─────────────────────────────────────────────────────────
-function setConnected(ok) {
-  const b = qs('conn-badge'), t = qs('conn-text');
-  b.className = 'conn-badge ' + (ok ? 'connected' : 'disconnected');
-  t.textContent = ok ? 'LIVE' : 'OFFLINE';
-}
-
-// ── Pause / Resume ───────────────────────────────────────────────────────────
-function togglePause() {
-  paused = !paused;
-  qs('pause-btn').textContent = paused ? '▶ RESUME' : '⏸ PAUSE';
-  qs('paused-banner').classList.toggle('show', paused);
-}
-document.addEventListener('click', e => {
-  if (paused && !e.target.closest('#pause-btn')) { paused = false; qs('pause-btn').textContent = '⏸ PAUSE'; qs('paused-banner').classList.remove('show'); }
-});
-
-// ── Mini bar chart ───────────────────────────────────────────────────────────
-function renderMiniChart(data) {
-  const el = qs('mini-req-chart');
-  if (!el) return;
-  const max = Math.max(...data, 1);
-  const last20 = data.slice(-20);
-  el.innerHTML = last20.map((v, i) =>
-    `<div class="mini-bar ${i===last20.length-1?'active':''}" style="height:${Math.max(2, Math.round(v/max*32))}px"></div>`
-  ).join('');
-}
-
-// ── Method bars ──────────────────────────────────────────────────────────────
-function renderMethodBars(mc) {
-  const el = qs('method-bars');
-  if (!el || !mc) return;
-  const methods = ['GET','POST','PUT','PATCH','DELETE'];
-  const colors  = { GET:'var(--green)', POST:'var(--cyan)', PUT:'var(--gold)', PATCH:'var(--purple)', DELETE:'var(--red)' };
-  const total   = Object.values(mc).reduce((a,b) => a+b, 0) || 1;
-  el.innerHTML = methods.map(m => {
-    const v = mc[m] || 0;
-    const pct = ((v/total)*100).toFixed(1);
-    return `<div style="margin-bottom:8px">
-      <div style="display:flex;justify-content:space-between;font-family:'JetBrains Mono',monospace;font-size:10px;margin-bottom:3px">
-        <span style="color:${colors[m]}">${m}</span><span style="color:var(--dim)">${fmt(v)} (${pct}%)</span>
-      </div>
-      <div style="height:4px;background:rgba(255,255,255,.06);border-radius:2px">
-        <div style="height:100%;width:${pct}%;background:${colors[m]};border-radius:2px;transition:width .6s ease"></div>
-      </div>
-    </div>`;
-  }).join('');
-}
-
-// ── Status ring ──────────────────────────────────────────────────────────────
-function updateRing(errRate) {
-  const circle  = qs('err-ring-circle');
-  const valEl   = qs('err-ring-val');
-  const rate    = parseFloat(errRate) || 0;
-  const dashLen = 176;
-  const offset  = dashLen - (rate / 100) * dashLen;
-  if (circle) { circle.style.strokeDashoffset = offset; circle.style.stroke = rate > 10 ? 'var(--red)' : rate > 3 ? 'var(--orange)' : 'var(--green)'; }
-  if (valEl)  { valEl.textContent = rate.toFixed(1) + '%'; valEl.style.color = rate > 10 ? 'var(--red)' : rate > 3 ? 'var(--orange)' : 'var(--green)'; }
-}
-
-// ── Top routes table ─────────────────────────────────────────────────────────
-function renderRoutes(routes) {
-  const tbody = qs('routes-tbody');
-  if (!tbody || !routes?.length) return;
-  const max = routes[0]?.hits || 1;
-  tbody.innerHTML = routes.slice(0, 12).map(r => {
-    const parts = r.route.split(' ');
-    const method = parts[0], path = parts[1] || '';
-    const pct = ((r.hits / max) * 100).toFixed(0);
-    const colors = { GET:'var(--green)', POST:'var(--cyan)', PUT:'var(--gold)', PATCH:'var(--purple)', DELETE:'var(--red)' };
-    return `<tr>
-      <td><span style="color:${colors[method]||'var(--cyan)'};font-family:'JetBrains Mono',monospace;font-size:10px">${method}</span> <span class="rt-route">${path.replace(/\/api\//,'/<span style="color:var(--cyan)">api</span>/').replace(/\/([^/]+)$/,'/<span style="color:var(--text)">$1</span>')}</span></td>
-      <td class="rt-hits">${fmt(r.hits)}</td>
-      <td><div class="rt-bar-wrap"><div class="rt-bar"><div class="rt-bar-fill" style="width:${pct}%"></div></div></div></td>
-    </tr>`;
-  }).join('');
-}
-
-// ── Heartbeat → update all in-memory stats ───────────────────────────────────
-function applyHeartbeat(data) {
-  if (!data) return;
-  if (data.uptime != null)        qs('stat-uptime').textContent = fmtUptime(data.uptime);
-  if (data.totalRequests != null) { qs('stat-total-req').textContent = fmt(data.totalRequests); qs('req-count').textContent = fmt(data.totalRequests) + ' requests'; }
-  if (data.errorRate != null)     { qs('stat-errrate').textContent = data.errorRate + '%'; updateRing(data.errorRate); }
-  if (data.statusCounts) {
-    const sc = data.statusCounts;
-    qs('sc-2xx').textContent = fmt(sc['2xx']);
-    qs('sc-3xx').textContent = fmt(sc['3xx']);
-    qs('sc-4xx').textContent = fmt(sc['4xx']);
-    qs('sc-5xx').textContent = fmt(sc['5xx']);
-    qs('stat-req-breakdown').textContent = `${fmt(sc['2xx'])} ok · ${fmt(sc['4xx']||0+sc['5xx']||0)} errors`;
-  }
-  if (data.perMinute) {
-    perMinData = data.perMinute;
-    const last = perMinData[perMinData.length-1] || 0;
-    const prev = perMinData[perMinData.length-2] || 0;
-    qs('stat-rpm').textContent = fmt(last);
-    const delta = last - prev;
-    const d = qs('stat-rpm-delta');
-    d.textContent = delta === 0 ? '→ same as last minute' : (delta > 0 ? `↑ +${delta} vs prev` : `↓ ${delta} vs prev`);
-    d.className = 'stat-delta' + (delta >= 0 ? '' : ' neg');
-    renderMiniChart(perMinData);
-  }
-  if (data.topRoutes) renderRoutes(data.topRoutes);
-  if (data.methodCounts) renderMethodBars(data.methodCounts);
-}
-
-// ── Snapshot (initial load) ───────────────────────────────────────────────────
-function applySnapshot(snap) {
-  applyHeartbeat(snap);
-  qs('stat-errtotal').textContent = `${fmt((snap.statusCounts?.['4xx']||0) + (snap.statusCounts?.['5xx']||0))} total errors`;
-
-  // Replay existing events
-  if (snap.recentEvents?.length) {
-    qs('live-log').innerHTML = '';
-    snap.recentEvents.slice(0, 60).forEach(ev => appendLog(ev));
-  }
-  if (snap.recentErrors?.length) {
-    qs('error-log').innerHTML = '';
-    snap.recentErrors.slice(0, 30).forEach(ev => appendError(ev));
-    errCount = snap.recentErrors.length;
-    updateErrBadge();
-  }
-  if (snap.recentActivity?.length) {
-    qs('activity-log').innerHTML = '';
-    snap.recentActivity.slice(0, 40).forEach(ev => appendActivity(ev));
-  }
-}
-
-// ── Append request log row ────────────────────────────────────────────────────
-function appendLog(ev) {
-  if (paused) return;
-  const log = qs('live-log');
-  if (!log) return;
-  const empty = log.querySelector('.empty');
-  if (empty) empty.remove();
-
-  const status = ev.status || 0;
-  const sc = status >= 500 ? 's5' : status >= 400 ? 's4' : status >= 300 ? 's3' : 's2';
-  const method = (ev.method || 'GET').toUpperCase();
-  const pathParts = (ev.path || '/').split('/');
-  const pathHtml = pathParts.map((p,i) => i===0?p : (i===2?`<span>${p}</span>`:p)).join('/');
-
-  const row = document.createElement('div');
-  row.className = 'log-entry';
-  row.innerHTML = `
-    <span class="log-ts">${fmtTime(ev.ts)}</span>
-    <span class="log-method ${method}">${method}</span>
-    <span class="log-path">${pathHtml}</span>
-    <span class="log-status ${sc}">${status}</span>
-    <span class="log-ms">${ev.ms != null ? ev.ms+'ms' : '—'}</span>`;
-  log.insertBefore(row, log.firstChild);
-  reqCount++;
-  qs('req-count').textContent = fmt(reqCount) + ' requests';
-
-  // Trim
-  while (log.children.length > MAX_LOG_ROWS) log.removeChild(log.lastChild);
-}
-
-// ── Append activity event ─────────────────────────────────────────────────────
-function appendActivity(ev) {
-  const log = qs('activity-log');
-  if (!log) return;
-  const empty = log.querySelector('.empty');
-  if (empty) empty.remove();
-
-  const row = document.createElement('div');
-  row.className = 'act-entry';
-  const levelClass = ev.level === 'success' ? 'success' : ev.level === 'error' ? 'error' : ev.level === 'warn' ? 'warn' : '';
-  row.innerHTML = `
-    <span class="act-icon">${getActIcon(ev.type)}</span>
-    <div class="act-body">
-      <div class="act-label ${levelClass}">${ev.label || ev.type}</div>
-      ${ev.detail ? `<div class="act-detail">${ev.detail}</div>` : ''}
-      <div class="act-ts">${fmtTime(ev.ts)}</div>
-    </div>`;
-  log.insertBefore(row, log.firstChild);
-  actCount++;
-  qs('act-count').textContent = fmt(actCount) + ' events';
-  while (log.children.length > 100) log.removeChild(log.lastChild);
-}
-
-// ── Append error entry ────────────────────────────────────────────────────────
-function appendError(ev) {
-  const log = qs('error-log');
-  if (!log) return;
-  const empty = log.querySelector('.empty');
-  if (empty) empty.remove();
-
-  const row = document.createElement('div');
-  row.className = 'err-entry';
-  row.innerHTML = `
-    <div class="e-top">
-      <span class="e-status">${ev.status}</span>
-      <span class="e-method">${ev.method}</span>
-      <span class="e-path">${ev.path}</span>
-      <span class="e-ms">${ev.ms != null ? ev.ms+'ms' : ''}</span>
-    </div>
-    <span class="e-ts">${fmtTime(ev.ts)} · IP: ${ev.ip || '—'}</span>`;
-  log.insertBefore(row, log.firstChild);
-  errCount++;
-  updateErrBadge();
-  while (log.children.length > 60) log.removeChild(log.lastChild);
-}
-
-function updateErrBadge() {
-  const b = qs('err-badge');
-  if (!b) return;
-  b.textContent = errCount + ' errors';
-  b.style.color = errCount > 0 ? 'var(--red)' : 'var(--dim)';
-  b.style.borderColor = errCount > 0 ? 'rgba(255,71,87,.3)' : 'var(--border)';
-}
-
-// ── Socket.IO connection ──────────────────────────────────────────────────────
-function connectSocket() {
-  socket = io('/monitor', { transports: ['websocket','polling'], reconnectionDelay: 2000, reconnectionDelayMax: 10000 });
-
-  socket.on('connect',    () => setConnected(true));
-  socket.on('disconnect', () => setConnected(false));
-  socket.on('connect_error', () => setConnected(false));
-
-  socket.on('snapshot',  applySnapshot);
-  socket.on('heartbeat', applyHeartbeat);
-  socket.on('req',       appendLog);
-  socket.on('err',       appendError);
-  socket.on('activity',  appendActivity);
-}
-
-// ── Load DB stats ────────────────────────────────────────────────────────────
-async function loadDB() {
-  try {
-    const r = await fetch('/api/monitor/db');
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    const d = await r.json();
-
-    const nodesEl = qs('db-nodes');
-    if (nodesEl && d.nodes) {
-      nodesEl.innerHTML = d.nodes.map(n =>
-        `<div class="db-node ${n.active ? 'active-node' : ''}">
-          <div class="dn-label">DB${n.node}${n.active ? ' ✓' : ''}</div>
-          <div class="dn-status ${n.status}">${n.status.toUpperCase()}${n.latencyMs != null ? '<br><small>' + n.latencyMs + 'ms</small>' : ''}</div>
-        </div>`
-      ).join('');
-    }
-
-    const meta = qs('db-meta');
-    if (meta) {
-      meta.innerHTML = `
-        Active Node: <span>DB${d.activeNode}</span> &nbsp;|&nbsp;
-        Query Latency: <span>${d.latencyMs != null ? d.latencyMs+'ms' : '—'}</span> &nbsp;|&nbsp;
-        Server Time: <span>${d.serverTime ? new Date(d.serverTime).toLocaleString('en-IN',{timeZone:'Asia/Kolkata'}) : '—'}</span> &nbsp;|&nbsp;
-        PG Version: <span>${d.pgVersion || '—'}</span>`;
-    }
-
-    // Update service band DB indicator
-    if (d.latencyMs != null) {
-      const dot = qs('bd-db');
-      const lat = qs('bd-db-lat');
-      if (dot) { dot.className = 'band-dot ok'; }
-      if (lat) lat.textContent = d.latencyMs + 'ms';
-    }
-  } catch (e) {
-    const dot = qs('bd-db');
-    if (dot) dot.className = 'band-dot error';
-    const meta = qs('db-meta');
-    if (meta) meta.innerHTML = `<span style="color:var(--red)">DB check failed: ${e.message}</span>`;
-  }
-}
-
-// ── Load services health ──────────────────────────────────────────────────────
-async function loadServices() {
-  try {
-    const r = await fetch('/api/monitor/services');
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    const d = await r.json();
-
-    // Update service band
-    const svcMap = {
-      'Cloudinary CDN':    ['bd-cloud','bd-cloud-lat'],
-      'Resend Email':      ['bd-email','bd-email-lat'],
-      'Web Push (VAPID)':  ['bd-push','bd-push-lat'],
-      'Delhivery Shipping':['bd-ship','bd-ship-lat'],
-      'Paytm Payments':    ['bd-pay','bd-pay-lat'],
-    };
-    d.services?.forEach(svc => {
-      const ids = svcMap[svc.name];
-      if (ids) {
-        const dot = qs(ids[0]), lat = qs(ids[1]);
-        const cls = svc.status === 'ok' ? 'ok' : svc.status === 'configured' ? 'ok' : svc.status === 'error' ? 'error' : 'warn';
-        if (dot) dot.className = 'band-dot ' + cls;
-        if (lat) lat.textContent = svc.latencyMs != null ? svc.latencyMs+'ms' : svc.status;
-      }
-    });
-
-    // Render service grid
-    const grid = qs('svc-grid');
-    if (grid && d.services?.length) {
-      grid.innerHTML = d.services.map(s =>
-        `<div class="svc-card">
-          <span class="svc-dot ${s.status}"></span>
-          <span class="svc-name">${s.name}</span>
-          <span class="svc-status ${s.status}">${s.status.toUpperCase()}${s.latencyMs != null ? ' '+s.latencyMs+'ms' : ''}</span>
-        </div>`
-      ).join('');
-    }
-  } catch (e) {
-    console.warn('loadServices error:', e.message);
-  }
-}
-
-// ── Load main stats (DB queries) ─────────────────────────────────────────────
-async function loadStats() {
-  try {
-    const r = await fetch('/api/monitor/stats');
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    const d = await r.json();
-
-    // DB stat cards
-    if (d.orders) {
-      qs('stat-orders-today').textContent  = fmt(d.orders.today);
-      qs('stat-revenue-today').textContent = fmtINR(d.orders.todayRevenue);
-      qs('stat-orders-pending').textContent = fmt(d.orders.pending) + ' pending orders';
-    }
-    if (d.users) {
-      qs('stat-users').textContent       = fmt(d.users.total);
-      qs('stat-users-today').textContent = fmt(d.users.newToday);
-    }
-    if (d.products) {
-      qs('stat-products').textContent    = fmt(d.products.active);
-      qs('stat-prod-pending').textContent = fmt(d.products.pending);
-    }
-    if (d.sellers) {
-      qs('stat-sellers').textContent = fmt(d.sellers.active);
-    }
-    if (d.queries) {
-      qs('stat-queries').textContent = fmt(d.queries.pending);
-    }
-
-    // Server uptime from DB stats response
-    if (d.server) applyHeartbeat(d.server);
-
-    // Orders table
-    if (d.orders?.recent?.length) {
-      const tbody = qs('orders-tbody');
-      tbody.innerHTML = d.orders.recent.map(o =>
-        `<tr>
-          <td style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--cyan)">${o.order_id}</td>
-          <td>${o.full_name}</td>
-          <td style="font-family:'JetBrains Mono',monospace">${fmtINR(o.total)}</td>
-          <td><span class="badge ${o.status}">${o.status}</span></td>
-          <td><span class="badge ${o.payment_status}">${o.payment_status}</span></td>
-          <td style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim)">${fmtRelative(o.created_at)}</td>
-        </tr>`
-      ).join('');
-    } else {
-      qs('orders-tbody').innerHTML = '<tr><td colspan="6" class="empty">No orders yet</td></tr>';
-    }
-
-    // DB node indicator in band
-    const dbStatus = d.db?.status === 'connected' ? 'ok' : 'error';
-    const dbDot = qs('bd-db');
-    if (dbDot) dbDot.className = 'band-dot ' + dbStatus;
-
-  } catch (e) {
-    console.warn('loadStats error:', e.message);
-  }
-}
-
-// ── Hard refresh everything ───────────────────────────────────────────────────
-function hardRefresh() {
-  loadStats();
-  loadDB();
-  loadServices();
-}
-
-// ── Boot ─────────────────────────────────────────────────────────────────────
-connectSocket();
-hardRefresh();
-
-// Poll every 15s for fresh DB counts
-setInterval(loadStats, 15000);
-// Poll services every 60s
-setInterval(loadServices, 60000);
-// Poll DB every 30s
-setInterval(loadDB, 30000);
+/* NOREN Control Center — Full JS */
+let socket,reqCnt=0,actCnt=0,errCnt=0,paused=0,pmData=Array(60).fill(0);
+const qs=id=>document.getElementById(id),fmt=n=>n==null?'—':Number(n).toLocaleString('en-IN'),fmtINR=n=>n==null?'—':'₹'+fmt(n);
+const fmtTime=iso=>{if(!iso)return'—';const d=new Date(iso);return d.toLocaleTimeString('en-IN',{hour12:0,timeZone:'Asia/Kolkata'})};
+const fmtRel=iso=>{if(!iso)return'—';const d=Date.now()-new Date(iso).getTime();if(d<6e4)return Math.floor(d/1e3)+'s';if(d<36e5)return Math.floor(d/6e4)+'m';return Math.floor(d/36e5)+'h'};
+const fmtUp=s=>{const d=Math.floor(s/86400),h=Math.floor((s%86400)/3600),m=Math.floor((s%3600)/60),sec=s%60;if(d)return`${d}d ${h}h ${m}m`;if(h)return`${h}h ${m}m ${sec}s`;return`${m}m ${sec}s`};
+const ACT_ICO={order:'🛒',email:'📧',otp:'🔐',login:'🔑',signup:'👤',crash:'💥',server_error:'❌',error:'⚠️',db_switch:'🎛️',db_copy:'📋',shutdown:'🔴',event:'📌'};
+const getActIcon=t=>ACT_ICO[t]||'📌';
+setInterval(()=>qs('clock').textContent=new Date().toLocaleTimeString('en-IN',{hour12:0,timeZone:'Asia/Kolkata'}),1e3);
+function setLive(ok){const b=qs('live-badge'),t=qs('live-txt');b.className='live-badge '+(ok?'on':'off');t.textContent=ok?'LIVE':'OFFLINE'}
+function toast(msg,type='ok'){const el=qs('toast');el.textContent=msg;el.className='show '+(type==='err'?'err':'ok');setTimeout(()=>el.className='',3500)}
+function togglePause(){paused=!paused;qs('pause-btn').textContent=paused?'▶ Resume':'⏸ Pause'}
+function clearLog(){qs('live-log').innerHTML='';reqCnt=0;qs('req-cnt').textContent='0'}
+function switchTab(name){document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));document.querySelector(`.tab[onclick*="${name}"]`)?.classList.add('active');qs('tab-'+name)?.classList.add('active')}
+function openModal(id){qs(id).classList.add('show')}
+function closeModal(id){qs(id).classList.remove('show')}
+function openSwitchModal(){const t=qs('sw-target').value;qs('switch-modal-sub').innerHTML=`You are switching to <b style="color:var(--cyan)">DB${t}</b>. Current active node will drain. Confirm?`;openModal('modal-switch')}
+function openCopyModal(){const f=qs('copy-from').value,t=qs('copy-to').value;if(f===t)return toast('Source and destination cannot be the same','err');qs('copy-modal-sub').innerHTML=`Copy all data from <b style="color:var(--cyan)">DB${f}</b> → <b style="color:var(--gold)">DB${t}</b>. Destination will be truncated. Proceed?`;openModal('modal-copy')}
+function openShutdownModal(){openModal('modal-shutdown')}
+async function execSwitch(){closeModal('modal-switch');const n=qs('sw-target').value;try{const r=await fetch('/api/monitor/db/switch',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({node:parseInt(n),confirm:true})});const d=await r.json();if(d.ok){toast(`Switched to DB${n}`,'ok');setTimeout(()=>{loadDB();loadStats()},1500)}else toast(d.error||'Switch failed','err')}catch(e){toast(e.message,'err')}}
+async function pingAllNodes(){const el=qs('ping-results');el.innerHTML='<div style="color:var(--cyan);font-size:10px">Pinging…</div>';try{const r=await fetch('/api/monitor/db/ping-all',{method:'POST'});const d=await r.json();el.innerHTML=d.nodes.map(n=>`<div style="margin-bottom:4px;display:flex;justify-content:space-between;font-size:11px"><span style="color:${n.status==='ok'?'var(--green)':'var(--red)'}">DB${n.node}</span><span style="color:var(--dim)">${n.latencyMs!=null?n.latencyMs+'ms':n.status}</span></div>`).join('')}catch(e){el.innerHTML=`<div style="color:var(--red);font-size:10px">${e.message}</div>`}}
+async function loadPoolStats(){const el=qs('pool-stats');try{const r=await fetch('/api/monitor/db/pool-stats');const d=await r.json();el.innerHTML=d.pools.map(p=>`<div><b style="color:${p.active?'var(--green)':'var(--dim)'}">DB${p.node}${p.active?' (ACTIVE)':''}</b><br>Total: ${p.totalCount??'?'} | Idle: ${p.idleCount??'?'} | Waiting: ${p.waitingCount??'?'}</div>`).join('<hr style="border:none;border-top:1px solid var(--border);margin:8px 0">')}catch(e){el.innerHTML='<span style="color:var(--red)">'+e.message+'</span>'}}
+async function execCopy(){closeModal('modal-copy');const f=qs('copy-from').value,t=qs('copy-to').value,pw=qs('copy-progress-wrap'),log=qs('copy-log'),bar=qs('copy-pbar'),st=qs('copy-status'),pct=qs('copy-pct');pw.style.display='block';log.innerHTML='';bar.style.width='0%';st.textContent='Starting…';pct.textContent='0%';const es=new EventSource('/api/monitor/db/copy?from='+f+'&to='+t+'&confirm=true');es.addEventListener('start',e=>{const d=JSON.parse(e.data);log.innerHTML+=`<div class="prog-info">Copy started: DB${d.from} → DB${d.to}</div>`;st.textContent='Copying…'});es.addEventListener('progress',e=>{const d=JSON.parse(e.data);log.innerHTML+=`<div class="prog-info">${d.msg}</div>`;log.scrollTop=log.scrollHeight});es.addEventListener('done',e=>{const d=JSON.parse(e.data);log.innerHTML+=`<div class="prog-${d.ok?'ok':'err'}">${d.ok?'✅ Complete':'❌ Failed'}: ${d.copied} copied, ${d.errors} errors</div>`;bar.style.width='100%';st.textContent=d.ok?'Complete':'Failed';pct.textContent='100%';es.close();toast(d.ok?'DB copy complete':'Copy failed',d.ok?'ok':'err')});es.onerror=()=>{log.innerHTML+='<div class="prog-err">Stream error</div>';es.close()}}
+async function loadTables(){const w=qs('tables-wrap');w.innerHTML='<div class="empty">Loading…</div>';try{const r=await fetch('/api/monitor/db/tables');const d=await r.json();if(!d.tables?.length)return w.innerHTML='<div class="empty">No tables</div>';w.innerHTML=`<table class="tbl"><thead><tr><th>Table</th><th>Rows</th><th>Size</th><th>Dead Rows</th></tr></thead><tbody>${d.tables.map(t=>`<tr><td style="font-family:'JetBrains Mono',monospace;font-size:11px">${t.table_name}</td><td>${fmt(t.row_count)}</td><td>${t.total_size}</td><td style="color:${t.dead_rows>0?'var(--orange)':'var(--dim)'}">${fmt(t.dead_rows)}</td></tr>`).join('')}</tbody></table>`}catch(e){w.innerHTML=`<div class="empty" style="color:var(--red)">${e.message}</div>`}}
+async function loadHealth(){try{const r=await fetch('/api/monitor/system/health');const d=await r.json();const m=d.memory;qs('mem-heap-used').textContent=m.heapUsed;qs('mem-heap-bar').style.width=m.heapPercent;qs('mem-rss').textContent=m.rss;qs('mem-rss-bar').style.width=((m.rssMB/500)*100).toFixed(1)+'%';qs('mem-heap-total').textContent=m.heapTotal;qs('mem-heap-total-bar').style.width=((m.heapTotalMB/500)*100).toFixed(1)+'%';const p=d.process;qs('proc-info').innerHTML=`PID: <span>${p.pid}</span><br>Node: <span>${p.nodeVersion}</span><br>Uptime: <span>${fmtUp(p.uptime)}</span><br>Platform: <span>${p.platform}</span><br>Arch: <span>${p.arch}</span><br>ENV: <span>${p.env}</span>`;const o=d.os;qs('os-info').innerHTML=`<div>Hostname: <span>${o.hostname}</span></div><div>Platform: <span>${o.platform}</span></div><div>CPUs: <span>${o.cpuCount}x ${o.cpuModel}</span></div><div>Total Mem: <span>${o.totalMemGB}</span></div><div>Free Mem: <span>${o.freeMemGB}</span></div><div>Load Avg: <span>${o.loadAvg['1m']} / ${o.loadAvg['5m']} / ${o.loadAvg['15m']}</span></div>`;const eg=qs('env-grid');eg.innerHTML=Object.entries(d.envChecks).map(([k,v])=>`<div class="env-item"><span class="env-dot ${v?'set':'unset'}"></span><span class="env-key">${k}</span><span class="env-val ${v?'set':'unset'}">${v?'SET':'UNSET'}</span></div>`).join('')}catch(e){toast(e.message,'err')}}
+async function execShutdown(){const sec=qs('shutdown-secret').value,reason=qs('shutdown-reason').value;if(!sec)return toast('Enter MONITOR_SECRET','err');if(!reason)return toast('Enter reason','err');closeModal('modal-shutdown');try{const r=await fetch('/api/monitor/system/shutdown',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({secret:sec,reason,confirm:true})});const d=await r.json();if(d.ok){toast('Server shutting down…','ok');setTimeout(()=>document.body.innerHTML='<div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;background:var(--bg);color:var(--text);font-family:Orbitron"><h1 style="color:var(--red);font-size:32px">Server Offline</h1><p style="color:var(--dim);margin-top:10px">Restarting…</p></div>',2500)}else toast(d.error||'Shutdown denied','err')}catch(e){toast(e.message,'err')}}
+function renderMini(data){const el=qs('rpm-chart');if(!el)return;const max=Math.max(...data,1),l=data.slice(-20);el.innerHTML=l.map((v,i)=>`<div class="mb ${i===l.length-1?'cur':''}" style="height:${Math.max(2,Math.round(v/max*30))}px"></div>`).join('')}
+function renderMethods(mc){if(!mc)return;const el=qs('method-bars'),ms=['GET','POST','PUT','PATCH','DELETE'],co={GET:'var(--green)',POST:'var(--cyan)',PUT:'var(--gold)',PATCH:'var(--purple)',DELETE:'var(--red)'},tot=Object.values(mc).reduce((a,b)=>a+b,0)||1;el.innerHTML=ms.map(m=>{const v=mc[m]||0,pct=((v/tot)*100).toFixed(1);return`<div style="margin-bottom:7px"><div style="display:flex;justify-content:space-between;font-family:'JetBrains Mono',monospace;font-size:10px;margin-bottom:3px"><span style="color:${co[m]}">${m}</span><span style="color:var(--dim)">${fmt(v)} (${pct}%)</span></div><div style="height:4px;background:rgba(255,255,255,.04);border-radius:2px"><div style="height:100%;width:${pct}%;background:${co[m]};border-radius:2px;transition:width .6s"></div></div></div>`}).join('')}
+function updateRing(rate){const c=qs('err-circle'),v=qs('err-pct'),r=parseFloat(rate)||0,dl=170,off=dl-(r/100)*dl;if(c){c.style.strokeDashoffset=off;c.style.stroke=r>10?'var(--red)':r>3?'var(--orange)':'var(--green)'}if(v){v.textContent=r.toFixed(1)+'%';v.style.color=r>10?'var(--red)':r>3?'var(--orange)':'var(--green)'}}
+function renderRoutes(rts){const tb=qs('routes-tb');if(!tb||!rts?.length)return;const max=rts[0]?.hits||1;tb.innerHTML=rts.slice(0,12).map(r=>{const [m,p]=r.route.split(' '),pct=((r.hits/max)*100).toFixed(0),co={GET:'var(--green)',POST:'var(--cyan)',PUT:'var(--gold)',PATCH:'var(--purple)',DELETE:'var(--red)'};return`<tr><td><span style="color:${co[m]||'var(--cyan)'};font-family:'JetBrains Mono',monospace;font-size:10px">${m}</span> <span style="color:var(--dim);font-family:'JetBrains Mono',monospace;font-size:11px">${(p||'').replace(/\/api\//,'/<b>api</b>/')}</span></td><td style="font-family:'JetBrains Mono',monospace;text-align:right">${fmt(r.hits)}</td><td><div style="display:flex;align-items:center;gap:6px"><div style="flex:1;height:4px;background:rgba(255,255,255,.05);border-radius:2px"><div style="height:100%;width:${pct}%;background:var(--cyan);border-radius:2px;transition:width .6s"></div></div></div></td></tr>`}).join('')}
+function applyHeartbeat(d){if(!d)return;if(d.uptime!=null)qs('s-uptime').textContent=fmtUp(d.uptime);if(d.totalRequests!=null){qs('s-total').textContent=fmt(d.totalRequests);qs('req-cnt').textContent=fmt(d.totalRequests)}if(d.errorRate!=null){qs('s-errrate').textContent=d.errorRate+'%';updateRing(d.errorRate)}if(d.statusCounts){const sc=d.statusCounts;qs('sc-2').textContent=fmt(sc['2xx']);qs('sc-3').textContent=fmt(sc['3xx']);qs('sc-4').textContent=fmt(sc['4xx']);qs('sc-5').textContent=fmt(sc['5xx']);qs('s-total-d').textContent=`${fmt(sc['2xx'])} ok · ${fmt((sc['4xx']||0)+(sc['5xx']||0))} errors`}if(d.perMinute){pmData=d.perMinute;const l=pmData[pmData.length-1]||0,p=pmData[pmData.length-2]||0;qs('s-rpm').textContent=fmt(l);const dt=l-p,de=qs('s-rpm-d');de.textContent=dt===0?'→ same':(dt>0?`↑ +${dt}`:`↓ ${dt}`);de.className='sd'+(dt>=0?'':' neg');renderMini(pmData)}if(d.topRoutes)renderRoutes(d.topRoutes);if(d.methodCounts)renderMethods(d.methodCounts)}
+function applySnapshot(snap){applyHeartbeat(snap);qs('s-errtot').textContent=`${fmt((snap.statusCounts?.['4xx']||0)+(snap.statusCounts?.['5xx']||0))} total`;if(snap.recentEvents?.length){qs('live-log').innerHTML='';snap.recentEvents.slice(0,60).forEach(appendLog)}if(snap.recentErrors?.length){qs('err-log').innerHTML='';snap.recentErrors.slice(0,30).forEach(appendError);errCnt=snap.recentErrors.length;qs('err-badge').textContent=errCnt+' errors'}if(snap.recentActivity?.length){qs('act-log').innerHTML='';snap.recentActivity.slice(0,40).forEach(appendActivity)}}
+function appendLog(ev){if(paused)return;const log=qs('live-log');if(!log)return;const e=log.querySelector('.empty');if(e)e.remove();const s=ev.status||0,sc=s>=500?'s5':s>=400?'s4':s>=300?'s3':'s2',m=(ev.method||'GET').toUpperCase(),pp=(ev.path||'/').split('/'),ph=pp.map((p,i)=>i===0?p:(i===2?`<b>${p}</b>`:p)).join('/'),row=document.createElement('div');row.className='le';row.innerHTML=`<span class="lts">${fmtTime(ev.ts)}</span><span class="lm ${m}">${m}</span><span class="lp">${ph}</span><span class="lst ${sc}">${s}</span><span class="lms">${ev.ms!=null?ev.ms+'ms':'—'}</span>`;log.insertBefore(row,log.firstChild);reqCnt++;qs('req-cnt').textContent=fmt(reqCnt);while(log.children.length>200)log.removeChild(log.lastChild)}
+function appendActivity(ev){const log=qs('act-log');if(!log)return;const e=log.querySelector('.empty');if(e)e.remove();const lc=ev.level==='success'?'success':ev.level==='error'?'error':ev.level==='warn'?'warn':'',row=document.createElement('div');row.className='ae';row.innerHTML=`<span class="ai">${getActIcon(ev.type)}</span><div class="ab"><div class="al ${lc}">${ev.label||ev.type}</div>${ev.detail?`<div class="ad">${ev.detail}</div>`:''}
+<div class="ats">${fmtTime(ev.ts)}</div></div>`;log.insertBefore(row,log.firstChild);actCnt++;qs('act-cnt').textContent=fmt(actCnt)+' events';while(log.children.length>100)log.removeChild(log.lastChild);if(ev.type==='db_switch'||ev.type==='db_copy'||ev.type==='shutdown'){const cl=qs('ctrl-log');if(cl){const ce=cl.querySelector('.empty');if(ce)ce.remove();cl.insertBefore(row.cloneNode(true),cl.firstChild)}}}
+function appendError(ev){const log=qs('err-log');if(!log)return;const e=log.querySelector('.empty');if(e)e.remove();const row=document.createElement('div');row.className='ee';row.innerHTML=`<div class="et"><span class="es">${ev.status}</span><span class="em">${ev.method}</span><span class="ep">${ev.path}</span><span class="ei">${ev.ms!=null?ev.ms+'ms':''}</span></div><span class="ei">${fmtTime(ev.ts)} · IP: ${ev.ip||'—'}</span>`;log.insertBefore(row,log.firstChild);errCnt++;qs('err-badge').textContent=errCnt+' errors';qs('err-badge').style.color=errCnt>0?'var(--red)':'var(--dim)';while(log.children.length>60)log.removeChild(log.lastChild)}
+function connectSocket(){socket=io('/monitor',{transports:['websocket','polling']});socket.on('connect',()=>setLive(true));socket.on('disconnect',()=>setLive(false));socket.on('snapshot',applySnapshot);socket.on('heartbeat',applyHeartbeat);socket.on('req',appendLog);socket.on('err',appendError);socket.on('activity',appendActivity);socket.on('db_switched',d=>toast(`DB switched to DB${d.to}`,'ok'));socket.on('server_shutdown',()=>{toast('Server shutting down','err');setTimeout(()=>location.reload(),4000)})}
+async function loadDB(){try{const r=await fetch('/api/monitor/db');const d=await r.json();const ng=qs('db-nodes-grid');if(ng&&d.nodes){ng.innerHTML=d.nodes.map(n=>`<div class="dbnode ${n.active?'active-node':''} ${n.status==='error'?'error-node':''}"><div class="dnn">${n.active?'<span class="dna">ACTIVE</span>':''}DB${n.node}</div><div class="dns ${n.status}">${n.status.toUpperCase()}${n.latencyMs!=null?' · '+n.latencyMs+'ms':''}</div></div>`).join('')}const meta=qs('db-meta');if(meta){meta.innerHTML=`Active: <span>DB${d.activeNode}</span> | Latency: <span>${d.latencyMs!=null?d.latencyMs+'ms':'—'}</span> | Server Time: <span>${d.serverTime?new Date(d.serverTime).toLocaleString('en-IN',{timeZone:'Asia/Kolkata'}):'—'}</span> | PG: <span>${d.pgVersion||'—'}</span>`}if(d.latencyMs!=null){const dot=qs('bd-db'),lat=qs('bd-db-l');if(dot)dot.className='bd ok';if(lat)lat.textContent=d.latencyMs+'ms'}}catch(e){const dot=qs('bd-db');if(dot)dot.className='bd error';toast(e.message,'err')}}
+async function loadServices(){try{const r=await fetch('/api/monitor/services');const d=await r.json();const svcMap={'Cloudinary CDN':['bd-cloud','bd-cloud-l'],'Resend Email':['bd-email','bd-email-l'],'Web Push (VAPID)':['bd-push','bd-push-l'],'Delhivery Shipping':['bd-ship','bd-ship-l'],'Paytm Payments':['bd-pay','bd-pay-l']};d.services?.forEach(svc=>{const ids=svcMap[svc.name];if(ids){const [dot,lat]=[qs(ids[0]),qs(ids[1])],cls=svc.status==='ok'||svc.status==='configured'?'ok':svc.status==='error'?'error':'warn';if(dot)dot.className='bd '+cls;if(lat)lat.textContent=svc.latencyMs!=null?svc.latencyMs+'ms':svc.status}});const grid=qs('svc-grid');if(grid&&d.services?.length){grid.innerHTML=d.services.map(s=>`<div class="sc"><span class="scd ${s.status}"></span><span class="scn">${s.name}</span><span class="scs ${s.status}">${s.status.toUpperCase()}${s.latencyMs!=null?' '+s.latencyMs+'ms':''}</span></div>`).join('')}}catch(e){toast(e.message,'err')}}
+async function loadStats(){try{const r=await fetch('/api/monitor/stats');const d=await r.json();if(d.orders){qs('s-ord-today').textContent=fmt(d.orders.today);qs('s-rev-today').textContent=fmtINR(d.orders.todayRevenue);qs('s-ord-pend').textContent=fmt(d.orders.pending)+' pending'}if(d.users){qs('s-users').textContent=fmt(d.users.total);qs('s-users-today').textContent=fmt(d.users.newToday)}if(d.products){qs('s-prods').textContent=fmt(d.products.active);qs('s-prods-pend').textContent=fmt(d.products.pending)}if(d.sellers)qs('s-sellers').textContent=fmt(d.sellers.active);if(d.queries)qs('s-queries').textContent=fmt(d.queries.pending);if(d.server)applyHeartbeat(d.server);if(d.orders?.recent?.length){const tb=qs('orders-tb');tb.innerHTML=d.orders.recent.map(o=>`<tr><td style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--cyan)">${o.order_id}</td><td>${o.full_name}</td><td style="font-family:'JetBrains Mono',monospace">${fmtINR(o.total)}</td><td><span class="badge ${o.status}">${o.status}</span></td><td><span class="badge ${o.payment_status}">${o.payment_status}</span></td><td style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim)">${fmtRel(o.created_at)}</td></tr>`).join('')}else{qs('orders-tb').innerHTML='<tr><td colspan="6" class="empty">No orders yet</td></tr>'}const dbS=d.db?.status==='connected'?'ok':'error';const dbD=qs('bd-db');if(dbD)dbD.className='bd '+dbS}catch(e){toast(e.message,'err')}}
+function hardRefresh(){loadStats();loadDB();loadServices()}
+connectSocket();hardRefresh();setInterval(loadStats,15e3);setInterval(loadServices,6e4);setInterval(loadDB,3e4);
 </script>
 </body>
 </html>

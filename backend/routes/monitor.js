@@ -6,16 +6,23 @@
  * No mocks, no demo data — everything is real.
  *
  * Routes:
- *   GET  /api/monitor/stats        — DB counts + in-memory snapshot
- *   GET  /api/monitor/db           — DB failover state + pool health
- *   GET  /api/monitor/errors       — recent 4xx/5xx log
- *   GET  /api/monitor/activity     — recent named events (orders, emails…)
- *   GET  /api/monitor/routes       — top API routes by hit count
- *   GET  /api/monitor/services     — check every external service (DB, email, cloud)
+ *   GET  /api/monitor/stats          — DB counts + in-memory snapshot
+ *   GET  /api/monitor/db             — DB failover state + pool health
+ *   POST /api/monitor/db/switch      — Force-switch active DB node
+ *   POST /api/monitor/db/ping-all    — Ping every DB node simultaneously
+ *   GET  /api/monitor/db/tables      — List tables + row counts on active DB
+ *   POST /api/monitor/db/copy        — Copy all data from one node to another (SSE stream)
+ *   GET  /api/monitor/errors         — recent 4xx/5xx log
+ *   GET  /api/monitor/activity       — recent named events (orders, emails…)
+ *   GET  /api/monitor/routes         — top API routes by hit count
+ *   GET  /api/monitor/services       — check every external service
+ *   GET  /api/monitor/system/health  — full system health (memory, CPU, env, process)
+ *   POST /api/monitor/system/shutdown — graceful server shutdown (requires MONITOR_SECRET)
  */
 
 const router  = require('express').Router();
-const { pool } = require('../config/db');
+const os      = require('os');
+const { pool, forceSwitch, pingAllNodes, copyDatabase, getPoolStats, RAW_URLS } = require('../config/db');
 const mon     = require('../monitor');
 
 // ── Simple secret guard (set MONITOR_SECRET in .env, or leave open for internal use) ──
@@ -349,6 +356,280 @@ router.get('/services', async (req, res) => {
   });
 
   res.json({ ts: new Date().toISOString(), services });
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+//  POST /api/monitor/db/switch
+//  Force the active DB node to a specific index (1-based from the client).
+//  Body: { node: 1|2|3, confirm: true }
+// ════════════════════════════════════════════════════════════════════════════
+router.post('/db/switch', async (req, res) => {
+  const { node, confirm } = req.body || {};
+  if (!confirm) return res.status(400).json({ ok: false, error: 'Must send confirm:true to execute a DB switch.' });
+
+  const targetIndex = parseInt(node, 10) - 1;   // client sends 1-based
+  if (isNaN(targetIndex) || targetIndex < 0 || targetIndex >= (RAW_URLS?.length || 3)) {
+    return res.status(400).json({ ok: false, error: `Invalid node ${node}. Must be 1–${RAW_URLS?.length || 3}.` });
+  }
+
+  const result = await forceSwitch(targetIndex);
+
+  // Record in activity log + broadcast
+  const ev = mon.recordActivity({
+    type:   'db_switch',
+    label:  `DB Switch: DB${result.from} → DB${result.to}`,
+    detail: result.ok ? 'Manual switch successful' : result.error,
+    level:  result.ok ? 'warn' : 'error',
+    meta:   result,
+  });
+  try {
+    const io = require('../realtime').get?.();
+    if (io) io.of('/monitor').emit('activity', ev);
+    if (io) io.of('/monitor').emit('db_switched', result);
+  } catch (_) {}
+
+  if (result.ok) {
+    console.log(`🎛️  Monitor: DB switched to DB${result.to}`);
+    return res.json({ ok: true, message: `Switched to DB${result.to}`, ...result });
+  } else {
+    return res.status(500).json({ ok: false, error: result.error, ...result });
+  }
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+//  POST /api/monitor/db/ping-all
+//  Simultaneously pings every configured DB node and returns latency.
+// ════════════════════════════════════════════════════════════════════════════
+router.post('/db/ping-all', async (req, res) => {
+  const results = await pingAllNodes();
+  res.json({ ts: new Date().toISOString(), nodes: results });
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+//  GET /api/monitor/db/tables
+//  Lists all tables on the ACTIVE DB with row counts and sizes.
+// ════════════════════════════════════════════════════════════════════════════
+router.get('/db/tables', async (req, res) => {
+  try {
+    const rows = await pool.query(`
+      SELECT
+        t.tablename                                           AS table_name,
+        pg_size_pretty(pg_total_relation_size(quote_ident(t.tablename)))  AS total_size,
+        pg_total_relation_size(quote_ident(t.tablename))     AS size_bytes,
+        COALESCE(s.n_live_tup, 0)                            AS row_count,
+        COALESCE(s.n_dead_tup, 0)                            AS dead_rows,
+        s.last_vacuum,
+        s.last_analyze
+      FROM pg_tables t
+      LEFT JOIN pg_stat_user_tables s ON s.relname = t.tablename
+      WHERE t.schemaname = 'public'
+      ORDER BY size_bytes DESC NULLS LAST
+    `);
+    res.json({ ts: new Date().toISOString(), count: rows.rows.length, tables: rows.rows });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+//  POST /api/monitor/db/copy
+//  Copy all tables from one DB node to another.
+//  Uses Server-Sent Events so the client sees real-time progress.
+//  Body: { from: 1|2|3, to: 1|2|3, confirm: true }
+// ════════════════════════════════════════════════════════════════════════════
+router.post('/db/copy', async (req, res) => {
+  const { from, to, confirm } = req.body || {};
+
+  if (!confirm) {
+    return res.status(400).json({ ok: false, error: 'Must send confirm:true. This is a destructive operation.' });
+  }
+
+  const fi = parseInt(from, 10) - 1;  // 1-based → 0-based
+  const ti = parseInt(to,   10) - 1;
+
+  if (fi === ti) return res.status(400).json({ ok: false, error: 'Source and destination cannot be the same node.' });
+
+  const maxNodes = RAW_URLS?.length || 3;
+  if (fi < 0 || fi >= maxNodes) return res.status(400).json({ ok: false, error: `Invalid from node ${from}` });
+  if (ti < 0 || ti >= maxNodes) return res.status(400).json({ ok: false, error: `Invalid to node ${to}` });
+
+  // Stream progress via SSE
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('X-Accel-Buffering', 'no');
+  res.flushHeaders?.();
+
+  const send = (type, data) => {
+    try { res.write(`event: ${type}\ndata: ${JSON.stringify(data)}\n\n`); } catch (_) {}
+  };
+
+  send('start', { from: fi + 1, to: ti + 1, ts: new Date().toISOString() });
+
+  // Record activity
+  mon.recordActivity({
+    type:   'db_copy',
+    label:  `DB Copy Started: DB${fi + 1} → DB${ti + 1}`,
+    detail: `Copying all tables from DB${fi + 1} to DB${ti + 1}`,
+    level:  'warn',
+  });
+
+  const result = await copyDatabase(fi, ti, (msg) => {
+    send('progress', { msg, ts: new Date().toISOString() });
+    // Also push to monitor namespace
+    try {
+      const io = require('../realtime').get?.();
+      if (io) io.of('/monitor').emit('activity', {
+        type: 'db_copy', label: 'DB Copy', detail: msg, level: 'info', ts: new Date().toISOString(),
+      });
+    } catch (_) {}
+  });
+
+  send('done', { ...result, ts: new Date().toISOString() });
+
+  mon.recordActivity({
+    type:   'db_copy',
+    label:  `DB Copy ${result.ok ? 'Complete' : 'Failed'}: DB${fi + 1} → DB${ti + 1}`,
+    detail: `${result.copied ?? 0} tables copied, ${result.errors ?? 0} errors`,
+    level:  result.ok ? 'success' : 'error',
+  });
+
+  res.end();
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+//  GET /api/monitor/system/health
+//  Returns full system health: process memory, CPU load, env config status,
+//  Node.js version, uptime, and per-pool connection stats.
+// ════════════════════════════════════════════════════════════════════════════
+router.get('/system/health', (req, res) => {
+  const mem   = process.memoryUsage();
+  const cpus  = os.cpus();
+  const snap  = mon.getSnapshot();
+  const pools = getPoolStats();
+
+  // CPU load average (1 / 5 / 15 min)
+  const loadAvg = os.loadavg();
+
+  // Check which env vars are configured (boolean only — no values)
+  const envChecks = {
+    DATABASE_URL_1:      !!process.env.DATABASE_URL_1,
+    DATABASE_URL_2:      !!process.env.DATABASE_URL_2,
+    DATABASE_URL_3:      !!process.env.DATABASE_URL_3,
+    JWT_SECRET:          !!process.env.JWT_SECRET,
+    RESEND_API_KEY:      !!process.env.RESEND_API_KEY,
+    CLOUDINARY_CLOUD_NAME: !!process.env.CLOUDINARY_CLOUD_NAME,
+    VAPID_PUBLIC_KEY:    !!process.env.VAPID_PUBLIC_KEY,
+    GOOGLE_CLIENT_ID:    !!process.env.GOOGLE_CLIENT_ID,
+    PAYTM_MID:           !!process.env.PAYTM_MID,
+    DELHIVERY_API_TOKEN: !!process.env.DELHIVERY_API_TOKEN,
+    FRONTEND_URL:        !!process.env.FRONTEND_URL,
+    RENDER_EXTERNAL_URL: !!process.env.RENDER_EXTERNAL_URL,
+    MONITOR_SECRET:      !!process.env.MONITOR_SECRET,
+  };
+
+  res.json({
+    ts:       new Date().toISOString(),
+    status:   'ok',
+    process: {
+      pid:        process.pid,
+      nodeVersion: process.version,
+      platform:   process.platform,
+      arch:       process.arch,
+      uptime:     Math.floor(process.uptime()),
+      env:        process.env.NODE_ENV || 'development',
+    },
+    memory: {
+      rss:        (mem.rss         / 1024 / 1024).toFixed(1) + ' MB',
+      heapUsed:   (mem.heapUsed    / 1024 / 1024).toFixed(1) + ' MB',
+      heapTotal:  (mem.heapTotal   / 1024 / 1024).toFixed(1) + ' MB',
+      external:   (mem.external    / 1024 / 1024).toFixed(1) + ' MB',
+      heapPercent: ((mem.heapUsed / mem.heapTotal) * 100).toFixed(1) + '%',
+      rssMB:      parseFloat((mem.rss / 1024 / 1024).toFixed(1)),
+      heapUsedMB: parseFloat((mem.heapUsed / 1024 / 1024).toFixed(1)),
+      heapTotalMB:parseFloat((mem.heapTotal / 1024 / 1024).toFixed(1)),
+    },
+    os: {
+      hostname:  os.hostname(),
+      platform:  os.platform(),
+      arch:      os.arch(),
+      cpuCount:  cpus.length,
+      cpuModel:  cpus[0]?.model || 'Unknown',
+      totalMemGB:(os.totalmem() / 1024 / 1024 / 1024).toFixed(2) + ' GB',
+      freeMemGB: (os.freemem()  / 1024 / 1024 / 1024).toFixed(2) + ' GB',
+      loadAvg:   { '1m': loadAvg[0].toFixed(2), '5m': loadAvg[1].toFixed(2), '15m': loadAvg[2].toFixed(2) },
+    },
+    database: {
+      configuredNodes: RAW_URLS?.length || 0,
+      pools,
+    },
+    monitor: {
+      uptime:        snap.uptime,
+      totalRequests: snap.totalRequests,
+      errorRate:     snap.errorRate,
+      bufferedEvents:mon._events.length,
+      bufferedErrors:mon._errors.length,
+    },
+    envChecks,
+  });
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+//  POST /api/monitor/system/shutdown
+//  Gracefully shuts down the server process.
+//  Requires MONITOR_SECRET in body AND in the guard header.
+//  Double-confirmation: { confirm: true, reason: '...' }
+// ════════════════════════════════════════════════════════════════════════════
+router.post('/system/shutdown', (req, res) => {
+  const { confirm, reason, secret } = req.body || {};
+
+  // Hard require MONITOR_SECRET for this endpoint — no matter what
+  const expected = process.env.MONITOR_SECRET;
+  if (!expected) {
+    return res.status(403).json({ ok: false, error: 'MONITOR_SECRET not configured. Set it in .env to enable shutdown.' });
+  }
+  if (secret !== expected) {
+    return res.status(403).json({ ok: false, error: 'Invalid MONITOR_SECRET.' });
+  }
+  if (!confirm) {
+    return res.status(400).json({ ok: false, error: 'Must send confirm:true to initiate shutdown.' });
+  }
+
+  const msg = `🔴 Server shutdown initiated via Monitor API. Reason: ${reason || 'No reason provided'}`;
+  console.warn(msg);
+
+  mon.recordActivity({
+    type:   'shutdown',
+    label:  'Server Shutdown',
+    detail: reason || 'Initiated from Monitor Dashboard',
+    level:  'error',
+  });
+
+  // Broadcast to all monitor clients
+  try {
+    const io = require('../realtime').get?.();
+    if (io) {
+      io.of('/monitor').emit('activity', {
+        type: 'shutdown', label: '🔴 Server Shutting Down', detail: reason || 'Monitor shutdown', level: 'error', ts: new Date().toISOString(),
+      });
+      io.of('/monitor').emit('server_shutdown', { reason, ts: new Date().toISOString() });
+    }
+  } catch (_) {}
+
+  res.json({ ok: true, message: 'Shutdown initiated. Server will exit in 3 seconds.', ts: new Date().toISOString() });
+
+  // Give the response time to flush, then exit cleanly
+  setTimeout(() => {
+    console.warn('🔴 Process exiting by Monitor shutdown command.');
+    process.exit(0);
+  }, 3000);
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+//  GET /api/monitor/db/pool-stats
+//  Returns live connection pool stats for all nodes
+// ════════════════════════════════════════════════════════════════════════════
+router.get('/db/pool-stats', (req, res) => {
+  res.json({ ts: new Date().toISOString(), pools: getPoolStats() });
 });
 
 module.exports = router;
