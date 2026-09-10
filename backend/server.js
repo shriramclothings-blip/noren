@@ -549,6 +549,13 @@ const PORT = process.env.PORT || 5000;
 initDB().catch(err => {
   console.warn(`⚠️  initDB warning (non-fatal): ${err.message} — server will still start, failover active`);
 });
+
+// Auto-run email portal migration on startup
+const { autoMigrate } = require('./autoMigrate');
+initDB()
+  .then(() => autoMigrate())
+  .catch(err => console.warn('Migration skipped:', err.message));
+
 // Verify email config on startup so misconfigurations are visible in logs
 const { testMailConfig } = require('./services/mailService');
 testMailConfig().catch(() => {});
