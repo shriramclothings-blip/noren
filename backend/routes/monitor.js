@@ -24,6 +24,7 @@ const router  = require('express').Router();
 const os      = require('os');
 const { pool, forceSwitch, pingAllNodes, copyDatabase, getPoolStats, RAW_URLS } = require('../config/db');
 const mon     = require('../monitor');
+const loginBlock = require('../services/loginBlockService');
 
 // ── Simple secret guard (set MONITOR_SECRET in .env, or leave open for internal use) ──
 const MONITOR_SECRET = process.env.MONITOR_SECRET || null;
@@ -644,6 +645,112 @@ router.post('/system/shutdown', guardWrite, (req, res) => {
 // ════════════════════════════════════════════════════════════════════════════
 router.get('/db/pool-stats', (req, res) => {
   res.json({ ts: new Date().toISOString(), pools: getPoolStats() });
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+//  GET /api/monitor/login-block/status
+//  Check if login service is blocked
+// ════════════════════════════════════════════════════════════════════════════
+router.get('/login-block/status', async (req, res) => {
+  try {
+    const status = await loginBlock.getStatus();
+    res.json({ ok: true, ...status, ts: new Date().toISOString() });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+//  POST /api/monitor/login-block/block
+//  Block all login services across all portals
+//  Body: { secret, reason, confirm: true }
+// ════════════════════════════════════════════════════════════════════════════
+router.post('/login-block/block', guardWrite, async (req, res) => {
+  const { secret, reason, confirm } = req.body || {};
+  
+  console.log('[Monitor] Login block request:', { hasSecret: !!secret, hasReason: !!reason, confirm });
+  
+  if (!confirm) {
+    return res.status(400).json({ ok: false, error: 'Must send confirm:true to block login service' });
+  }
+  
+  // Double-check MONITOR_SECRET (already checked in guardWrite, but critical operation)
+  const expected = process.env.MONITOR_SECRET;
+  if (expected && secret !== expected) {
+    return res.status(403).json({ ok: false, error: 'Invalid MONITOR_SECRET' });
+  }
+  
+  // Extract admin ID from JWT if available
+  let adminId = null;
+  const token = req.headers.authorization?.replace('Bearer ', '');
+  if (token) {
+    try {
+      const decoded = require('jsonwebtoken').verify(token, process.env.JWT_SECRET);
+      adminId = decoded.id;
+    } catch (_) {}
+  }
+  
+  const result = await loginBlock.block(adminId, reason || 'Emergency block via Monitor Dashboard');
+  
+  if (result.ok) {
+    console.warn(`🚫 [Monitor] LOGIN SERVICE BLOCKED: ${reason || 'No reason provided'}`);
+    return res.json({ ok: true, message: 'Login service blocked across all portals', ...result });
+  } else {
+    return res.status(500).json({ ok: false, error: result.error });
+  }
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+//  POST /api/monitor/login-block/resume
+//  Resume all login services
+//  Body: { secret, reason, confirm: true }
+// ════════════════════════════════════════════════════════════════════════════
+router.post('/login-block/resume', guardWrite, async (req, res) => {
+  const { secret, reason, confirm } = req.body || {};
+  
+  console.log('[Monitor] Login resume request:', { hasSecret: !!secret, hasReason: !!reason, confirm });
+  
+  if (!confirm) {
+    return res.status(400).json({ ok: false, error: 'Must send confirm:true to resume login service' });
+  }
+  
+  // Double-check MONITOR_SECRET
+  const expected = process.env.MONITOR_SECRET;
+  if (expected && secret !== expected) {
+    return res.status(403).json({ ok: false, error: 'Invalid MONITOR_SECRET' });
+  }
+  
+  // Extract admin ID from JWT if available
+  let adminId = null;
+  const token = req.headers.authorization?.replace('Bearer ', '');
+  if (token) {
+    try {
+      const decoded = require('jsonwebtoken').verify(token, process.env.JWT_SECRET);
+      adminId = decoded.id;
+    } catch (_) {}
+  }
+  
+  const result = await loginBlock.resume(adminId, reason || 'Resumed via Monitor Dashboard');
+  
+  if (result.ok) {
+    console.log(`✅ [Monitor] LOGIN SERVICE RESUMED: ${reason || 'No reason provided'}`);
+    return res.json({ ok: true, message: 'Login service resumed', ...result });
+  } else {
+    return res.status(500).json({ ok: false, error: result.error });
+  }
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+//  GET /api/monitor/login-block/history
+//  Get login block history (last 20 changes)
+// ════════════════════════════════════════════════════════════════════════════
+router.get('/login-block/history', async (req, res) => {
+  try {
+    const history = await loginBlock.getHistory();
+    res.json({ ok: true, history, ts: new Date().toISOString() });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
 });
 
 module.exports = router;

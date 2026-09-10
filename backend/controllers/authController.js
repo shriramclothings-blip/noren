@@ -4,8 +4,23 @@ const crypto = require('crypto');
 const { pool } = require('../config/db');
 const { sendMail } = require('../services/mailService');
 const { recordSession } = require('../services/sessionService');
+const loginBlock = require('../services/loginBlockService');
 // Lazy import to avoid circular — notificationController requires db which is fine
 const getNotifCtrl = () => require('./notificationController');
+
+// ── Login Block Check Middleware ──────────────────────────────────────────────
+const checkLoginBlock = async (req, res, next) => {
+  if (loginBlock.isBlocked()) {
+    const status = await loginBlock.getStatus();
+    return res.status(503).json({ 
+      error: 'Login service temporarily blocked',
+      message: 'ALL LOGIN SERVICES ARE CURRENTLY BLOCKED. Please contact system administrator.',
+      reason: status.reason,
+      blockedAt: status.blockedAt,
+    });
+  }
+  next();
+};
 
 // ── Monitor helper ────────────────────────────────────────────────────────────
 const emitAuthEvent = (type, label, detail, level = 'info', meta = {}) => {
@@ -38,6 +53,17 @@ const enrichUser = async (user) => ({
 });
 
 const register = async (req, res) => {
+  // Check if login service is blocked
+  if (loginBlock.isBlocked()) {
+    const status = await loginBlock.getStatus();
+    return res.status(503).json({ 
+      error: 'Registration service temporarily blocked',
+      message: 'ALL LOGIN/REGISTRATION SERVICES ARE CURRENTLY BLOCKED. Please contact administrator.',
+      reason: status.reason,
+      blockedAt: status.blockedAt,
+    });
+  }
+  
   const { name, email, password, phone } = req.body;
   if (!name || !email || !password)
     return res.status(400).json({ message: 'Name, email and password are required' });
@@ -95,6 +121,18 @@ const register = async (req, res) => {
 };
 
 const login = async (req, res) => {
+  // Check if login service is blocked
+  if (loginBlock.isBlocked()) {
+    const status = await loginBlock.getStatus();
+    emitAuthEvent('login_blocked', '🚫 Login Attempt Blocked', `Email: ${req.body?.email || 'unknown'}`, 'warn', { ip: req.ip });
+    return res.status(503).json({ 
+      error: 'Login service temporarily blocked',
+      message: 'ALL LOGIN SERVICES ARE CURRENTLY BLOCKED. Please contact administrator.',
+      reason: status.reason,
+      blockedAt: status.blockedAt,
+    });
+  }
+  
   const { email, password } = req.body;
   if (!email || !password) return res.status(400).json({ message: 'Email and password required' });
   try {
