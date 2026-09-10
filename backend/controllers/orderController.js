@@ -7,6 +7,17 @@ const { attributeConversion } = require('./influencerController');
 const { sendMail } = require('../services/mailService');
 const { sellerNewOrder } = require('../services/sellerEmailTemplates');
 
+// ── Monitor helper ────────────────────────────────────────────────────────────
+const emitOrderEvent = (label, detail, level = 'success', meta = {}) => {
+  try {
+    const mon = require('../monitor');
+    const ev = mon.recordActivity({ type: 'order', label, detail, level, meta });
+    const rt = require('../realtime');
+    const io = rt.get?.();
+    if (io) io.of('/monitor').emit('activity', ev);
+  } catch (_) {}
+};
+
 // ── Notify all sellers who have items in this order ──────────────────────────
 const notifySellersOfOrder = async (orderId, orderRef) => {
   try {
@@ -84,8 +95,7 @@ const createPaytmInitiate = async (req, res) => {
        'pending', infSessionToken]
     );
     const order = orderResult.rows[0];
-
-    // Insert order items but do NOT reduce stock until payment is verified
+    emitOrderEvent('Order Created', `#${orderId} · ₹${total} · ${full_name}`, 'info', { orderId, total, email });
     for (const item of items) {
       await client.query(
         `INSERT INTO src_order_items (order_id, product_id, variant_id, title, size, price, quantity, image_url)

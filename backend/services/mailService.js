@@ -8,6 +8,22 @@ const getClient = () => {
   return _client;
 };
 
+// Lazy-load monitor to avoid circular deps
+const emitMailEvent = (level, to, subject, detail) => {
+  try {
+    const mon = require('../monitor');
+    const ev = mon.recordActivity({
+      type:   'email',
+      label:  'Email ' + (level === 'success' ? 'Sent' : level === 'skip' ? 'Skipped' : 'Failed'),
+      detail: `To: ${to} | ${subject}`,
+      level:  level === 'success' ? 'success' : level === 'skip' ? 'info' : 'error',
+      meta:   { to, subject },
+    });
+    const io = require('./realtime') && require('../realtime').get?.();
+    if (io) io.of('/monitor').emit('activity', ev);
+  } catch (_) {}
+};
+
 /**
  * Send an HTML email via Resend (HTTPS API — works on Render free tier).
  * Returns true on success, false on failure.
@@ -16,6 +32,7 @@ const getClient = () => {
 const sendMail = async (to, subject, html) => {
   if (!process.env.RESEND_API_KEY) {
     console.log(`[Mail skipped – RESEND_API_KEY not configured] To: ${to} | Subject: ${subject}`);
+    emitMailEvent('skip', to, subject);
     return false;
   }
 
@@ -25,13 +42,16 @@ const sendMail = async (to, subject, html) => {
 
     if (error) {
       console.error(`[Mail error] To: ${to} | Subject: ${subject} | ${error.message}`);
+      emitMailEvent('error', to, subject, error.message);
       return false;
     }
 
     console.log(`[Mail sent] id: ${data?.id} | To: ${to} | Subject: ${subject}`);
+    emitMailEvent('success', to, subject, `id:${data?.id}`);
     return true;
   } catch (err) {
     console.error(`[Mail error] To: ${to} | Subject: ${subject} | ${err.message}`);
+    emitMailEvent('error', to, subject, err.message);
     return false;
   }
 };

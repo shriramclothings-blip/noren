@@ -7,6 +7,16 @@ const { recordSession } = require('../services/sessionService');
 // Lazy import to avoid circular — notificationController requires db which is fine
 const getNotifCtrl = () => require('./notificationController');
 
+// ── Monitor helper ────────────────────────────────────────────────────────────
+const emitAuthEvent = (type, label, detail, level = 'info', meta = {}) => {
+  try {
+    const mon = require('../monitor');
+    const ev = mon.recordActivity({ type, label, detail, level, meta });
+    const io = require('../realtime').get?.();
+    if (io) io.of('/monitor').emit('activity', ev);
+  } catch (_) {}
+};
+
 const signToken = (user) =>
   jwt.sign({ id: user.id, role: user.role, business_id: user.business_id || null, store_id: user.store_id || null, warehouse_id: user.warehouse_id || null }, process.env.JWT_SECRET, { expiresIn: '7d' });
 
@@ -77,6 +87,7 @@ const register = async (req, res) => {
     // Notify super_admin — new user registered
     getNotifCtrl().notifyAdminNewUser({ userId: user.id, name, email }).catch(() => {});
 
+    emitAuthEvent('signup', 'New Registration', `${name} (${email})`, 'success', { email, role: user.role });
     res.status(201).json({ token: signToken(user), user: await enrichUser(user) });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -141,6 +152,7 @@ const login = async (req, res) => {
     }).catch(() => {});
 
     const { password: _, ...safeUser } = user;
+    emitAuthEvent('login', 'User Login', `${user.email} (${user.role})`, 'success', { email: user.email, role: user.role });
     res.json({ token: signToken(user), user: await enrichUser(safeUser) });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -248,6 +260,7 @@ const forgotPassword = async (req, res) => {
     sendMail(email, 'Your NOREN Password Reset OTP', forgotPasswordOTP(result.rows[0].name, otp))
       .catch(e => console.error('[OTP mail error]', e.message));
 
+    emitAuthEvent('otp', 'OTP Sent', `Password reset OTP → ${email}`, 'info', { email });
     res.json({ message: 'If this email exists, an OTP has been sent.' });
   } catch (err) {
     console.error('forgotPassword error:', err.message);

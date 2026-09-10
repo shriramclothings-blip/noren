@@ -6,9 +6,19 @@ const { Server } = require('socket.io');
 const jwt = require('jsonwebtoken');
 const { initDB, pool } = require('./config/db');
 
+// ── Monitor — load before everything so all events are captured ──────────────
+const mon = require('./monitor');
+
 // ── Keep the process alive — log unhandled errors instead of crashing ────────
-process.on('uncaughtException',       err => console.error('⚠️  UncaughtException:', err.message));
-process.on('unhandledRejection', (reason) => console.error('⚠️  UnhandledRejection:', reason?.message || reason));
+process.on('uncaughtException', err => {
+  console.error('⚠️  UncaughtException:', err.message);
+  mon.recordActivity({ type: 'crash', label: 'UncaughtException', detail: err.message, level: 'error' });
+});
+process.on('unhandledRejection', (reason) => {
+  const msg = reason?.message || String(reason);
+  console.error('⚠️  UnhandledRejection:', msg);
+  mon.recordActivity({ type: 'crash', label: 'UnhandledRejection', detail: msg, level: 'error' });
+});
 
 const app = express();
 const httpServer = http.createServer(app);
@@ -101,12 +111,35 @@ app.post('/api/upload', sysUpload.any(), (req, res) => {
   res.json({ message: 'Upload successful', files: uploaded, url: uploaded[0].media_url });
 });
 
-// ── HTTP request logger (4xx / 5xx) ────────────────────────────────────────
+// ── HTTP request logger + monitor interceptor ──────────────────────────────
 app.use((req, res, next) => {
   const start = Date.now();
   res.on('finish', () => {
-    const ms = Date.now() - start;
+    const ms     = Date.now() - start;
     const status = res.statusCode;
+    const ip     = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || '—';
+
+    // Skip monitor & static asset noise from the event log
+    const skipPaths = ['/api/monitor', '/api/health', '/uploads', '/sitemap'];
+    const skip = skipPaths.some(p => req.path.startsWith(p));
+
+    if (!skip) {
+      const ev = mon.recordRequest({
+        method:    req.method,
+        path:      req.path,
+        status,
+        ms,
+        ip,
+        userAgent: req.headers['user-agent'],
+      });
+      // Broadcast to monitor dashboard via Socket.IO
+      const io = require('./realtime').get();
+      if (io) io.to('__monitor__').emit('req', ev);
+      if (status >= 400) {
+        if (io) io.to('__monitor__').emit('err', ev);
+      }
+    }
+
     if (status >= 400) {
       const level = status >= 500 ? '❌ ERROR' : '⚠️  WARN';
       console.log(`${level} ${req.method} ${req.path} ${status} ${ms}ms`);
@@ -164,6 +197,10 @@ app.use('/api/admin/social',  require('./routes/adminSocial'));
 
 // ── Support Portal API ────────────────────────────────────────────────────
 app.use('/api/support', require('./routes/support'));
+
+// ── Real-time Monitor API + Dashboard ────────────────────────────────────────
+app.use('/api/monitor', require('./routes/monitor'));
+app.get('/monitor', (_, res) => res.sendFile(path.join(__dirname, 'public', 'monitor.html')));
 
 // ════════════════════════════════════════════════════════════════════════════
 //  SEO: SITEMAP INDEX + PRODUCT / STATIC SITEMAPS  (v3 — with image tags)
@@ -494,7 +531,12 @@ app.use((err, req, res, next) => {
   // ── Generic errors ────────────────────────────────────────────────────────
   const status = err.status || err.statusCode || 500;
   const message = status < 500 ? err.message : 'Internal server error';
-  if (status >= 500) console.error('❌ Server error:', err.stack || err.message);
+  if (status >= 500) {
+    console.error('❌ Server error:', err.stack || err.message);
+    mon.recordActivity({ type: 'server_error', label: '500 Server Error', detail: err.message, level: 'error', meta: { path: req?.path, method: req?.method } });
+    const io = require('./realtime').get();
+    if (io) io.of('/monitor').emit('activity', { type: 'server_error', label: '500 Error', detail: err.message, level: 'error', ts: new Date().toISOString() });
+  }
   if (!res.headersSent) res.status(status).json({ message });
 });
 
@@ -531,6 +573,40 @@ httpServer.listen(PORT, '0.0.0.0', () => console.log(`🚀 NOREN API running on 
   } catch (err) {
     console.warn('Failed to set realtime io instance:', err.message);
   }
+
+  // ── Monitor room — unauthenticated dashboard clients join __monitor__ ──────
+  // Monitor socket namespace — no JWT required (guard is in the HTML/route)
+  const monitorNs = io.of('/monitor');
+  monitorNs.on('connection', (socket) => {
+    socket.join('__monitor__');
+    // Send the full in-memory snapshot immediately on connect
+    socket.emit('snapshot', mon.getSnapshot());
+    // Heartbeat every 5s with fresh per-minute rate + uptime
+    const hb = setInterval(() => {
+      const snap = mon.getSnapshot();
+      socket.emit('heartbeat', {
+        ts:            new Date().toISOString(),
+        uptime:        snap.uptime,
+        totalRequests: snap.totalRequests,
+        statusCounts:  snap.statusCounts,
+        perMinute:     snap.perMinute,
+        errorRate:     snap.errorRate,
+        topRoutes:     snap.topRoutes.slice(0, 10),
+      });
+    }, 5000);
+    socket.on('disconnect', () => clearInterval(hb));
+  });
+
+  // Forward named activity events to monitor namespace
+  mon.bus.on('activity', (ev) => {
+    monitorNs.emit('activity', ev);
+  });
+  mon.bus.on('error_event', (ev) => {
+    monitorNs.emit('err', ev);
+  });
+  mon.bus.on('request', (ev) => {
+    monitorNs.emit('req', ev);
+  });
 
   // Authenticate socket connections via JWT
   io.use(async (socket, next) => {

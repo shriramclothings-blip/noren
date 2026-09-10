@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>NOREN — Live Server Monitor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@300;400;500&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#020509;--bg2:#060c14;--surface:#0a1220;--surface2:#0d1628;
+  --border:rgba(0,200,255,.1);--border2:rgba(0,200,255,.22);
+  --cyan:#00c8ff;--cyan2:#00eaff;--green:#00ff9d;--gold:#f5c518;
+  --red:#ff4757;--orange:#ff8c42;--purple:#9b5de5;
+  --text:#dde8f4;--dim:#607a99;--muted:#2a3d55;
+  --glow:0 0 24px rgba(0,200,255,.12);
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-size:13px;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,200,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(0,200,255,.025) 1px,transparent 1px);background-size:48px 48px;pointer-events:none;z-index:0;animation:gridMove 25s linear infinite}
+@keyframes gridMove{0%{background-position:0 0,0 0}100%{background-position:0 48px,48px 0}}
+.page{position:relative;z-index:1;min-height:100vh;padding:52px 0 40px}
+
+/* TOPBAR */
+.topbar{position:fixed;top:0;left:0;right:0;height:52px;background:rgba(2,5,9,.92);border-bottom:1px solid var(--border);backdrop-filter:blur(16px);display:flex;align-items:center;gap:16px;padding:0 20px;z-index:100}
+.topbar-brand{font-family:'Orbitron',sans-serif;font-size:14px;font-weight:700;letter-spacing:4px;color:var(--cyan)}
+.topbar-sep{width:1px;height:20px;background:var(--border2)}
+.topbar-label{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:3px;color:var(--dim);text-transform:uppercase}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:16px}
+.conn-badge{display:flex;align-items:center;gap:6px;font-family:'JetBrains Mono',monospace;font-size:11px;padding:4px 12px;border-radius:100px;border:1px solid var(--border);transition:.3s}
+.conn-badge.connected{color:var(--green);border-color:rgba(0,255,157,.3)}
+.conn-badge.disconnected{color:var(--red);border-color:rgba(255,71,87,.3)}
+.conn-dot{width:6px;height:6px;border-radius:50%;background:currentColor;animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.ts-label{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim)}
+
+/* LAYOUT */
+.container{max-width:1400px;margin:0 auto;padding:20px 16px}
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px}
+.grid-2{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:16px}
+.grid-2-1{display:grid;grid-template-columns:2fr 1fr;gap:12px;margin-bottom:16px}
+.grid-1-2{display:grid;grid-template-columns:1fr 2fr;gap:12px;margin-bottom:16px}
+@media(max-width:1100px){.grid-4{grid-template-columns:repeat(2,1fr)}.grid-3{grid-template-columns:repeat(2,1fr)}.grid-2-1,.grid-1-2{grid-template-columns:1fr}}
+@media(max-width:640px){.grid-4,.grid-3,.grid-2{grid-template-columns:1fr}.topbar-label{display:none}}
+
+/* CARDS */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px;position:relative;overflow:hidden;transition:border-color .3s}
+.card:hover{border-color:var(--border2)}
+.card::before{content:'';position:absolute;inset:0;border-radius:14px;background:linear-gradient(135deg,rgba(0,200,255,.03),transparent);pointer-events:none}
+.card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.card-title{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--dim)}
+.card-icon{font-size:16px}
+
+/* STAT CARDS */
+.stat-val{font-family:'Orbitron',sans-serif;font-size:28px;font-weight:700;color:var(--cyan);line-height:1;margin-bottom:4px;transition:.5s}
+.stat-val.green{color:var(--green)}
+.stat-val.gold{color:var(--gold)}
+.stat-val.red{color:var(--red)}
+.stat-val.purple{color:var(--purple)}
+.stat-sub{font-size:11px;color:var(--dim);margin-bottom:8px}
+.stat-delta{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--green)}
+.stat-delta.neg{color:var(--red)}
+
+/* MINI BAR CHART */
+.mini-chart{display:flex;align-items:flex-end;gap:2px;height:32px;margin-top:8px}
+.mini-bar{flex:1;background:rgba(0,200,255,.15);border-radius:2px 2px 0 0;transition:height .4s ease,background .3s;min-height:2px}
+.mini-bar.active{background:var(--cyan)}
+
+/* STATUS BAND */
+.status-band{display:flex;gap:8px;margin-bottom:16px}
+.band-item{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:8px;font-size:12px;transition:.3s}
+.band-item:hover{border-color:var(--border2)}
+.band-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.band-dot.ok{background:var(--green);box-shadow:0 0 8px var(--green)}
+.band-dot.warn{background:var(--orange);box-shadow:0 0 8px var(--orange)}
+.band-dot.error{background:var(--red);box-shadow:0 0 8px var(--red);animation:pulse 1.5s infinite}
+.band-dot.checking{background:var(--dim)}
+.band-name{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:1px;color:var(--text);flex:1}
+.band-latency{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim)}
+
+/* LOG STREAM */
+.log-stream{height:280px;overflow-y:auto;font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.6}
+.log-stream::-webkit-scrollbar{width:4px}
+.log-stream::-webkit-scrollbar-track{background:transparent}
+.log-stream::-webkit-scrollbar-thumb{background:var(--muted);border-radius:2px}
+.log-entry{display:flex;gap:8px;padding:3px 0;border-bottom:1px solid rgba(255,255,255,.03);animation:fadeIn .3s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:none}}
+.log-ts{color:var(--muted);white-space:nowrap;font-size:10px;min-width:68px}
+.log-method{min-width:50px;text-align:center;border-radius:3px;padding:0 4px;font-size:9px;font-weight:700;letter-spacing:.5px}
+.log-method.GET{color:var(--green);background:rgba(0,255,157,.08)}
+.log-method.POST{color:var(--cyan);background:rgba(0,200,255,.08)}
+.log-method.PUT{color:var(--gold);background:rgba(245,197,24,.08)}
+.log-method.PATCH{color:var(--purple);background:rgba(155,93,229,.08)}
+.log-method.DELETE{color:var(--red);background:rgba(255,71,87,.08)}
+.log-path{color:var(--dim);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.log-path span{color:var(--cyan)}
+.log-status{min-width:34px;text-align:right;font-weight:600}
+.log-status.s2{color:var(--green)}
+.log-status.s3{color:var(--gold)}
+.log-status.s4{color:var(--orange)}
+.log-status.s5{color:var(--red)}
+.log-ms{min-width:44px;text-align:right;color:var(--muted);font-size:10px}
+
+/* ACTIVITY STREAM */
+.activity-stream{height:260px;overflow-y:auto}
+.activity-stream::-webkit-scrollbar{width:4px}
+.activity-stream::-webkit-scrollbar-thumb{background:var(--muted);border-radius:2px}
+.act-entry{display:flex;gap:10px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.04);animation:fadeIn .3s ease}
+.act-icon{font-size:14px;width:20px;text-align:center;flex-shrink:0;margin-top:1px}
+.act-body{flex:1;min-width:0}
+.act-label{font-size:12px;font-weight:500;color:var(--text)}
+.act-label.success{color:var(--green)}
+.act-label.error{color:var(--red)}
+.act-label.warn{color:var(--orange)}
+.act-detail{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.act-ts{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);white-space:nowrap;margin-top:2px}
+
+/* ERROR LOG */
+.err-log{height:240px;overflow-y:auto}
+.err-log::-webkit-scrollbar{width:4px}
+.err-log::-webkit-scrollbar-thumb{background:var(--muted);border-radius:2px}
+.err-entry{background:rgba(255,71,87,.05);border:1px solid rgba(255,71,87,.12);border-radius:8px;padding:8px 12px;margin-bottom:6px;animation:fadeIn .3s ease}
+.err-entry .e-top{display:flex;gap:8px;align-items:center;margin-bottom:4px}
+.err-entry .e-status{font-family:'Orbitron',monospace;font-size:11px;font-weight:700;color:var(--red)}
+.err-entry .e-method{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--orange)}
+.err-entry .e-path{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.err-entry .e-ts{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted)}
+.err-entry .e-ms{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted)}
+
+/* TOP ROUTES TABLE */
+.routes-table{width:100%;border-collapse:collapse}
+.routes-table th{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);padding:6px 8px;text-align:left;border-bottom:1px solid var(--border)}
+.routes-table td{padding:7px 8px;border-bottom:1px solid rgba(255,255,255,.03);font-family:'JetBrains Mono',monospace;font-size:11px}
+.routes-table tr:hover td{background:rgba(0,200,255,.03)}
+.rt-route{color:var(--dim)}
+.rt-route span{color:var(--cyan)}
+.rt-bar-wrap{display:flex;align-items:center;gap:8px}
+.rt-bar{height:4px;background:rgba(0,200,255,.15);border-radius:2px;flex:1}
+.rt-bar-fill{height:100%;background:var(--cyan);border-radius:2px;transition:width .6s ease}
+.rt-hits{color:var(--text);min-width:30px;text-align:right}
+
+/* DB PANEL */
+.db-nodes{display:flex;gap:10px;margin-bottom:14px}
+.db-node{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 14px;text-align:center;transition:.3s}
+.db-node.active-node{border-color:rgba(0,255,157,.4);box-shadow:0 0 16px rgba(0,255,157,.08)}
+.db-node .dn-label{font-family:'Orbitron',sans-serif;font-size:11px;font-weight:700;color:var(--text);margin-bottom:4px}
+.db-node .dn-status{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1px;text-transform:uppercase}
+.db-node .dn-status.ok{color:var(--green)}
+.db-node .dn-status.standby{color:var(--dim)}
+.db-node .dn-status.error{color:var(--red)}
+.db-meta{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim);line-height:2}
+.db-meta span{color:var(--text)}
+
+/* ORDERS TABLE */
+.orders-table{width:100%;border-collapse:collapse}
+.orders-table th{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);padding:6px 8px;text-align:left;border-bottom:1px solid var(--border)}
+.orders-table td{padding:7px 8px;border-bottom:1px solid rgba(255,255,255,.03);font-size:12px}
+.orders-table tr:hover td{background:rgba(0,200,255,.03)}
+.badge{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1px;text-transform:uppercase;padding:2px 8px;border-radius:4px;font-weight:600}
+.badge.pending{background:rgba(245,197,24,.1);color:var(--gold)}
+.badge.confirmed,.badge.processing{background:rgba(0,200,255,.1);color:var(--cyan)}
+.badge.shipped{background:rgba(155,93,229,.1);color:var(--purple)}
+.badge.delivered{background:rgba(0,255,157,.1);color:var(--green)}
+.badge.cancelled{background:rgba(255,71,87,.1);color:var(--red)}
+.badge.paid{background:rgba(0,255,157,.1);color:var(--green)}
+.badge.failed{background:rgba(255,71,87,.1);color:var(--red)}
+
+/* SECTION LABEL */
+.section-eyebrow{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--cyan);margin-bottom:10px}
+
+/* CHART CANVAS */
+.chart-wrap{position:relative;height:80px;margin-top:8px}
+canvas{width:100%!important}
+
+/* RATE RING */
+.rate-ring-wrap{display:flex;align-items:center;gap:16px}
+.rate-ring{position:relative;width:70px;height:70px;flex-shrink:0}
+.rate-ring svg{transform:rotate(-90deg)}
+.rate-ring .ring-val{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'Orbitron',sans-serif;font-size:12px;font-weight:700}
+.rate-stats{flex:1}
+.rate-row{display:flex;justify-content:space-between;margin-bottom:6px;font-family:'JetBrains Mono',monospace;font-size:11px}
+.rate-label{color:var(--dim)}
+.rate-val{color:var(--text)}
+
+/* UPTIME DISPLAY */
+.uptime-big{font-family:'Orbitron',sans-serif;font-size:22px;font-weight:700;color:var(--green);letter-spacing:2px;margin:8px 0 4px}
+
+/* EMPTY STATE */
+.empty{text-align:center;padding:32px 0;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)}
+
+/* REFRESH BTN */
+.btn-refresh{background:rgba(0,200,255,.08);border:1px solid var(--border2);border-radius:8px;padding:5px 14px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--cyan);cursor:pointer;transition:.2s;letter-spacing:1px}
+.btn-refresh:hover{background:rgba(0,200,255,.15)}
+
+/* SERVICES GRID */
+.svc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px}
+.svc-card{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;display:flex;align-items:center;gap:8px;transition:.3s}
+.svc-card:hover{border-color:var(--border2)}
+.svc-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.svc-dot.ok{background:var(--green);box-shadow:0 0 8px var(--green)}
+.svc-dot.configured{background:var(--cyan);box-shadow:0 0 6px var(--cyan)}
+.svc-dot.unconfigured{background:var(--muted)}
+.svc-dot.error{background:var(--red);animation:pulse 1.5s infinite}
+.svc-name{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);flex:1}
+.svc-status{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1px;text-transform:uppercase}
+.svc-status.ok{color:var(--green)}
+.svc-status.configured{color:var(--cyan)}
+.svc-status.unconfigured{color:var(--muted)}
+.svc-status.error{color:var(--red)}
+
+/* PAUSED OVERLAY */
+.paused-banner{display:none;position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:rgba(245,197,24,.12);border:1px solid rgba(245,197,24,.3);border-radius:100px;padding:8px 24px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--gold);z-index:200}
+.paused-banner.show{display:block}
+</style>
+</head>
+<body>
+<nav class="topbar">
+  <span class="topbar-brand">NOREN</span>
+  <span class="topbar-sep"></span>
+  <span class="topbar-label">Live Server Monitor</span>
+  <div class="topbar-right">
+    <span class="ts-label" id="clock">--:--:--</span>
+    <span class="ts-label" id="ist-label">IST</span>
+    <div class="conn-badge disconnected" id="conn-badge">
+      <span class="conn-dot"></span>
+      <span id="conn-text">CONNECTING</span>
+    </div>
+    <button class="btn-refresh" onclick="hardRefresh()">↻ REFRESH</button>
+  </div>
+</nav>
+
+<div class="paused-banner" id="paused-banner">⏸ STREAM PAUSED — click anywhere to resume</div>
+
+<div class="page">
+<div class="container">
+
+  <!-- SERVICE STATUS BAND -->
+  <div class="status-band" id="service-band">
+    <div class="band-item"><span class="band-dot checking" id="bd-db"></span><span class="band-name">DATABASE</span><span class="band-latency" id="bd-db-lat">—</span></div>
+    <div class="band-item"><span class="band-dot checking" id="bd-cloud"></span><span class="band-name">CLOUDINARY</span><span class="band-latency" id="bd-cloud-lat">—</span></div>
+    <div class="band-item"><span class="band-dot checking" id="bd-email"></span><span class="band-name">EMAIL (RESEND)</span><span class="band-latency" id="bd-email-lat">—</span></div>
+    <div class="band-item"><span class="band-dot checking" id="bd-push"></span><span class="band-name">PUSH (VAPID)</span><span class="band-latency" id="bd-push-lat">—</span></div>
+    <div class="band-item"><span class="band-dot checking" id="bd-ship"></span><span class="band-name">DELHIVERY</span><span class="band-latency" id="bd-ship-lat">—</span></div>
+    <div class="band-item"><span class="band-dot checking" id="bd-pay"></span><span class="band-name">PAYTM</span><span class="band-latency" id="bd-pay-lat">—</span></div>
+  </div>
+
+  <!-- TOP STAT CARDS -->
+  <div class="grid-4">
+    <div class="card">
+      <div class="card-header"><span class="card-title">UPTIME</span><span class="card-icon">⏱</span></div>
+      <div class="uptime-big" id="stat-uptime">—</div>
+      <div class="stat-sub">Since last deploy</div>
+      <div class="mini-chart" id="mini-req-chart"></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><span class="card-title">REQUESTS / MIN</span><span class="card-icon">⚡</span></div>
+      <div class="stat-val" id="stat-rpm">—</div>
+      <div class="stat-sub">Current minute</div>
+      <div class="stat-delta" id="stat-rpm-delta"></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><span class="card-title">ERROR RATE</span><span class="card-icon">🎯</span></div>
+      <div class="stat-val red" id="stat-errrate">—</div>
+      <div class="stat-sub">4xx + 5xx / total</div>
+      <div class="stat-delta" id="stat-errtotal"></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><span class="card-title">TOTAL REQUESTS</span><span class="card-icon">📡</span></div>
+      <div class="stat-val" id="stat-total-req">—</div>
+      <div class="stat-sub">This session</div>
+      <div class="stat-delta" id="stat-req-breakdown"></div>
+    </div>
+  </div>
+
+  <!-- DB STATS ROW -->
+  <div class="grid-4">
+    <div class="card">
+      <div class="card-header"><span class="card-title">ORDERS TODAY</span><span class="card-icon">🛒</span></div>
+      <div class="stat-val gold" id="stat-orders-today">—</div>
+      <div class="stat-sub">Revenue: <span id="stat-revenue-today">—</span></div>
+      <div class="stat-delta" id="stat-orders-pending"></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><span class="card-title">TOTAL USERS</span><span class="card-icon">👥</span></div>
+      <div class="stat-val purple" id="stat-users">—</div>
+      <div class="stat-sub">+<span id="stat-users-today">—</span> today</div>
+    </div>
+    <div class="card">
+      <div class="card-header"><span class="card-title">PRODUCTS</span><span class="card-icon">📦</span></div>
+      <div class="stat-val green" id="stat-products">—</div>
+      <div class="stat-sub"><span id="stat-prod-pending">—</span> pending review</div>
+    </div>
+    <div class="card">
+      <div class="card-header"><span class="card-title">SELLERS ACTIVE</span><span class="card-icon">🏪</span></div>
+      <div class="stat-val" id="stat-sellers">—</div>
+      <div class="stat-sub">Open queries: <span id="stat-queries">—</span></div>
+    </div>
+  </div>
+
+  <!-- LIVE REQUEST LOG + ACTIVITY STREAM -->
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">// LIVE REQUEST LOG</span>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim)" id="req-count">0 requests</span>
+          <button class="btn-refresh" onclick="togglePause()" id="pause-btn">⏸ PAUSE</button>
+        </div>
+      </div>
+      <div class="log-stream" id="live-log">
+        <div class="empty">Waiting for requests…</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><span class="card-title">// ACTIVITY STREAM</span><span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim)" id="act-count">0 events</span></div>
+      <div class="activity-stream" id="activity-log">
+        <div class="empty">Waiting for events…</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ERROR LOG + TOP ROUTES -->
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-header"><span class="card-title">// ERROR LOG</span><span class="conn-badge" id="err-badge" style="font-size:10px;padding:2px 8px">0 errors</span></div>
+      <div class="err-log" id="error-log">
+        <div class="empty">No errors detected 🟢</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><span class="card-title">// TOP ROUTES</span><span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim)">by hits</span></div>
+      <div style="overflow-y:auto;max-height:240px">
+        <table class="routes-table">
+          <thead><tr><th>Route</th><th>Hits</th><th style="min-width:100px">Traffic</th></tr></thead>
+          <tbody id="routes-tbody"><tr><td colspan="3" class="empty">—</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- STATUS CODE BREAKDOWN + METHOD BREAKDOWN -->
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-header"><span class="card-title">// STATUS CODES</span></div>
+      <div class="rate-ring-wrap">
+        <div class="rate-ring">
+          <svg width="70" height="70" viewBox="0 0 70 70">
+            <circle cx="35" cy="35" r="28" fill="none" stroke="rgba(255,255,255,.06)" stroke-width="6"/>
+            <circle cx="35" cy="35" r="28" fill="none" stroke="var(--red)" stroke-width="6" stroke-dasharray="176" id="err-ring-circle" stroke-dashoffset="176" stroke-linecap="round" style="transition:.6s"/>
+          </svg>
+          <div class="ring-val red" id="err-ring-val">0%</div>
+        </div>
+        <div class="rate-stats">
+          <div class="rate-row"><span class="rate-label">2xx OK</span><span class="rate-val green" id="sc-2xx">0</span></div>
+          <div class="rate-row"><span class="rate-label">3xx Redirect</span><span class="rate-val gold" id="sc-3xx">0</span></div>
+          <div class="rate-row"><span class="rate-label">4xx Client Error</span><span class="rate-val" style="color:var(--orange)" id="sc-4xx">0</span></div>
+          <div class="rate-row"><span class="rate-label">5xx Server Error</span><span class="rate-val red" id="sc-5xx">0</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><span class="card-title">// HTTP METHODS</span></div>
+      <div id="method-bars" style="padding-top:4px"></div>
+    </div>
+  </div>
+
+  <!-- DB STATUS -->
+  <div class="section-eyebrow">// DATABASE STATUS</div>
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-header"><span class="card-title">FAILOVER NODES</span><button class="btn-refresh" onclick="loadDB()">↻ CHECK</button></div>
+    <div class="db-nodes" id="db-nodes">
+      <div class="db-node"><div class="dn-label">DB1</div><div class="dn-status checking">CHECKING…</div></div>
+      <div class="db-node"><div class="dn-label">DB2</div><div class="dn-status standby">STANDBY</div></div>
+      <div class="db-node"><div class="dn-label">DB3</div><div class="dn-status standby">STANDBY</div></div>
+    </div>
+    <div class="db-meta" id="db-meta">Loading database info…</div>
+  </div>
+
+  <!-- RECENT ORDERS TABLE -->
+  <div class="section-eyebrow">// RECENT ORDERS (LIVE DB)</div>
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-header"><span class="card-title">LAST 10 ORDERS</span><button class="btn-refresh" onclick="loadStats()">↻ REFRESH</button></div>
+    <div style="overflow-x:auto">
+      <table class="orders-table">
+        <thead><tr><th>Order ID</th><th>Customer</th><th>Amount</th><th>Status</th><th>Payment</th><th>Time</th></tr></thead>
+        <tbody id="orders-tbody"><tr><td colspan="6" class="empty">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- SERVICES HEALTH -->
+  <div class="section-eyebrow">// EXTERNAL SERVICES</div>
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-header"><span class="card-title">SERVICE HEALTH</span><button class="btn-refresh" onclick="loadServices()">↻ CHECK ALL</button></div>
+    <div class="svc-grid" id="svc-grid"><div class="empty">Checking services…</div></div>
+  </div>
+
+</div><!-- container -->
+</div><!-- page -->
+
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script>
+'use strict';
+/* ═══════════════════════════════════════════════════════════════════════
+   NOREN Monitor Dashboard — Real-time Client
+   Connects to /monitor Socket.IO namespace
+   Polls /api/monitor/stats every 15s for DB-level metrics
+═══════════════════════════════════════════════════════════════════════ */
+
+// ── State ───────────────────────────────────────────────────────────────────
+let reqCount   = 0;
+let actCount   = 0;
+let errCount   = 0;
+let paused     = false;
+let perMinData = new Array(60).fill(0);
+let socket     = null;
+
+const MAX_LOG_ROWS = 200;
+
+// ── Helpers ─────────────────────────────────────────────────────────────────
+const qs  = id => document.getElementById(id);
+const fmt = n  => n == null ? '—' : Number(n).toLocaleString('en-IN');
+const fmtINR = n => n == null ? '—' : '₹' + Number(n).toLocaleString('en-IN', { maximumFractionDigits: 0 });
+const fmtTime = iso => {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return d.toLocaleTimeString('en-IN', { hour12: false, timeZone: 'Asia/Kolkata' });
+};
+const fmtRelative = iso => {
+  if (!iso) return '—';
+  const diff = Date.now() - new Date(iso).getTime();
+  if (diff < 60000)  return Math.floor(diff/1000) + 's ago';
+  if (diff < 3600000) return Math.floor(diff/60000) + 'm ago';
+  return Math.floor(diff/3600000) + 'h ago';
+};
+const fmtUptime = s => {
+  const d = Math.floor(s/86400), h = Math.floor((s%86400)/3600),
+        m = Math.floor((s%3600)/60), sec = s%60;
+  if (d) return `${d}d ${h}h ${m}m`;
+  if (h) return `${h}h ${m}m ${sec}s`;
+  return `${m}m ${sec}s`;
+};
+
+const ACTIVITY_ICONS = {
+  order:'🛒', email:'📧', otp:'🔐', login:'🔑', signup:'👤',
+  crash:'💥', server_error:'❌', error:'⚠️', event:'📌',
+};
+const getActIcon = type => ACTIVITY_ICONS[type] || '📌';
+
+// ── Clock ────────────────────────────────────────────────────────────────────
+setInterval(() => {
+  qs('clock').textContent = new Date().toLocaleTimeString('en-IN', { hour12: false, timeZone: 'Asia/Kolkata' });
+}, 1000);
+
+// ── Connection badge ─────────────────────────────────────────────────────────
+function setConnected(ok) {
+  const b = qs('conn-badge'), t = qs('conn-text');
+  b.className = 'conn-badge ' + (ok ? 'connected' : 'disconnected');
+  t.textContent = ok ? 'LIVE' : 'OFFLINE';
+}
+
+// ── Pause / Resume ───────────────────────────────────────────────────────────
+function togglePause() {
+  paused = !paused;
+  qs('pause-btn').textContent = paused ? '▶ RESUME' : '⏸ PAUSE';
+  qs('paused-banner').classList.toggle('show', paused);
+}
+document.addEventListener('click', e => {
+  if (paused && !e.target.closest('#pause-btn')) { paused = false; qs('pause-btn').textContent = '⏸ PAUSE'; qs('paused-banner').classList.remove('show'); }
+});
+
+// ── Mini bar chart ───────────────────────────────────────────────────────────
+function renderMiniChart(data) {
+  const el = qs('mini-req-chart');
+  if (!el) return;
+  const max = Math.max(...data, 1);
+  const last20 = data.slice(-20);
+  el.innerHTML = last20.map((v, i) =>
+    `<div class="mini-bar ${i===last20.length-1?'active':''}" style="height:${Math.max(2, Math.round(v/max*32))}px"></div>`
+  ).join('');
+}
+
+// ── Method bars ──────────────────────────────────────────────────────────────
+function renderMethodBars(mc) {
+  const el = qs('method-bars');
+  if (!el || !mc) return;
+  const methods = ['GET','POST','PUT','PATCH','DELETE'];
+  const colors  = { GET:'var(--green)', POST:'var(--cyan)', PUT:'var(--gold)', PATCH:'var(--purple)', DELETE:'var(--red)' };
+  const total   = Object.values(mc).reduce((a,b) => a+b, 0) || 1;
+  el.innerHTML = methods.map(m => {
+    const v = mc[m] || 0;
+    const pct = ((v/total)*100).toFixed(1);
+    return `<div style="margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;font-family:'JetBrains Mono',monospace;font-size:10px;margin-bottom:3px">
+        <span style="color:${colors[m]}">${m}</span><span style="color:var(--dim)">${fmt(v)} (${pct}%)</span>
+      </div>
+      <div style="height:4px;background:rgba(255,255,255,.06);border-radius:2px">
+        <div style="height:100%;width:${pct}%;background:${colors[m]};border-radius:2px;transition:width .6s ease"></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Status ring ──────────────────────────────────────────────────────────────
+function updateRing(errRate) {
+  const circle  = qs('err-ring-circle');
+  const valEl   = qs('err-ring-val');
+  const rate    = parseFloat(errRate) || 0;
+  const dashLen = 176;
+  const offset  = dashLen - (rate / 100) * dashLen;
+  if (circle) { circle.style.strokeDashoffset = offset; circle.style.stroke = rate > 10 ? 'var(--red)' : rate > 3 ? 'var(--orange)' : 'var(--green)'; }
+  if (valEl)  { valEl.textContent = rate.toFixed(1) + '%'; valEl.style.color = rate > 10 ? 'var(--red)' : rate > 3 ? 'var(--orange)' : 'var(--green)'; }
+}
+
+// ── Top routes table ─────────────────────────────────────────────────────────
+function renderRoutes(routes) {
+  const tbody = qs('routes-tbody');
+  if (!tbody || !routes?.length) return;
+  const max = routes[0]?.hits || 1;
+  tbody.innerHTML = routes.slice(0, 12).map(r => {
+    const parts = r.route.split(' ');
+    const method = parts[0], path = parts[1] || '';
+    const pct = ((r.hits / max) * 100).toFixed(0);
+    const colors = { GET:'var(--green)', POST:'var(--cyan)', PUT:'var(--gold)', PATCH:'var(--purple)', DELETE:'var(--red)' };
+    return `<tr>
+      <td><span style="color:${colors[method]||'var(--cyan)'};font-family:'JetBrains Mono',monospace;font-size:10px">${method}</span> <span class="rt-route">${path.replace(/\/api\//,'/<span style="color:var(--cyan)">api</span>/').replace(/\/([^/]+)$/,'/<span style="color:var(--text)">$1</span>')}</span></td>
+      <td class="rt-hits">${fmt(r.hits)}</td>
+      <td><div class="rt-bar-wrap"><div class="rt-bar"><div class="rt-bar-fill" style="width:${pct}%"></div></div></div></td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Heartbeat → update all in-memory stats ───────────────────────────────────
+function applyHeartbeat(data) {
+  if (!data) return;
+  if (data.uptime != null)        qs('stat-uptime').textContent = fmtUptime(data.uptime);
+  if (data.totalRequests != null) { qs('stat-total-req').textContent = fmt(data.totalRequests); qs('req-count').textContent = fmt(data.totalRequests) + ' requests'; }
+  if (data.errorRate != null)     { qs('stat-errrate').textContent = data.errorRate + '%'; updateRing(data.errorRate); }
+  if (data.statusCounts) {
+    const sc = data.statusCounts;
+    qs('sc-2xx').textContent = fmt(sc['2xx']);
+    qs('sc-3xx').textContent = fmt(sc['3xx']);
+    qs('sc-4xx').textContent = fmt(sc['4xx']);
+    qs('sc-5xx').textContent = fmt(sc['5xx']);
+    qs('stat-req-breakdown').textContent = `${fmt(sc['2xx'])} ok · ${fmt(sc['4xx']||0+sc['5xx']||0)} errors`;
+  }
+  if (data.perMinute) {
+    perMinData = data.perMinute;
+    const last = perMinData[perMinData.length-1] || 0;
+    const prev = perMinData[perMinData.length-2] || 0;
+    qs('stat-rpm').textContent = fmt(last);
+    const delta = last - prev;
+    const d = qs('stat-rpm-delta');
+    d.textContent = delta === 0 ? '→ same as last minute' : (delta > 0 ? `↑ +${delta} vs prev` : `↓ ${delta} vs prev`);
+    d.className = 'stat-delta' + (delta >= 0 ? '' : ' neg');
+    renderMiniChart(perMinData);
+  }
+  if (data.topRoutes) renderRoutes(data.topRoutes);
+  if (data.methodCounts) renderMethodBars(data.methodCounts);
+}
+
+// ── Snapshot (initial load) ───────────────────────────────────────────────────
+function applySnapshot(snap) {
+  applyHeartbeat(snap);
+  qs('stat-errtotal').textContent = `${fmt((snap.statusCounts?.['4xx']||0) + (snap.statusCounts?.['5xx']||0))} total errors`;
+
+  // Replay existing events
+  if (snap.recentEvents?.length) {
+    qs('live-log').innerHTML = '';
+    snap.recentEvents.slice(0, 60).forEach(ev => appendLog(ev));
+  }
+  if (snap.recentErrors?.length) {
+    qs('error-log').innerHTML = '';
+    snap.recentErrors.slice(0, 30).forEach(ev => appendError(ev));
+    errCount = snap.recentErrors.length;
+    updateErrBadge();
+  }
+  if (snap.recentActivity?.length) {
+    qs('activity-log').innerHTML = '';
+    snap.recentActivity.slice(0, 40).forEach(ev => appendActivity(ev));
+  }
+}
+
+// ── Append request log row ────────────────────────────────────────────────────
+function appendLog(ev) {
+  if (paused) return;
+  const log = qs('live-log');
+  if (!log) return;
+  const empty = log.querySelector('.empty');
+  if (empty) empty.remove();
+
+  const status = ev.status || 0;
+  const sc = status >= 500 ? 's5' : status >= 400 ? 's4' : status >= 300 ? 's3' : 's2';
+  const method = (ev.method || 'GET').toUpperCase();
+  const pathParts = (ev.path || '/').split('/');
+  const pathHtml = pathParts.map((p,i) => i===0?p : (i===2?`<span>${p}</span>`:p)).join('/');
+
+  const row = document.createElement('div');
+  row.className = 'log-entry';
+  row.innerHTML = `
+    <span class="log-ts">${fmtTime(ev.ts)}</span>
+    <span class="log-method ${method}">${method}</span>
+    <span class="log-path">${pathHtml}</span>
+    <span class="log-status ${sc}">${status}</span>
+    <span class="log-ms">${ev.ms != null ? ev.ms+'ms' : '—'}</span>`;
+  log.insertBefore(row, log.firstChild);
+  reqCount++;
+  qs('req-count').textContent = fmt(reqCount) + ' requests';
+
+  // Trim
+  while (log.children.length > MAX_LOG_ROWS) log.removeChild(log.lastChild);
+}
+
+// ── Append activity event ─────────────────────────────────────────────────────
+function appendActivity(ev) {
+  const log = qs('activity-log');
+  if (!log) return;
+  const empty = log.querySelector('.empty');
+  if (empty) empty.remove();
+
+  const row = document.createElement('div');
+  row.className = 'act-entry';
+  const levelClass = ev.level === 'success' ? 'success' : ev.level === 'error' ? 'error' : ev.level === 'warn' ? 'warn' : '';
+  row.innerHTML = `
+    <span class="act-icon">${getActIcon(ev.type)}</span>
+    <div class="act-body">
+      <div class="act-label ${levelClass}">${ev.label || ev.type}</div>
+      ${ev.detail ? `<div class="act-detail">${ev.detail}</div>` : ''}
+      <div class="act-ts">${fmtTime(ev.ts)}</div>
+    </div>`;
+  log.insertBefore(row, log.firstChild);
+  actCount++;
+  qs('act-count').textContent = fmt(actCount) + ' events';
+  while (log.children.length > 100) log.removeChild(log.lastChild);
+}
+
+// ── Append error entry ────────────────────────────────────────────────────────
+function appendError(ev) {
+  const log = qs('error-log');
+  if (!log) return;
+  const empty = log.querySelector('.empty');
+  if (empty) empty.remove();
+
+  const row = document.createElement('div');
+  row.className = 'err-entry';
+  row.innerHTML = `
+    <div class="e-top">
+      <span class="e-status">${ev.status}</span>
+      <span class="e-method">${ev.method}</span>
+      <span class="e-path">${ev.path}</span>
+      <span class="e-ms">${ev.ms != null ? ev.ms+'ms' : ''}</span>
+    </div>
+    <span class="e-ts">${fmtTime(ev.ts)} · IP: ${ev.ip || '—'}</span>`;
+  log.insertBefore(row, log.firstChild);
+  errCount++;
+  updateErrBadge();
+  while (log.children.length > 60) log.removeChild(log.lastChild);
+}
+
+function updateErrBadge() {
+  const b = qs('err-badge');
+  if (!b) return;
+  b.textContent = errCount + ' errors';
+  b.style.color = errCount > 0 ? 'var(--red)' : 'var(--dim)';
+  b.style.borderColor = errCount > 0 ? 'rgba(255,71,87,.3)' : 'var(--border)';
+}
+
+// ── Socket.IO connection ──────────────────────────────────────────────────────
+function connectSocket() {
+  socket = io('/monitor', { transports: ['websocket','polling'], reconnectionDelay: 2000, reconnectionDelayMax: 10000 });
+
+  socket.on('connect',    () => setConnected(true));
+  socket.on('disconnect', () => setConnected(false));
+  socket.on('connect_error', () => setConnected(false));
+
+  socket.on('snapshot',  applySnapshot);
+  socket.on('heartbeat', applyHeartbeat);
+  socket.on('req',       appendLog);
+  socket.on('err',       appendError);
+  socket.on('activity',  appendActivity);
+}
+
+// ── Load DB stats ────────────────────────────────────────────────────────────
+async function loadDB() {
+  try {
+    const r = await fetch('/api/monitor/db');
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const d = await r.json();
+
+    const nodesEl = qs('db-nodes');
+    if (nodesEl && d.nodes) {
+      nodesEl.innerHTML = d.nodes.map(n =>
+        `<div class="db-node ${n.active ? 'active-node' : ''}">
+          <div class="dn-label">DB${n.node}${n.active ? ' ✓' : ''}</div>
+          <div class="dn-status ${n.status}">${n.status.toUpperCase()}${n.latencyMs != null ? '<br><small>' + n.latencyMs + 'ms</small>' : ''}</div>
+        </div>`
+      ).join('');
+    }
+
+    const meta = qs('db-meta');
+    if (meta) {
+      meta.innerHTML = `
+        Active Node: <span>DB${d.activeNode}</span> &nbsp;|&nbsp;
+        Query Latency: <span>${d.latencyMs != null ? d.latencyMs+'ms' : '—'}</span> &nbsp;|&nbsp;
+        Server Time: <span>${d.serverTime ? new Date(d.serverTime).toLocaleString('en-IN',{timeZone:'Asia/Kolkata'}) : '—'}</span> &nbsp;|&nbsp;
+        PG Version: <span>${d.pgVersion || '—'}</span>`;
+    }
+
+    // Update service band DB indicator
+    if (d.latencyMs != null) {
+      const dot = qs('bd-db');
+      const lat = qs('bd-db-lat');
+      if (dot) { dot.className = 'band-dot ok'; }
+      if (lat) lat.textContent = d.latencyMs + 'ms';
+    }
+  } catch (e) {
+    const dot = qs('bd-db');
+    if (dot) dot.className = 'band-dot error';
+    const meta = qs('db-meta');
+    if (meta) meta.innerHTML = `<span style="color:var(--red)">DB check failed: ${e.message}</span>`;
+  }
+}
+
+// ── Load services health ──────────────────────────────────────────────────────
+async function loadServices() {
+  try {
+    const r = await fetch('/api/monitor/services');
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const d = await r.json();
+
+    // Update service band
+    const svcMap = {
+      'Cloudinary CDN':    ['bd-cloud','bd-cloud-lat'],
+      'Resend Email':      ['bd-email','bd-email-lat'],
+      'Web Push (VAPID)':  ['bd-push','bd-push-lat'],
+      'Delhivery Shipping':['bd-ship','bd-ship-lat'],
+      'Paytm Payments':    ['bd-pay','bd-pay-lat'],
+    };
+    d.services?.forEach(svc => {
+      const ids = svcMap[svc.name];
+      if (ids) {
+        const dot = qs(ids[0]), lat = qs(ids[1]);
+        const cls = svc.status === 'ok' ? 'ok' : svc.status === 'configured' ? 'ok' : svc.status === 'error' ? 'error' : 'warn';
+        if (dot) dot.className = 'band-dot ' + cls;
+        if (lat) lat.textContent = svc.latencyMs != null ? svc.latencyMs+'ms' : svc.status;
+      }
+    });
+
+    // Render service grid
+    const grid = qs('svc-grid');
+    if (grid && d.services?.length) {
+      grid.innerHTML = d.services.map(s =>
+        `<div class="svc-card">
+          <span class="svc-dot ${s.status}"></span>
+          <span class="svc-name">${s.name}</span>
+          <span class="svc-status ${s.status}">${s.status.toUpperCase()}${s.latencyMs != null ? ' '+s.latencyMs+'ms' : ''}</span>
+        </div>`
+      ).join('');
+    }
+  } catch (e) {
+    console.warn('loadServices error:', e.message);
+  }
+}
+
+// ── Load main stats (DB queries) ─────────────────────────────────────────────
+async function loadStats() {
+  try {
+    const r = await fetch('/api/monitor/stats');
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const d = await r.json();
+
+    // DB stat cards
+    if (d.orders) {
+      qs('stat-orders-today').textContent  = fmt(d.orders.today);
+      qs('stat-revenue-today').textContent = fmtINR(d.orders.todayRevenue);
+      qs('stat-orders-pending').textContent = fmt(d.orders.pending) + ' pending orders';
+    }
+    if (d.users) {
+      qs('stat-users').textContent       = fmt(d.users.total);
+      qs('stat-users-today').textContent = fmt(d.users.newToday);
+    }
+    if (d.products) {
+      qs('stat-products').textContent    = fmt(d.products.active);
+      qs('stat-prod-pending').textContent = fmt(d.products.pending);
+    }
+    if (d.sellers) {
+      qs('stat-sellers').textContent = fmt(d.sellers.active);
+    }
+    if (d.queries) {
+      qs('stat-queries').textContent = fmt(d.queries.pending);
+    }
+
+    // Server uptime from DB stats response
+    if (d.server) applyHeartbeat(d.server);
+
+    // Orders table
+    if (d.orders?.recent?.length) {
+      const tbody = qs('orders-tbody');
+      tbody.innerHTML = d.orders.recent.map(o =>
+        `<tr>
+          <td style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--cyan)">${o.order_id}</td>
+          <td>${o.full_name}</td>
+          <td style="font-family:'JetBrains Mono',monospace">${fmtINR(o.total)}</td>
+          <td><span class="badge ${o.status}">${o.status}</span></td>
+          <td><span class="badge ${o.payment_status}">${o.payment_status}</span></td>
+          <td style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim)">${fmtRelative(o.created_at)}</td>
+        </tr>`
+      ).join('');
+    } else {
+      qs('orders-tbody').innerHTML = '<tr><td colspan="6" class="empty">No orders yet</td></tr>';
+    }
+
+    // DB node indicator in band
+    const dbStatus = d.db?.status === 'connected' ? 'ok' : 'error';
+    const dbDot = qs('bd-db');
+    if (dbDot) dbDot.className = 'band-dot ' + dbStatus;
+
+  } catch (e) {
+    console.warn('loadStats error:', e.message);
+  }
+}
+
+// ── Hard refresh everything ───────────────────────────────────────────────────
+function hardRefresh() {
+  loadStats();
+  loadDB();
+  loadServices();
+}
+
+// ── Boot ─────────────────────────────────────────────────────────────────────
+connectSocket();
+hardRefresh();
+
+// Poll every 15s for fresh DB counts
+setInterval(loadStats, 15000);
+// Poll services every 60s
+setInterval(loadServices, 60000);
+// Poll DB every 30s
+setInterval(loadDB, 30000);
+</script>
+</body>
+</html>
