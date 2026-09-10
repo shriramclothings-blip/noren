@@ -8,6 +8,7 @@ const segmentCtrl = require('../controllers/emailSegmentsController');
 const contactCtrl = require('../controllers/emailContactsController');
 const suppressionCtrl = require('../controllers/emailSuppressionController');
 const automationCtrl = require('../controllers/emailAutomationController');
+const broadcastCtrl = require('../controllers/scheduledBroadcastController');
 const analyticsCtrl = require('../controllers/emailAnalyticsController');
 const settingsCtrl = require('../controllers/emailSettingsController');
 
@@ -102,6 +103,18 @@ router.post('/automations/:id/toggle', ...adminAccess, automationCtrl.toggleAuto
 router.post('/automations/:id/test', ...marketingAccess, automationCtrl.testAutomation);
 router.get('/automations/:id/logs', ...marketingAccess, automationCtrl.getAutomationLogs);
 router.get('/automations/:id/stats', ...marketingAccess, automationCtrl.getAutomationStats);
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SCHEDULED BROADCASTS (Recurring Email Automation)
+// ═══════════════════════════════════════════════════════════════════════════
+router.get('/broadcasts', ...marketingAccess, broadcastCtrl.getScheduledBroadcasts);
+router.get('/broadcasts/:id', ...marketingAccess, broadcastCtrl.getBroadcastById);
+router.post('/broadcasts', ...marketingAccess, broadcastCtrl.createBroadcast);
+router.put('/broadcasts/:id', ...marketingAccess, broadcastCtrl.updateBroadcast);
+router.delete('/broadcasts/:id', ...adminAccess, broadcastCtrl.deleteBroadcast);
+router.patch('/broadcasts/:id/toggle', ...adminAccess, broadcastCtrl.toggleBroadcast);
+router.get('/broadcasts/:id/stats', ...marketingAccess, broadcastCtrl.getBroadcastStats);
+router.post('/broadcasts/:id/send-now', ...marketingAccess, broadcastCtrl.sendBroadcastNow);
 
 // ═══════════════════════════════════════════════════════════════════════════
 // ANALYTICS & REPORTING

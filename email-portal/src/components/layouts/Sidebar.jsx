@@ -2,7 +2,7 @@ import { NavLink } from 'react-router-dom'
 import { 
   MdDashboard, MdEdit, MdInbox, MdSend, MdDrafts, 
   MdDescription, MdCampaign, MdContacts, MdPeople,
-  MdAnalytics, MdAutorenew, MdSettings, MdEmail
+  MdAnalytics, MdAutorenew, MdSettings, MdEmail, MdSchedule
 } from 'react-icons/md'
 import useAuthStore from '@/store/authStore'
 import useEmailStore from '@/store/emailStore'
@@ -96,6 +96,12 @@ const Sidebar = () => {
       name: 'Automation',
       href: '/automation',
       icon: MdAutorenew,
+      show: hasMarketingAccess
+    },
+    {
+      name: 'Scheduled Broadcasts',
+      href: '/broadcasts',
+      icon: MdSchedule,
       show: hasMarketingAccess
     },
     {

@@ -458,6 +458,81 @@ class EmailService {
   }
 
   // ===============================
+  // SCHEDULED BROADCASTS
+  // ===============================
+  async getScheduledBroadcasts(params = {}) {
+    try {
+      const response = await emailApi.get('/broadcasts', { params })
+      return response.data
+    } catch (error) {
+      throw error
+    }
+  }
+
+  async getBroadcastById(id) {
+    try {
+      const response = await emailApi.get(`/broadcasts/${id}`)
+      return response.data
+    } catch (error) {
+      throw error
+    }
+  }
+
+  async createBroadcast(broadcastData) {
+    try {
+      const response = await emailApi.post('/broadcasts', broadcastData)
+      return response.data
+    } catch (error) {
+      throw error
+    }
+  }
+
+  async updateBroadcast(id, broadcastData) {
+    try {
+      const response = await emailApi.put(`/broadcasts/${id}`, broadcastData)
+      return response.data
+    } catch (error) {
+      throw error
+    }
+  }
+
+  async deleteBroadcast(id) {
+    try {
+      const response = await emailApi.delete(`/broadcasts/${id}`)
+      return response.data
+    } catch (error) {
+      throw error
+    }
+  }
+
+  async toggleBroadcast(id, isActive) {
+    try {
+      const response = await emailApi.patch(`/broadcasts/${id}/toggle`, { is_active: isActive })
+      return response.data
+    } catch (error) {
+      throw error
+    }
+  }
+
+  async getBroadcastStats(id) {
+    try {
+      const response = await emailApi.get(`/broadcasts/${id}/stats`)
+      return response.data
+    } catch (error) {
+      throw error
+    }
+  }
+
+  async sendBroadcastNow(id) {
+    try {
+      const response = await emailApi.post(`/broadcasts/${id}/send-now`)
+      return response.data
+    } catch (error) {
+      throw error
+    }
+  }
+
+  // ===============================
   // ANALYTICS
   // ===============================
   async getAnalyticsOverview(params = {}) {

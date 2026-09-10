@@ -25,6 +25,7 @@ import Contacts from './pages/Contacts'
 import Segments from './pages/Segments'
 import Analytics from './pages/Analytics'
 import Automation from './pages/Automation'
+import ScheduledBroadcasts from './pages/ScheduledBroadcasts'
 import Settings from './pages/Settings'
 
 // Protected Route Component
@@ -172,6 +173,14 @@ function App() {
             <ProtectedRoute>
               <DashboardLayout>
                 <Automation />
+              </DashboardLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/broadcasts" element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <ScheduledBroadcasts />
               </DashboardLayout>
             </ProtectedRoute>
           } />
