@@ -28,14 +28,16 @@ const mon     = require('../monitor');
 // ── Simple secret guard (set MONITOR_SECRET in .env, or leave open for internal use) ──
 const MONITOR_SECRET = process.env.MONITOR_SECRET || null;
 
-function guard(req, res, next) {
+// Guard for write operations (switch, copy, shutdown)
+function guardWrite(req, res, next) {
   if (!MONITOR_SECRET) return next();
-  const token = req.headers['x-monitor-key'] || req.query.key;
+  const token = req.headers['x-monitor-key'] || req.query.key || req.body?.secret;
   if (token === MONITOR_SECRET) return next();
   return res.status(401).json({ error: 'Unauthorized — x-monitor-key required' });
 }
 
-router.use(guard);
+// Read-only endpoints are open, write operations are protected
+// (This allows the dashboard to load, but requires auth for critical operations)
 
 // ────────────────────────────────────────────────────────────────────────────
 //  Helper: safe DB query — returns null on failure instead of throwing
@@ -363,7 +365,7 @@ router.get('/services', async (req, res) => {
 //  Force the active DB node to a specific index (1-based from the client).
 //  Body: { node: 1|2|3, confirm: true }
 // ════════════════════════════════════════════════════════════════════════════
-router.post('/db/switch', async (req, res) => {
+router.post('/db/switch', guardWrite, async (req, res) => {
   const { node, confirm } = req.body || {};
   if (!confirm) return res.status(400).json({ ok: false, error: 'Must send confirm:true to execute a DB switch.' });
 
@@ -400,7 +402,7 @@ router.post('/db/switch', async (req, res) => {
 //  POST /api/monitor/db/ping-all
 //  Simultaneously pings every configured DB node and returns latency.
 // ════════════════════════════════════════════════════════════════════════════
-router.post('/db/ping-all', async (req, res) => {
+router.post('/db/ping-all', guardWrite, async (req, res) => {
   const results = await pingAllNodes();
   res.json({ ts: new Date().toISOString(), nodes: results });
 });
@@ -437,7 +439,7 @@ router.get('/db/tables', async (req, res) => {
 //  Uses Server-Sent Events so the client sees real-time progress.
 //  Body: { from: 1|2|3, to: 1|2|3, confirm: true }
 // ════════════════════════════════════════════════════════════════════════════
-router.post('/db/copy', async (req, res) => {
+router.post('/db/copy', guardWrite, async (req, res) => {
   const { from, to, confirm } = req.body || {};
 
   if (!confirm) {
@@ -579,7 +581,7 @@ router.get('/system/health', (req, res) => {
 //  Requires MONITOR_SECRET in body AND in the guard header.
 //  Double-confirmation: { confirm: true, reason: '...' }
 // ════════════════════════════════════════════════════════════════════════════
-router.post('/system/shutdown', (req, res) => {
+router.post('/system/shutdown', guardWrite, (req, res) => {
   const { confirm, reason, secret } = req.body || {};
 
   // Hard require MONITOR_SECRET for this endpoint — no matter what
