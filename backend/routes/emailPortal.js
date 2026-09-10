@@ -67,19 +67,16 @@ router.post('/segments', ...marketingAccess, segmentCtrl.createSegment);
 router.put('/segments/:id', ...marketingAccess, segmentCtrl.updateSegment);
 router.delete('/segments/:id', ...adminAccess, segmentCtrl.deleteSegment);
 router.post('/segments/:id/calculate', ...marketingAccess, segmentCtrl.calculateSegment);
-router.post('/segments/:id/refresh', ...marketingAccess, segmentCtrl.refreshSegment);
 router.get('/segments/:id/preview', ...marketingAccess, segmentCtrl.previewSegment);
 
 // ═══════════════════════════════════════════════════════════════════════════
 // CONTACTS (Unified Contact Management)
 // ═══════════════════════════════════════════════════════════════════════════
 router.get('/contacts', ...marketingAccess, contactCtrl.getContacts);
-router.get('/contacts/:email', ...marketingAccess, contactCtrl.getContactByEmail);
-router.get('/contacts/:email/history', ...marketingAccess, contactCtrl.getContactHistory);
+router.get('/contacts/:id', ...marketingAccess, contactCtrl.getContactById);
+router.get('/contacts/:id/history', ...marketingAccess, contactCtrl.getContactHistory);
 router.post('/contacts/import', ...adminAccess, contactCtrl.importContacts);
 router.get('/contacts/export', ...adminAccess, contactCtrl.exportContacts);
-router.get('/contacts/stats', ...marketingAccess, contactCtrl.getContactStats);
-router.post('/contacts/search', ...marketingAccess, contactCtrl.searchContacts);
 
 // ═══════════════════════════════════════════════════════════════════════════
 // SUPPRESSION LIST (Email Blocking)
@@ -101,8 +98,7 @@ router.get('/automations/:id', ...marketingAccess, automationCtrl.getAutomationB
 router.post('/automations', ...marketingAccess, automationCtrl.createAutomation);
 router.put('/automations/:id', ...marketingAccess, automationCtrl.updateAutomation);
 router.delete('/automations/:id', ...adminAccess, automationCtrl.deleteAutomation);
-router.post('/automations/:id/activate', ...adminAccess, automationCtrl.activateAutomation);
-router.post('/automations/:id/deactivate', ...adminAccess, automationCtrl.deactivateAutomation);
+router.post('/automations/:id/toggle', ...adminAccess, automationCtrl.toggleAutomation);
 router.post('/automations/:id/test', ...marketingAccess, automationCtrl.testAutomation);
 router.get('/automations/:id/logs', ...marketingAccess, automationCtrl.getAutomationLogs);
 router.get('/automations/:id/stats', ...marketingAccess, automationCtrl.getAutomationStats);
