@@ -31,7 +31,27 @@ const Compose = () => {
 
     setLoading(true)
     try {
-      await emailService.sendEmail(formData)
+      // Parse email addresses (comma or semicolon separated)
+      const parseEmails = (emailString) => {
+        if (!emailString || !emailString.trim()) return []
+        return emailString
+          .split(/[,;]/)
+          .map(e => e.trim())
+          .filter(e => e)
+          .map(email => ({ email, name: null, type: 'other' }))
+      }
+
+      // Format data for backend API
+      const emailData = {
+        recipients: parseEmails(formData.to),
+        subject: formData.subject,
+        body_html: formData.body,
+        body_plain: formData.body.replace(/<[^>]*>/g, ''), // Strip HTML for plain text
+        cc: formData.cc ? formData.cc.split(/[,;]/).map(e => e.trim()).filter(e => e) : [],
+        bcc: formData.bcc ? formData.bcc.split(/[,;]/).map(e => e.trim()).filter(e => e) : []
+      }
+
+      await emailService.sendEmail(emailData)
       toast.success('Email sent successfully!')
       navigate('/sent')
     } catch (error) {
@@ -43,10 +63,28 @@ const Compose = () => {
 
   const handleSaveDraft = async () => {
     try {
-      await emailService.saveDraft(formData)
+      const parseEmails = (emailString) => {
+        if (!emailString || !emailString.trim()) return []
+        return emailString
+          .split(/[,;]/)
+          .map(e => e.trim())
+          .filter(e => e)
+          .map(email => ({ email }))
+      }
+
+      const draftData = {
+        recipients: parseEmails(formData.to),
+        cc: parseEmails(formData.cc),
+        bcc: parseEmails(formData.bcc),
+        subject: formData.subject,
+        body_html: formData.body,
+        body_plain: formData.body.replace(/<[^>]*>/g, '')
+      }
+
+      await emailService.saveDraft(draftData)
       toast.success('Draft saved!')
     } catch (error) {
-      toast.error('Failed to save draft')
+      toast.error(error.message || 'Failed to save draft')
     }
   }
 
@@ -71,7 +109,7 @@ const Compose = () => {
             name="to"
             value={formData.to}
             onChange={handleChange}
-            placeholder="recipient@example.com"
+            placeholder="recipient@example.com (comma-separated for multiple)"
             required
             fullWidth
           />
@@ -82,7 +120,7 @@ const Compose = () => {
               name="cc"
               value={formData.cc}
               onChange={handleChange}
-              placeholder="cc@example.com"
+              placeholder="cc@example.com (optional)"
               fullWidth
             />
             <Input
@@ -90,7 +128,7 @@ const Compose = () => {
               name="bcc"
               value={formData.bcc}
               onChange={handleChange}
-              placeholder="bcc@example.com"
+              placeholder="bcc@example.com (optional)"
               fullWidth
             />
           </div>
