@@ -364,6 +364,99 @@ class EmailService {
     }
   }
 
+  async addContact(contactData) {
+    try {
+      const response = await emailApi.post('/contacts', contactData)
+      return response.data
+    } catch (error) {
+      throw error
+    }
+  }
+
+  async deleteContact(email) {
+    try {
+      const response = await emailApi.delete(`/contacts/${email}`)
+      return response.data
+    } catch (error) {
+      throw error
+    }
+  }
+
+  // ===============================
+  // AUTOMATION
+  // ===============================
+  async getAutomations(params = {}) {
+    try {
+      const response = await emailApi.get('/automations', { params })
+      return response.data
+    } catch (error) {
+      throw error
+    }
+  }
+
+  async getAutomationById(id) {
+    try {
+      const response = await emailApi.get(`/automations/${id}`)
+      return response.data
+    } catch (error) {
+      throw error
+    }
+  }
+
+  async createAutomation(automationData) {
+    try {
+      const response = await emailApi.post('/automations', automationData)
+      return response.data
+    } catch (error) {
+      throw error
+    }
+  }
+
+  async updateAutomation(id, automationData) {
+    try {
+      const response = await emailApi.put(`/automations/${id}`, automationData)
+      return response.data
+    } catch (error) {
+      throw error
+    }
+  }
+
+  async deleteAutomation(id) {
+    try {
+      const response = await emailApi.delete(`/automations/${id}`)
+      return response.data
+    } catch (error) {
+      throw error
+    }
+  }
+
+  async toggleAutomation(id, isActive) {
+    try {
+      const response = await emailApi.patch(`/automations/${id}/toggle`, { is_active: isActive })
+      return response.data
+    } catch (error) {
+      throw error
+    }
+  }
+
+  async getAutomationStats(id) {
+    try {
+      const response = await emailApi.get(`/automations/${id}/stats`)
+      return response.data
+    } catch (error) {
+      throw error
+    }
+  }
+
+  async testAutomation(id, testData) {
+    try {
+      const response = await emailApi.post(`/automations/${id}/test`, testData)
+      return response.data
+    } catch (error) {
+      throw error
+    }
+  }
+
   // ===============================
   // ANALYTICS
   // ===============================
