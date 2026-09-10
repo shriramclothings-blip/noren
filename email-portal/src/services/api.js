@@ -48,18 +48,51 @@ const addResponseInterceptor = (apiInstance) => {
       return response
     },
     (error) => {
-      if (error.response?.status === 401) {
-        // Unauthorized - clear auth and redirect to login
+      // Handle network errors
+      if (!error.response) {
+        const networkError = {
+          message: 'Network error. Please check your connection and try again.',
+          status: 0,
+          code: 'NETWORK_ERROR',
+          data: null
+        }
+        console.error('Network Error:', error)
+        return Promise.reject(networkError)
+      }
+
+      // Handle 401 Unauthorized
+      if (error.response.status === 401) {
+        console.warn('Unauthorized access - redirecting to login')
         localStorage.removeItem('noren-email-auth')
-        window.location.href = '/login'
+        
+        // Only redirect if not already on login page
+        if (!window.location.pathname.includes('/login')) {
+          window.location.href = '/login'
+        }
+      }
+
+      // Handle 403 Forbidden
+      if (error.response.status === 403) {
+        console.warn('Access forbidden:', error.response.data?.message)
+      }
+
+      // Handle 404 Not Found
+      if (error.response.status === 404) {
+        console.warn('Resource not found:', error.config?.url)
+      }
+
+      // Handle 500 Server errors
+      if (error.response.status >= 500) {
+        console.error('Server error:', error.response.data)
       }
       
       // Format error for consistent handling
       const formattedError = {
-        message: error.response?.data?.message || error.message || 'An error occurred',
+        message: error.response?.data?.message || error.message || 'An unexpected error occurred',
         status: error.response?.status,
-        code: error.response?.data?.code,
-        data: error.response?.data
+        code: error.response?.data?.code || `HTTP_${error.response?.status}`,
+        data: error.response?.data,
+        originalError: error
       }
       
       return Promise.reject(formattedError)

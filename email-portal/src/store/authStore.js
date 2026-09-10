@@ -1,8 +1,8 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
-// Mock mode when backend is not available
-const MOCK_MODE = true
+// Mock mode disabled for production
+const MOCK_MODE = false
 
 const useAuthStore = create(
   persist(

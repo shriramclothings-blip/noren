@@ -26,48 +26,6 @@ const Dashboard = () => {
     try {
       setLoading(true)
       
-      // Mock data for demonstration when backend is not available
-      setTimeout(() => {
-        setStats({
-          totalSent: 15420,
-          totalCampaigns: 28,
-          totalContacts: 8750,
-          avgOpenRate: 0.234
-        })
-        
-        setRecentCampaigns([
-          {
-            id: 1,
-            name: 'Summer Collection Launch',
-            status: 'sent',
-            recipient_count: 2500,
-            open_rate: 0.28,
-            created_at: new Date().toISOString()
-          },
-          {
-            id: 2,
-            name: 'New Arrival Notification',
-            status: 'scheduled',
-            recipient_count: 3200,
-            open_rate: 0.31,
-            created_at: new Date(Date.now() - 86400000).toISOString()
-          },
-          {
-            id: 3,
-            name: 'Weekly Newsletter #23',
-            status: 'sent',
-            recipient_count: 8750,
-            open_rate: 0.19,
-            created_at: new Date(Date.now() - 172800000).toISOString()
-          }
-        ])
-        
-        setLoading(false)
-        toast.success('Dashboard loaded (Demo Mode)')
-      }, 1500)
-
-      // Uncomment when backend is ready:
-      /*
       // Load analytics overview
       const analyticsData = await emailService.getAnalyticsOverview({ days: 30 })
       if (analyticsData) {
@@ -84,7 +42,8 @@ const Dashboard = () => {
       if (campaignsData?.campaigns) {
         setRecentCampaigns(campaignsData.campaigns)
       }
-      */
+      
+      setLoading(false)
     } catch (error) {
       console.error('Error loading dashboard:', error)
       toast.error('Failed to load dashboard data')
