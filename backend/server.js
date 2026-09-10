@@ -37,6 +37,7 @@ const allowedOrigins = [
   'http://localhost:5174', // seller portal dev
   'http://localhost:5175', // noren messaging dev
   'http://localhost:5176', // support portal dev
+  'http://localhost:5177', // email portal dev
   'http://localhost:3000',
 ].map(normalizeOrigin);
 
@@ -197,6 +198,9 @@ app.use('/api/admin/social',  require('./routes/adminSocial'));
 
 // ── Support Portal API ────────────────────────────────────────────────────
 app.use('/api/support', require('./routes/support'));
+
+// ── Email Portal API ──────────────────────────────────────────────────────────
+app.use('/api/email', require('./routes/emailPortal'));
 
 // ── Real-time Monitor API + Dashboard ────────────────────────────────────────
 app.use('/api/monitor', require('./routes/monitor'));

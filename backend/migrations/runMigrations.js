@@ -27,6 +27,7 @@ const MIGRATIONS = [
   '004_create_calls_notifications_tables.sql',
   '005_create_privacy_audit_mention_tables.sql',
   '006_enhance_existing_social_tables.sql',
+  '007_create_email_portal_tables.sql',
 ];
 
 async function runMigrations() {

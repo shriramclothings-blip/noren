@@ -113,8 +113,17 @@ router.delete('/email-templates/:id', ...guard, s.deleteEmailTemplate);
 // ── Audit Logs ─────────────────────────────────────────────────────────────
 router.get('/audit-logs',             ...guard, s.getAuditLogs);
 
-// ── Automation (placeholder — rules stored in src_settings) ───────────────
-router.get('/automation',             ...guard, (req, res) => res.json({ rules: [] }));
-router.post('/automation',            ...guard, (req, res) => res.json({ message: 'Not implemented yet' }));
+// ── Activity feed ──────────────────────────────────────────────────────────
+router.get('/activity',               ...guard, s.getAuditLogs); // alias
+
+// ── Settings ───────────────────────────────────────────────────────────────
+router.get('/settings',               ...guard, s.getPortalSettings);
+router.patch('/settings',             ...guard, s.updatePortalSettings);
+
+// ── Automation rules ──────────────────────────────────────────────────────
+router.get('/automation',             ...guard, s.getAutomationRules);
+router.post('/automation',            ...guard, s.createAutomationRule);
+router.patch('/automation/:id',       ...guard, s.updateAutomationRule);
+router.delete('/automation/:id',      ...guard, s.deleteAutomationRule);
 
 module.exports = router;

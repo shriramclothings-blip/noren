@@ -1141,3 +1141,109 @@ module.exports = {
   // Categories
   getCategories,
 };
+
+// ── PORTAL SETTINGS ───────────────────────────────────────────────────────
+// Store portal settings as key-value pairs in src_settings (existing table)
+// with keys prefixed "support_portal."
+const getPortalSettings = async (req, res) => {
+  const { group } = req.query;
+  const prefix = group ? `support_portal.${group}.` : 'support_portal.';
+  try {
+    const r = await pool.query(
+      `SELECT key, value FROM src_settings WHERE key LIKE $1`,
+      [`${prefix}%`]
+    );
+    const settings = {};
+    for (const row of r.rows) {
+      const shortKey = row.key.replace(prefix, '');
+      try { settings[shortKey] = JSON.parse(row.value); } catch { settings[shortKey] = row.value; }
+    }
+    res.json({ settings });
+  } catch (err) { res.status(500).json({ message: err.message }); }
+};
+
+const updatePortalSettings = async (req, res) => {
+  const { group, data } = req.body;
+  if (!data || typeof data !== 'object') return res.status(400).json({ message: 'data object required' });
+  const prefix = group ? `support_portal.${group}.` : 'support_portal.';
+  try {
+    for (const [key, value] of Object.entries(data)) {
+      const fullKey = `${prefix}${key}`;
+      const strVal = typeof value === 'string' ? value : JSON.stringify(value);
+      await pool.query(
+        `INSERT INTO src_settings (key, value, updated_at) VALUES ($1,$2,NOW())
+         ON CONFLICT (key) DO UPDATE SET value=$2, updated_at=NOW()`,
+        [fullKey, strVal]
+      );
+    }
+    await logAudit(pool, { adminId: req.user.id, action: 'settings.updated', targetType: 'settings', details: `Group: ${group}, keys: ${Object.keys(data).join(', ')}` });
+    res.json({ message: 'Settings saved' });
+  } catch (err) { res.status(500).json({ message: err.message }); }
+};
+
+// ── AUTOMATION RULES ──────────────────────────────────────────────────────
+// Store as JSON in src_settings key "support_portal.automation_rules"
+async function getAutomationDB() {
+  try {
+    const r = await pool.query(`SELECT value FROM src_settings WHERE key='support_portal.automation_rules'`);
+    if (!r.rows.length) return [];
+    return JSON.parse(r.rows[0].value || '[]');
+  } catch { return []; }
+}
+
+async function saveAutomationDB(rules) {
+  await pool.query(
+    `INSERT INTO src_settings (key, value, updated_at) VALUES ('support_portal.automation_rules', $1, NOW())
+     ON CONFLICT (key) DO UPDATE SET value=$1, updated_at=NOW()`,
+    [JSON.stringify(rules)]
+  );
+}
+
+const getAutomationRules = async (req, res) => {
+  try {
+    const rules = await getAutomationDB();
+    res.json({ rules });
+  } catch (err) { res.status(500).json({ message: err.message }); }
+};
+
+const createAutomationRule = async (req, res) => {
+  try {
+    const rules = await getAutomationDB();
+    const newRule = { id: Date.now(), ...req.body, created_at: new Date().toISOString() };
+    rules.push(newRule);
+    await saveAutomationDB(rules);
+    await logAudit(pool, { adminId: req.user.id, action: 'automation.created', details: newRule.name });
+    res.status(201).json({ rule: newRule });
+  } catch (err) { res.status(500).json({ message: err.message }); }
+};
+
+const updateAutomationRule = async (req, res) => {
+  try {
+    const rules = await getAutomationDB();
+    const idx = rules.findIndex(r => String(r.id) === String(req.params.id));
+    if (idx === -1) return res.status(404).json({ message: 'Rule not found' });
+    rules[idx] = { ...rules[idx], ...req.body, updated_at: new Date().toISOString() };
+    await saveAutomationDB(rules);
+    res.json({ rule: rules[idx] });
+  } catch (err) { res.status(500).json({ message: err.message }); }
+};
+
+const deleteAutomationRule = async (req, res) => {
+  try {
+    const rules = await getAutomationDB();
+    const filtered = rules.filter(r => String(r.id) !== String(req.params.id));
+    await saveAutomationDB(filtered);
+    await logAudit(pool, { adminId: req.user.id, action: 'automation.deleted', details: `Rule ${req.params.id}` });
+    res.json({ message: 'Deleted' });
+  } catch (err) { res.status(500).json({ message: err.message }); }
+};
+
+// ── EXPORT new functions ──────────────────────────────────────────────────
+Object.assign(module.exports, {
+  getPortalSettings,
+  updatePortalSettings,
+  getAutomationRules,
+  createAutomationRule,
+  updateAutomationRule,
+  deleteAutomationRule,
+});

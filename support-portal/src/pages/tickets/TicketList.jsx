@@ -49,7 +49,7 @@ export default function TicketList({ filter }) {
     setLoading(false);
   }, [filter, search, filters]);
 
-  useEffect(() => { load(1, search, filters); }, []);
+  useEffect(() => { load(1, search, filters); }, [filter]); // re-run when filter prop changes
 
   const debouncedSearch = useCallback(
     debounce((q) => load(1, q, filters), 400),
