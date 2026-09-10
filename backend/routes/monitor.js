@@ -375,7 +375,10 @@ router.get('/services', async (req, res) => {
 //  Body: { node: 1|2|3, confirm: true }
 // ════════════════════════════════════════════════════════════════════════════
 router.post('/db/switch', guardWrite, async (req, res) => {
-  const { node, confirm } = req.body || {};
+  const { node, confirm, secret } = req.body || {};
+  
+  console.log('[Monitor] DB switch request:', { node, confirm, hasSecret: !!secret, bodyKeys: Object.keys(req.body || {}) });
+  
   if (!confirm) return res.status(400).json({ ok: false, error: 'Must send confirm:true to execute a DB switch.' });
 
   const targetIndex = parseInt(node, 10) - 1;   // client sends 1-based
