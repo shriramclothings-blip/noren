@@ -217,15 +217,42 @@ class BroadcastScheduler {
   }
 
   personalizeEmail(emailHtml, recipient, broadcast) {
-    return emailHtml
+    let content = emailHtml
       .replace(/{{recipient_name}}/g, recipient.name || 'Valued Customer')
-      .replace(/{{message_content}}/g, broadcast.description || broadcast.subject)
-      .replace(/{{contact_email}}/g, 'support@dineshglobal.com')
-      .replace(/{{website_url}}/g, 'https://dineshglobal.com')
-      .replace(/{{social_facebook}}/g, '#')
-      .replace(/{{social_twitter}}/g, '#')
+      .replace(/{{company_name}}/g, broadcast.company_name || 'Dinesh Global Enterprises Pvt Ltd')
+      .replace(/{{subject}}/g, broadcast.subject)
+      .replace(/{{current_year}}/g, new Date().getFullYear())
+      .replace(/{{contact_email}}/g, 'info@dineshglobal.in')
+      .replace(/{{website_url}}/g, 'https://dineshglobal.in')
+      .replace(/{{social_facebook}}/g, 'https://facebook.com/dineshglobal')
+      .replace(/{{social_twitter}}/g, 'https://twitter.com/dineshglobal')
       .replace(/{{unsubscribe_url}}/g, '#')
       .replace(/{{preferences_url}}/g, '#');
+
+    // Replace custom content if provided
+    if (broadcast.custom_content) {
+      // Replace the default message content with custom content
+      const customMessage = broadcast.custom_content
+        .replace(/\n/g, '<br>')
+        .replace(/{{recipient_name}}/g, recipient.name || 'Valued Customer')
+        .replace(/{{company_name}}/g, broadcast.company_name || 'Dinesh Global Enterprises Pvt Ltd');
+      
+      // Find and replace the message content section
+      content = content.replace(
+        /We hope this message finds you well\. This is a quick note from the[\s\S]*?services and solutions\./,
+        customMessage
+      );
+    }
+
+    // Replace CTA if provided
+    if (broadcast.cta_text && broadcast.cta_url) {
+      content = content.replace(
+        /<a href="#" class="cta-button">Get in Touch →<\/a>/,
+        `<a href="${broadcast.cta_url}" class="cta-button">${broadcast.cta_text} →</a>`
+      );
+    }
+
+    return content;
   }
 
   async logBroadcastExecution(broadcastId, recipientsCount, sentCount, status, errorMessage = null) {

@@ -16,7 +16,12 @@ CREATE TABLE src_email_scheduled_broadcasts (
   description TEXT,
   subject VARCHAR(500) NOT NULL,
   template_id INTEGER REFERENCES src_email_templates(id) ON DELETE SET NULL,
-  company_name VARCHAR(255) DEFAULT 'Dinesh Global Pvt Ltd',
+  company_name VARCHAR(255) DEFAULT 'Dinesh Global Enterprises Pvt Ltd',
+  
+  -- Content customization
+  custom_content TEXT, -- Custom email content
+  cta_text VARCHAR(100), -- Call-to-action button text
+  cta_url VARCHAR(500), -- Call-to-action link
   
   -- Schedule configuration
   frequency VARCHAR(50) NOT NULL CHECK (frequency IN ('daily', 'weekly', 'custom', 'one_time')),

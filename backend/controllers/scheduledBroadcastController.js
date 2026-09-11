@@ -92,6 +92,9 @@ const createBroadcast = async (req, res) => {
       subject,
       template_id,
       company_name,
+      custom_content,
+      cta_text,
+      cta_url,
       frequency,
       custom_days,
       send_time,
@@ -112,12 +115,14 @@ const createBroadcast = async (req, res) => {
     const result = await pool.query(`
       INSERT INTO src_email_scheduled_broadcasts (
         name, description, subject, template_id, company_name,
+        custom_content, cta_text, cta_url,
         frequency, custom_days, send_time, audience_type,
         custom_recipient_list, is_active, next_run_at, created_by
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
       RETURNING *
     `, [
-      name, description, subject, template_id, company_name || 'Dinesh Global Pvt Ltd',
+      name, description, subject, template_id, company_name || 'Dinesh Global Enterprises Pvt Ltd',
+      custom_content, cta_text, cta_url,
       frequency, custom_days ? JSON.stringify(custom_days) : null, send_time,
       audience_type, custom_recipient_list, is_active !== false, nextRunAt,
       req.user.id
@@ -141,6 +146,7 @@ const updateBroadcast = async (req, res) => {
   try {
     const {
       name, description, subject, template_id, company_name,
+      custom_content, cta_text, cta_url,
       frequency, custom_days, send_time, audience_type,
       custom_recipient_list, is_active
     } = req.body;
@@ -151,13 +157,15 @@ const updateBroadcast = async (req, res) => {
     const result = await pool.query(`
       UPDATE src_email_scheduled_broadcasts
       SET name = $1, description = $2, subject = $3, template_id = $4,
-          company_name = $5, frequency = $6, custom_days = $7, send_time = $8,
-          audience_type = $9, custom_recipient_list = $10, is_active = $11,
-          next_run_at = $12, updated_at = NOW()
-      WHERE id = $13
+          company_name = $5, custom_content = $6, cta_text = $7, cta_url = $8,
+          frequency = $9, custom_days = $10, send_time = $11,
+          audience_type = $12, custom_recipient_list = $13, is_active = $14,
+          next_run_at = $15, updated_at = NOW()
+      WHERE id = $16
       RETURNING *
     `, [
-      name, description, subject, template_id, company_name || 'Dinesh Global Pvt Ltd',
+      name, description, subject, template_id, company_name || 'Dinesh Global Enterprises Pvt Ltd',
+      custom_content, cta_text, cta_url,
       frequency, custom_days ? JSON.stringify(custom_days) : null, send_time,
       audience_type, custom_recipient_list, is_active !== false, nextRunAt,
       req.params.id

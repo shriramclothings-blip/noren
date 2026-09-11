@@ -14,7 +14,10 @@ const CreateBroadcastModal = ({ isOpen, onClose, onSuccess, editingBroadcast }) 
     description: '',
     subject: '',
     template_id: '',
-    company_name: 'Dinesh Global Pvt Ltd',
+    company_name: 'Dinesh Global Enterprises Pvt Ltd',
+    custom_content: '',
+    cta_text: '',
+    cta_url: '',
     frequency: 'daily',
     custom_days: [],
     send_time: '09:00',
@@ -42,7 +45,10 @@ const CreateBroadcastModal = ({ isOpen, onClose, onSuccess, editingBroadcast }) 
           description: editingBroadcast.description || '',
           subject: editingBroadcast.subject || '',
           template_id: editingBroadcast.template_id || '',
-          company_name: editingBroadcast.company_name || 'Dinesh Global Pvt Ltd',
+          company_name: editingBroadcast.company_name || 'Dinesh Global Enterprises Pvt Ltd',
+          custom_content: editingBroadcast.custom_content || '',
+          cta_text: editingBroadcast.cta_text || '',
+          cta_url: editingBroadcast.cta_url || '',
           frequency: editingBroadcast.frequency || 'daily',
           custom_days: editingBroadcast.custom_days || [],
           send_time: time24,
@@ -60,7 +66,10 @@ const CreateBroadcastModal = ({ isOpen, onClose, onSuccess, editingBroadcast }) 
           description: '',
           subject: '',
           template_id: '',
-          company_name: 'Dinesh Global Pvt Ltd',
+          company_name: 'Dinesh Global Enterprises Pvt Ltd',
+          custom_content: '',
+          cta_text: '',
+          cta_url: '',
           frequency: 'daily',
           custom_days: [],
           send_time: '09:00',
@@ -227,7 +236,7 @@ const CreateBroadcastModal = ({ isOpen, onClose, onSuccess, editingBroadcast }) 
             name="company_name"
             value={formData.company_name}
             onChange={handleChange}
-            placeholder="Dinesh Global Pvt Ltd"
+            placeholder="Dinesh Global Enterprises Pvt Ltd"
           />
           <p className="text-xs text-gray-500 -mt-2">
             This will be displayed in the email template
@@ -242,6 +251,42 @@ const CreateBroadcastModal = ({ isOpen, onClose, onSuccess, editingBroadcast }) 
             placeholder="Daily Update from Dinesh Global"
             required
           />
+
+          {/* Custom Content */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Email Content (optional)
+            </label>
+            <textarea
+              name="custom_content"
+              value={formData.custom_content}
+              onChange={handleChange}
+              rows={4}
+              className="input"
+              placeholder="Add your custom message content here. This will replace the default content in the email template."
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Leave empty to use the default Dinesh Global template content
+            </p>
+          </div>
+
+          {/* Call to Action */}
+          <div className="grid grid-cols-2 gap-3">
+            <Input
+              label="Call-to-Action Text (optional)"
+              name="cta_text"
+              value={formData.cta_text}
+              onChange={handleChange}
+              placeholder="Get in Touch"
+            />
+            <Input
+              label="CTA Link (optional)"
+              name="cta_url"
+              value={formData.cta_url}
+              onChange={handleChange}
+              placeholder="https://dineshglobal.in/contact"
+            />
+          </div>
 
           {/* Template Selection */}
           <div>
@@ -346,9 +391,17 @@ const CreateBroadcastModal = ({ isOpen, onClose, onSuccess, editingBroadcast }) 
                 required
               >
                 <option value="00">00</option>
+                <option value="05">05</option>
+                <option value="10">10</option>
                 <option value="15">15</option>
+                <option value="20">20</option>
+                <option value="25">25</option>
                 <option value="30">30</option>
+                <option value="35">35</option>
+                <option value="40">40</option>
                 <option value="45">45</option>
+                <option value="50">50</option>
+                <option value="55">55</option>
               </select>
               
               {/* AM/PM */}
@@ -364,7 +417,7 @@ const CreateBroadcastModal = ({ isOpen, onClose, onSuccess, editingBroadcast }) 
               </select>
             </div>
             <p className="text-xs text-gray-500 mt-1">
-              Emails will be sent at this time (e.g., 09:00 AM)
+              Emails will be sent at this exact time (e.g., 09:25 AM)
             </p>
           </div>
 
