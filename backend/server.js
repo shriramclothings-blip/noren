@@ -559,7 +559,19 @@ initDB()
 // Verify email config on startup so misconfigurations are visible in logs
 const { testMailConfig } = require('./services/mailService');
 testMailConfig().catch(() => {});
-httpServer.listen(PORT, '0.0.0.0', () => console.log(`🚀 NOREN API running on port ${PORT}`));
+
+// Import the broadcast scheduler
+const broadcastScheduler = require('./services/broadcastScheduler');
+
+httpServer.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 NOREN API running on port ${PORT}`);
+  console.log(`📧 Email Portal: ${process.env.NODE_ENV === 'production' ? 'https://noren-iqk3.onrender.com' : `http://localhost:${PORT}`}`);
+  
+  // Start broadcast scheduler after server is ready
+  setTimeout(() => {
+    broadcastScheduler.start();
+  }, 3000); // Wait 3 seconds for server to fully start
+});
 
   // ── Socket.IO real-time chat ──────────────────────────────────────────────
   const io = new Server(httpServer, {

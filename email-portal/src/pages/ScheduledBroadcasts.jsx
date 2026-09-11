@@ -5,7 +5,7 @@ import EmptyState from '@/components/common/EmptyState'
 import Button from '@/components/common/Button'
 import Badge from '@/components/common/Badge'
 import CreateBroadcastModal from '@/components/broadcasts/CreateBroadcastModal'
-import { MdSchedule, MdAdd, MdDelete, MdPlayArrow, MdPause, MdEdit } from 'react-icons/md'
+import { MdSchedule, MdAdd, MdDelete, MdPlayArrow, MdPause, MdEdit, MdSend } from 'react-icons/md'
 import emailService from '@/services/emailService'
 import { formatDateTime } from '@/utils/formatting'
 import toast from 'react-hot-toast'
@@ -46,6 +46,17 @@ const ScheduledBroadcasts = () => {
     }
   }
 
+  const handleSendNow = async (broadcast) => {
+    if (!confirm(`Send broadcast "${broadcast.name}" immediately to all recipients?`)) return
+    
+    try {
+      await emailService.sendBroadcastNow(broadcast.id)
+      toast.success(`Broadcast "${broadcast.name}" sent successfully!`)
+      loadBroadcasts()
+    } catch (error) {
+      toast.error('Failed to send broadcast')
+    }
+  }
   const handleDelete = async (id, name) => {
     if (!confirm(`Delete broadcast "${name}"?`)) return
     
@@ -192,6 +203,13 @@ const ScheduledBroadcasts = () => {
                     </td>
                     <td className="table-cell text-right">
                       <div className="flex items-center justify-end space-x-2">
+                        <button
+                          onClick={() => handleSendNow(broadcast)}
+                          className="text-blue-400 hover:text-blue-600"
+                          title="Send Now"
+                        >
+                          <MdSend size={18} />
+                        </button>
                         <button
                           onClick={() => handleEdit(broadcast)}
                           className="text-blue-400 hover:text-blue-600"
