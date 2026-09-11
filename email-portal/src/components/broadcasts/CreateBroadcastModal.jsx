@@ -18,6 +18,9 @@ const CreateBroadcastModal = ({ isOpen, onClose, onSuccess, editingBroadcast }) 
     frequency: 'daily',
     custom_days: [],
     send_time: '09:00',
+    send_hour: '09',
+    send_minute: '00',
+    send_period: 'AM',
     audience_type: 'all_contacts',
     custom_recipient_list: '',
     is_active: true
@@ -27,6 +30,13 @@ const CreateBroadcastModal = ({ isOpen, onClose, onSuccess, editingBroadcast }) 
     if (isOpen) {
       loadTemplates()
       if (editingBroadcast) {
+        // Parse 24-hour time to 12-hour
+        const time24 = editingBroadcast.send_time || '09:00';
+        const [hours24, minutes] = time24.split(':');
+        const hour24 = parseInt(hours24);
+        const period = hour24 >= 12 ? 'PM' : 'AM';
+        const hour12 = hour24 === 0 ? 12 : hour24 > 12 ? hour24 - 12 : hour24;
+
         setFormData({
           name: editingBroadcast.name || '',
           description: editingBroadcast.description || '',
@@ -35,7 +45,10 @@ const CreateBroadcastModal = ({ isOpen, onClose, onSuccess, editingBroadcast }) 
           company_name: editingBroadcast.company_name || 'Dinesh Global Pvt Ltd',
           frequency: editingBroadcast.frequency || 'daily',
           custom_days: editingBroadcast.custom_days || [],
-          send_time: editingBroadcast.send_time || '09:00',
+          send_time: time24,
+          send_hour: hour12.toString().padStart(2, '0'),
+          send_minute: minutes || '00',
+          send_period: period,
           audience_type: editingBroadcast.audience_type || 'all_contacts',
           custom_recipient_list: editingBroadcast.custom_recipient_list || '',
           is_active: editingBroadcast.is_active !== undefined ? editingBroadcast.is_active : true
@@ -51,6 +64,9 @@ const CreateBroadcastModal = ({ isOpen, onClose, onSuccess, editingBroadcast }) 
           frequency: 'daily',
           custom_days: [],
           send_time: '09:00',
+          send_hour: '09',
+          send_minute: '00',
+          send_period: 'AM',
           audience_type: 'all_contacts',
           custom_recipient_list: '',
           is_active: true
@@ -70,10 +86,31 @@ const CreateBroadcastModal = ({ isOpen, onClose, onSuccess, editingBroadcast }) 
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value
-    }))
+    setFormData(prev => {
+      const updated = {
+        ...prev,
+        [name]: type === 'checkbox' ? checked : value
+      };
+
+      // Update send_time when hour, minute, or period changes
+      if (name === 'send_hour' || name === 'send_minute' || name === 'send_period') {
+        const hour = name === 'send_hour' ? value : prev.send_hour;
+        const minute = name === 'send_minute' ? value : prev.send_minute;
+        const period = name === 'send_period' ? value : prev.send_period;
+        
+        // Convert to 24-hour format
+        let hour24 = parseInt(hour);
+        if (period === 'PM' && hour24 !== 12) {
+          hour24 += 12;
+        } else if (period === 'AM' && hour24 === 12) {
+          hour24 = 0;
+        }
+        
+        updated.send_time = `${hour24.toString().padStart(2, '0')}:${minute}`;
+      }
+
+      return updated;
+    });
   }
 
   const handleDayToggle = (day) => {
@@ -275,16 +312,59 @@ const CreateBroadcastModal = ({ isOpen, onClose, onSuccess, editingBroadcast }) 
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Send Time
             </label>
-            <input
-              type="time"
-              name="send_time"
-              value={formData.send_time}
-              onChange={handleChange}
-              className="input"
-              required
-            />
+            <div className="flex space-x-2">
+              {/* Hour */}
+              <select
+                name="send_hour"
+                value={formData.send_hour}
+                onChange={handleChange}
+                className="input flex-1"
+                required
+              >
+                <option value="01">01</option>
+                <option value="02">02</option>
+                <option value="03">03</option>
+                <option value="04">04</option>
+                <option value="05">05</option>
+                <option value="06">06</option>
+                <option value="07">07</option>
+                <option value="08">08</option>
+                <option value="09">09</option>
+                <option value="10">10</option>
+                <option value="11">11</option>
+                <option value="12">12</option>
+              </select>
+              
+              <span className="text-2xl text-gray-500 self-center">:</span>
+              
+              {/* Minute */}
+              <select
+                name="send_minute"
+                value={formData.send_minute}
+                onChange={handleChange}
+                className="input flex-1"
+                required
+              >
+                <option value="00">00</option>
+                <option value="15">15</option>
+                <option value="30">30</option>
+                <option value="45">45</option>
+              </select>
+              
+              {/* AM/PM */}
+              <select
+                name="send_period"
+                value={formData.send_period}
+                onChange={handleChange}
+                className="input flex-1"
+                required
+              >
+                <option value="AM">AM</option>
+                <option value="PM">PM</option>
+              </select>
+            </div>
             <p className="text-xs text-gray-500 mt-1">
-              Emails will be sent at this time (server timezone)
+              Emails will be sent at this time (e.g., 09:00 AM)
             </p>
           </div>
 
