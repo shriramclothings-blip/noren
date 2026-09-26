@@ -201,6 +201,9 @@ const chat = async (req, res) => {
   try {
     const userMessage = message.trim();
     
+    // Get general store info FIRST (needed for error messages)
+    const storeInfo = await getStoreInfo();
+    
     // Detect intent from message - Enhanced detection
     const isOrderQuery = /order|track|status|delivery|shipped|delivered|order\s*id|#src/i.test(userMessage);
     const isProductQuery = /product|price|available|stock|buy|purchase|show|find|search|looking for|want|need|dress|shirt|top|saree|kurti|jeans|clothes|clothing|fashion|wear|ethnic|western|men|women|kids|photo|image|picture/i.test(userMessage);
@@ -262,9 +265,6 @@ const chat = async (req, res) => {
           ).join('\n');
       }
     }
-    
-    // Get general store info
-    const storeInfo = await getStoreInfo();
     
     // Build conversation history (last 6 messages)
     const conversationContext = conversation_history.slice(-6).map(m =>
