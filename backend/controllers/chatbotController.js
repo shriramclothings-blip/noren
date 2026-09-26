@@ -269,7 +269,7 @@ async function getStoreInfo() {
 
 // Main chatbot endpoint
 const chat = async (req, res) => {
-  const { message, conversation_history = [] } = req.body;
+  const { message, conversation_history = [], user_context = {} } = req.body;
   
   if (!message || typeof message !== 'string') {
     return res.status(400).json({ message: 'Message is required' });
@@ -353,12 +353,18 @@ const chat = async (req, res) => {
     // Build AI prompt - CONTEXT-AWARE MODE
     const systemPrompt = `You are NOREN's AI Customer Support Assistant.
 
+USER CONTEXT:
+- Customer Name: ${user_context.user_name || 'Valued Customer'}
+- Customer Email: ${user_context.email || 'Not provided'}
+- User ID: ${user_context.user_id || 'Guest'}
+
 CRITICAL RULES:
 1. ONLY use real database information provided below
 2. If customer asks about PRODUCTS → Show product cards with photos
 3. If customer asks about POLICIES/HELP (shipping, returns, payment, etc.) → Answer directly WITHOUT showing products
 4. Use EXACT prices from database (₹ symbol)
-5. Be helpful and context-aware
+5. Address the customer by name when appropriate
+6. Be helpful and context-aware
 
 STORE INFORMATION:
 - Website: www.norenfastion.shop
@@ -379,6 +385,7 @@ YOUR RESPONSE GUIDELINES:
 ✅ If PRODUCT query: "I found X products for you! Check them below with photos."
 ✅ If GENERAL query: Answer their question directly about shipping/returns/policies
 ✅ Use conversational, warm tone
+✅ Use customer's name occasionally (not every message)
 ✅ Keep response to 2-4 sentences
 ✅ Be helpful and guide them
 

@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { X, Send, Package, Edit3, RefreshCw, TrendingUp, MapPin, ChevronRight, Paperclip } from 'lucide-react';
 import axios from 'axios';
+import { useAuth } from '../context/AuthContext';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -134,11 +135,16 @@ const QuickActionButton = ({ icon: Icon, label, onClick }) => (
 );
 
 export default function ChatBotDark() {
+  const { user } = useAuth(); // Get logged-in user data
   const [isOpen, setIsOpen] = useState(false);
+  
+  // Get user's name with fallbacks
+  const userName = user?.full_name || user?.name || user?.first_name || 'there';
+  
   const [messages, setMessages] = useState([
     {
       role: 'assistant',
-      content: 'Hi Mayur 👋\nWelcome to NOREN!\n\nI\'m your personal shopping assistant. You can ask me about our products, track your orders, shipping, or anything else — I\'m here to help!',
+      content: `Hi ${userName} 👋\nWelcome to NOREN!\n\nI'm your personal shopping assistant. You can ask me about our products, track your orders, shipping, or anything else — I'm here to help!`,
       timestamp: new Date().toISOString(),
     }
   ]);
@@ -201,6 +207,11 @@ export default function ChatBotDark() {
       const response = await axios.post(`${API_URL}/chatbot/chat`, {
         message: userMessage,
         conversation_history: conversationHistory,
+        user_context: {
+          user_id: user?.id,
+          user_name: userName,
+          email: user?.email,
+        }
       }, {
         timeout: 30000,
       });
