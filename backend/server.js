@@ -210,6 +210,9 @@ app.get('/monitor', (_, res) => res.sendFile(path.join(__dirname, 'public', 'mon
 // ── Database Status & Health API ──────────────────────────────────────────────
 app.use('/api/database', require('./routes/databaseStatus'));
 
+// ── AI Chatbot Monitor API ───────────────────────────────────────────────────
+app.use('/api/chatbot-monitor', require('./routes/chatbotMonitor'));
+
 // ════════════════════════════════════════════════════════════════════════════
 //  SEO: SITEMAP INDEX + PRODUCT / STATIC SITEMAPS  (v3 — with image tags)
 // ════════════════════════════════════════════════════════════════════════════

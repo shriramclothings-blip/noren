@@ -13,7 +13,10 @@
     "db:sync-now": "node database-monitor.js sync",
     "db:setup": "node setup-database-sync.js",
     "admin:create": "node createAdmin.js",
-    "admin:fix": "node fix-admin-login.js"
+    "admin:fix": "node fix-admin-login.js",
+    "ai:test": "node -e \"console.log('🤖 AI Chatbot Monitor Ready!'); console.log('Access at: http://localhost:' + (process.env.PORT || 5000) + '/monitor'); console.log('Click AI Assistant tab to start chatting!')\"",
+    "ai:health": "curl -s http://localhost:5000/api/chatbot-monitor/quick/health | node -e \"console.log(JSON.stringify(JSON.parse(require('fs').readFileSync(0, 'utf-8')), null, 2))\"",
+    "ai:suggestions": "curl -s http://localhost:5000/api/chatbot-monitor/suggestions | node -e \"console.log(JSON.stringify(JSON.parse(require('fs').readFileSync(0, 'utf-8')), null, 2))\""
   },
   "type": "commonjs",
   "dependencies": {

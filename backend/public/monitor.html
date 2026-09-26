@@ -226,6 +226,102 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 #toast.show{opacity:1}
 #toast.err{border-color:rgba(255,71,87,.4);color:var(--red)}
 #toast.ok{border-color:rgba(0,255,157,.4);color:var(--green)}
+
+/* ═══════ AI CHATBOT STYLES ═══════ */
+.ai-chat-card{min-height:580px;display:flex;flex-direction:column;background:linear-gradient(135deg,var(--surface),var(--s2));border:1px solid var(--b2)}
+.ai-status{display:flex;align-items:center;gap:8px}
+.ai-indicator{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green);animation:pulse 2s infinite}
+.ai-indicator.active{animation:pulse 1.5s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.ai-status-text{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:2px;color:var(--green);font-weight:600}
+
+.ai-chat-container{flex:1;height:350px;overflow-y:auto;margin-bottom:15px;padding:15px;background:rgba(0,0,0,.2);border-radius:12px;border:1px solid rgba(0,200,255,.1)}
+.ai-chat-container::-webkit-scrollbar{width:4px}
+.ai-chat-container::-webkit-scrollbar-thumb{background:var(--muted);border-radius:2px}
+
+.ai-welcome-msg,.ai-msg{display:flex;gap:12px;margin-bottom:16px;animation:slideIn .3s ease}
+@keyframes slideIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.ai-avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--cyan),var(--purple));display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.user-avatar{background:linear-gradient(135deg,var(--green),var(--gold))}
+.ai-msg-content{flex:1;background:rgba(0,200,255,.05);border:1px solid rgba(0,200,255,.1);border-radius:12px;padding:12px 16px}
+.user-msg-content{background:rgba(0,255,157,.05);border:1px solid rgba(0,255,157,.1)}
+.ai-msg-text{font-size:13px;line-height:1.6;color:var(--text);margin-bottom:8px}
+.ai-msg-timestamp{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim)}
+
+.ai-suggestions{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.ai-suggestion{font-family:'JetBrains Mono',monospace;font-size:10px;padding:4px 10px;background:rgba(0,200,255,.1);border:1px solid rgba(0,200,255,.2);border-radius:16px;cursor:pointer;transition:.2s;color:var(--cyan)}
+.ai-suggestion:hover{background:rgba(0,200,255,.2);border-color:var(--b3)}
+
+.ai-voice-controls{display:flex;align-items:center;gap:10px;margin-bottom:15px;padding:10px;background:rgba(0,0,0,.1);border-radius:8px;border:1px solid var(--border)}
+.voice-btn{display:flex;align-items:center;gap:6px;font-family:'JetBrains Mono',monospace;font-size:10px;padding:6px 12px;border-radius:20px;border:1px solid var(--b2);background:rgba(0,200,255,.07);color:var(--cyan);cursor:pointer;transition:.2s}
+.voice-btn:hover{background:rgba(0,200,255,.15);border-color:var(--b3)}
+.voice-btn.active{background:var(--red);border-color:rgba(255,71,87,.3);color:white;animation:blink 1s infinite}
+.voice-indicator{flex:1;height:4px;background:rgba(0,200,255,.1);border-radius:2px;overflow:hidden}
+.voice-wave{height:100%;width:0;background:linear-gradient(90deg,var(--cyan),var(--green));border-radius:2px;transition:.1s}
+
+.ai-input-area{display:flex;gap:8px}
+.ai-input{flex:1;font-family:'JetBrains Mono',monospace;font-size:12px;padding:10px 16px;background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;color:var(--text);outline:none;transition:.2s}
+.ai-input:focus{border-color:var(--b3);box-shadow:0 0 0 2px rgba(0,200,255,.1)}
+.ai-input::placeholder{color:var(--dim)}
+.ai-send-btn{padding:10px 16px;background:linear-gradient(135deg,var(--cyan),var(--purple));border:none;border-radius:8px;cursor:pointer;transition:.2s;color:white;font-size:14px}
+.ai-send-btn:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,200,255,.3)}
+
+.ai-insights-panel{display:flex;flex-direction:column;gap:12px}
+.ai-pulse{position:relative;width:80px;height:80px;margin:0 auto 15px;display:flex;align-items:center;justify-content:center}
+.pulse-ring{position:absolute;inset:0;border:2px solid var(--green);border-radius:50%;animation:pulseRing 2s ease-in-out infinite}
+@keyframes pulseRing{0%{transform:scale(.8);opacity:1}100%{transform:scale(1.2);opacity:0}}
+.pulse-core{width:50px;height:50px;background:radial-gradient(circle,var(--green),rgba(0,255,157,.3));border-radius:50%;display:flex;align-items:center;justify-content:center;z-index:1}
+.pulse-text{font-family:'JetBrains Mono',monospace;font-size:8px;letter-spacing:1px;color:var(--bg);font-weight:700}
+
+.ai-quick-stats{display:flex;flex-direction:column;gap:8px}
+.stat-item{display:flex;justify-content:space-between;align-items:center}
+.stat-label{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim)}
+.stat-value{font-family:'Orbitron',sans-serif;font-size:12px;font-weight:700;color:var(--cyan)}
+
+.ai-alerts{max-height:200px;overflow-y:auto}
+.ai-alerts::-webkit-scrollbar{width:3px}
+.ai-alerts::-webkit-scrollbar-thumb{background:var(--muted);border-radius:2px}
+.alert-item{display:flex;gap:10px;padding:8px;margin-bottom:6px;background:rgba(0,0,0,.2);border-radius:8px;border:1px solid var(--border)}
+.alert-item.green{border-color:rgba(0,255,157,.2)}
+.alert-item.orange{border-color:rgba(255,140,66,.2)}
+.alert-item.red{border-color:rgba(255,71,87,.2)}
+.alert-icon{font-size:16px;flex-shrink:0}
+.alert-content{flex:1}
+.alert-text{font-size:11px;color:var(--text);margin-bottom:2px}
+.alert-time{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim)}
+
+.ai-activity-feed{max-height:180px;overflow-y:auto}
+.ai-activity-feed::-webkit-scrollbar{width:3px}
+.ai-activity-feed::-webkit-scrollbar-thumb{background:var(--muted);border-radius:2px}
+.activity-item{display:flex;gap:8px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.05);animation:slideIn .3s ease}
+.activity-icon{font-size:12px;width:16px;text-align:center;flex-shrink:0;margin-top:2px}
+.activity-text{font-size:10px;color:var(--text);flex:1}
+.activity-time{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim)}
+
+.ai-help-card{}
+.ai-help-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media(max-width:768px){.ai-help-grid{grid-template-columns:1fr}}
+.help-section h4{font-family:'Orbitron',sans-serif;font-size:12px;color:var(--cyan);margin-bottom:12px}
+.help-commands{display:flex;flex-wrap:wrap;gap:6px}
+.help-cmd{font-family:'JetBrains Mono',monospace;font-size:9px;padding:3px 8px;background:rgba(0,200,255,.07);border:1px solid rgba(0,200,255,.15);border-radius:12px;color:var(--cyan)}
+.help-features{display:flex;flex-direction:column;gap:8px}
+.feature-item{display:flex;align-items:center;gap:8px}
+.feature-icon{font-size:14px}
+.feature-text{font-size:11px;color:var(--text)}
+
+.ai-typing{display:flex;gap:4px;align-items:center;padding:12px 16px}
+.typing-dot{width:6px;height:6px;background:var(--cyan);border-radius:50%;animation:typingAnimation 1.4s infinite}
+.typing-dot:nth-child(2){animation-delay:.2s}
+.typing-dot:nth-child(3){animation-delay:.4s}
+@keyframes typingAnimation{0%,60%,100%{opacity:.3;transform:translateY(0)}30%{opacity:1;transform:translateY(-8px)}}
+
+/* Voice Recognition States */
+.voice-listening{border-color:var(--red) !important;background:rgba(255,71,87,.1) !important;color:var(--red) !important}
+.voice-processing{border-color:var(--gold) !important;background:rgba(245,197,24,.1) !important;color:var(--gold) !important}
+
+/* Responsive Design */
+@media(max-width:1100px){.g21{grid-template-columns:1fr}.ai-insights-panel{flex-direction:row;overflow-x:auto}.ai-insights-panel > .card{min-width:250px;flex-shrink:0}}
+@media(max-width:768px){.ai-voice-controls{flex-wrap:wrap}.voice-indicator{order:3;width:100%}}
 </style>
 </head>
 <body>
@@ -250,6 +346,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
   <div class="tab" onclick="switchTab('system')">System</div>
   <div class="tab" onclick="switchTab('services')">Services</div>
   <div class="tab" onclick="switchTab('danger')">⚠ Controls</div>
+  <div class="tab" onclick="switchTab('ai-chat')">🤖 AI Assistant</div>
 </div>
 
 <!-- ═══════ TAB: OVERVIEW ═══════ -->
@@ -656,6 +753,150 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 </div>
 </div><!-- /tab-danger -->
 
+<!-- ═══════ TAB: AI ASSISTANT ═══════ -->
+<div class="tab-content" id="tab-ai-chat">
+<div class="con">
+  <!-- AI CHATBOT INTERFACE -->
+  <div class="g21">
+    <!-- Chat Interface -->
+    <div class="card ai-chat-card">
+      <div class="ch">
+        <span class="ct">// AI System Monitor Assistant</span>
+        <div class="ai-status">
+          <span class="ai-indicator active" id="ai-status"></span>
+          <span class="ai-status-text" id="ai-status-text">ONLINE</span>
+        </div>
+      </div>
+      
+      <!-- Chat Messages -->
+      <div class="ai-chat-container" id="chat-container">
+        <div class="ai-welcome-msg">
+          <div class="ai-avatar">🤖</div>
+          <div class="ai-msg-content">
+            <div class="ai-msg-text">
+              Welcome to the AI System Monitor! I'm your intelligent assistant for monitoring system health, analyzing databases, checking logs, and providing predictive insights. 
+              <br><br>
+              <strong>Try saying:</strong> "system health", "database status", "show errors", "performance report"
+            </div>
+            <div class="ai-suggestions" id="ai-suggestions"></div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Voice Controls -->
+      <div class="ai-voice-controls">
+        <button class="voice-btn" id="voice-listen-btn" title="Voice Input">
+          <span class="voice-icon">🎤</span>
+          <span class="voice-text">Speak</span>
+        </button>
+        <button class="voice-btn" id="voice-stop-btn" title="Stop Voice" style="display:none;">
+          <span class="voice-icon">⏹</span>
+          <span class="voice-text">Stop</span>
+        </button>
+        <div class="voice-indicator" id="voice-indicator"></div>
+      </div>
+      
+      <!-- Chat Input -->
+      <div class="ai-input-area">
+        <input type="text" class="ai-input" id="chat-input" placeholder="Ask me about system health, database status, errors, performance..." autocomplete="off"/>
+        <button class="ai-send-btn" id="send-btn">
+          <span class="send-icon">⚡</span>
+        </button>
+      </div>
+    </div>
+    
+    <!-- AI Insights Panel -->
+    <div class="ai-insights-panel">
+      <!-- Quick Stats -->
+      <div class="card ai-stats-card">
+        <div class="ch"><span class="ct">// System Pulse</span></div>
+        <div class="ai-pulse" id="ai-pulse">
+          <div class="pulse-ring"></div>
+          <div class="pulse-core">
+            <span class="pulse-text" id="pulse-text">HEALTHY</span>
+          </div>
+        </div>
+        <div class="ai-quick-stats" id="quick-stats">
+          <div class="stat-item">
+            <span class="stat-label">Health Score</span>
+            <span class="stat-value" id="health-score">95/100</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Active DBs</span>
+            <span class="stat-value" id="active-dbs">2/3</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Alerts</span>
+            <span class="stat-value" id="alert-count">0</span>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Predictive Alerts -->
+      <div class="card ai-alerts-card">
+        <div class="ch"><span class="ct">// Predictive Alerts</span></div>
+        <div class="ai-alerts" id="predictive-alerts">
+          <div class="alert-item green">
+            <div class="alert-icon">✅</div>
+            <div class="alert-content">
+              <div class="alert-text">All systems optimal</div>
+              <div class="alert-time">Real-time</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Activity Feed -->
+      <div class="card ai-activity-card">
+        <div class="ch"><span class="ct">// Live Activity</span></div>
+        <div class="ai-activity-feed" id="activity-feed">
+          <!-- Activities will be populated by JavaScript -->
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Voice Commands Help -->
+  <div class="card ai-help-card">
+    <div class="ch"><span class="ct">// Voice Commands & Features</span></div>
+    <div class="ai-help-grid">
+      <div class="help-section">
+        <h4>🗣️ Voice Commands</h4>
+        <div class="help-commands">
+          <span class="help-cmd">"system health"</span>
+          <span class="help-cmd">"database status"</span>
+          <span class="help-cmd">"show errors"</span>
+          <span class="help-cmd">"performance report"</span>
+          <span class="help-cmd">"what's happening?"</span>
+          <span class="help-cmd">"predict issues"</span>
+        </div>
+      </div>
+      <div class="help-section">
+        <h4>🤖 AI Features</h4>
+        <div class="help-features">
+          <div class="feature-item">
+            <span class="feature-icon">🔮</span>
+            <span class="feature-text">Predictive Analysis</span>
+          </div>
+          <div class="feature-item">
+            <span class="feature-icon">🔊</span>
+            <span class="feature-text">Text-to-Speech</span>
+          </div>
+          <div class="feature-item">
+            <span class="feature-icon">📊</span>
+            <span class="feature-text">Real-time Insights</span>
+          </div>
+          <div class="feature-item">
+            <span class="feature-icon">⚡</span>
+            <span class="feature-text">Instant Responses</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div><!-- /tab-ai-chat -->
+
 </div><!-- /wrap -->
 <div id="toast"></div>
 
@@ -915,6 +1156,417 @@ async function loadServices(){try{const r=await fetch('/api/monitor/services');c
 async function loadStats(){try{const r=await fetch('/api/monitor/stats');const d=await r.json();if(d.orders){qs('s-ord-today').textContent=fmt(d.orders.today);qs('s-rev-today').textContent=fmtINR(d.orders.todayRevenue);qs('s-ord-pend').textContent=fmt(d.orders.pending)+' pending'}if(d.users){qs('s-users').textContent=fmt(d.users.total);qs('s-users-today').textContent=fmt(d.users.newToday)}if(d.products){qs('s-prods').textContent=fmt(d.products.active);qs('s-prods-pend').textContent=fmt(d.products.pending)}if(d.sellers)qs('s-sellers').textContent=fmt(d.sellers.active);if(d.queries)qs('s-queries').textContent=fmt(d.queries.pending);if(d.server)applyHeartbeat(d.server);if(d.orders?.recent?.length){const tb=qs('orders-tb');tb.innerHTML=d.orders.recent.map(o=>`<tr><td style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--cyan)">${o.order_id}</td><td>${o.full_name}</td><td style="font-family:'JetBrains Mono',monospace">${fmtINR(o.total)}</td><td><span class="badge ${o.status}">${o.status}</span></td><td><span class="badge ${o.payment_status}">${o.payment_status}</span></td><td style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim)">${fmtRel(o.created_at)}</td></tr>`).join('')}else{qs('orders-tb').innerHTML='<tr><td colspan="6" class="empty">No orders yet</td></tr>'}const dbS=d.db?.status==='connected'?'ok':'error';const dbD=qs('bd-db');if(dbD)dbD.className='bd '+dbS}catch(e){toast(e.message,'err')}}
 function hardRefresh(){loadStats();loadDB();loadServices()}
 connectSocket();hardRefresh();setInterval(loadStats,15e3);setInterval(loadServices,6e4);setInterval(loadDB,3e4);
+
+/* ═══════ AI CHATBOT FUNCTIONALITY ═══════ */
+
+class AIChatbot {
+  constructor() {
+    this.conversationId = 'monitor-' + Date.now();
+    this.isListening = false;
+    this.recognition = null;
+    this.synthesis = window.speechSynthesis;
+    this.voices = [];
+    this.selectedVoice = null;
+    
+    this.init();
+  }
+  
+  init() {
+    // Initialize voice recognition
+    this.initVoiceRecognition();
+    
+    // Initialize TTS voices
+    this.initTextToSpeech();
+    
+    // Bind events
+    this.bindEvents();
+    
+    // Load initial suggestions
+    this.loadSuggestions();
+    
+    // Start activity feed
+    this.startActivityFeed();
+    
+    // Load quick stats
+    this.updateQuickStats();
+    
+    console.log('🤖 AI Chatbot initialized');
+  }
+  
+  initVoiceRecognition() {
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      this.recognition = new SpeechRecognition();
+      
+      this.recognition.continuous = false;
+      this.recognition.interimResults = true;
+      this.recognition.lang = 'en-US';
+      
+      this.recognition.onstart = () => {
+        console.log('🎤 Voice recognition started');
+        this.isListening = true;
+        this.updateVoiceUI('listening');
+      };
+      
+      this.recognition.onresult = (event) => {
+        let transcript = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          transcript += event.results[i][0].transcript;
+        }
+        
+        if (event.results[event.results.length - 1].isFinal) {
+          console.log('🗣️ Voice input:', transcript);
+          qs('chat-input').value = transcript;
+          this.sendMessage(transcript);
+        }
+      };
+      
+      this.recognition.onerror = (event) => {
+        console.error('Voice recognition error:', event.error);
+        this.isListening = false;
+        this.updateVoiceUI('error');
+        toast('Voice recognition failed: ' + event.error, 'err');
+      };
+      
+      this.recognition.onend = () => {
+        console.log('🎤 Voice recognition ended');
+        this.isListening = false;
+        this.updateVoiceUI('idle');
+      };
+    } else {
+      console.warn('Speech recognition not supported');
+      qs('voice-listen-btn').style.display = 'none';
+    }
+  }
+  
+  initTextToSpeech() {
+    if (this.synthesis) {
+      const loadVoices = () => {
+        this.voices = this.synthesis.getVoices();
+        // Prefer female voices with good quality
+        this.selectedVoice = this.voices.find(v => 
+          v.name.includes('Google') && v.lang === 'en-US' && v.name.includes('Female')
+        ) || this.voices.find(v => 
+          v.lang === 'en-US' && (v.name.includes('Samantha') || v.name.includes('Susan'))
+        ) || this.voices.find(v => v.lang === 'en-US') || this.voices[0];
+        
+        console.log('🔊 TTS initialized with voice:', this.selectedVoice?.name);
+      };
+      
+      if (this.voices.length === 0) {
+        this.synthesis.addEventListener('voiceschanged', loadVoices);
+      } else {
+        loadVoices();
+      }
+    }
+  }
+  
+  bindEvents() {
+    // Send button
+    qs('send-btn').onclick = () => {
+      const message = qs('chat-input').value.trim();
+      if (message) {
+        this.sendMessage(message);
+        qs('chat-input').value = '';
+      }
+    };
+    
+    // Enter key
+    qs('chat-input').onkeypress = (e) => {
+      if (e.key === 'Enter') {
+        const message = qs('chat-input').value.trim();
+        if (message) {
+          this.sendMessage(message);
+          qs('chat-input').value = '';
+        }
+      }
+    };
+    
+    // Voice buttons
+    qs('voice-listen-btn').onclick = () => {
+      if (this.recognition && !this.isListening) {
+        this.recognition.start();
+      }
+    };
+    
+    qs('voice-stop-btn').onclick = () => {
+      if (this.recognition && this.isListening) {
+        this.recognition.stop();
+      }
+    };
+  }
+  
+  async sendMessage(message) {
+    this.addUserMessage(message);
+    this.showTypingIndicator();
+    
+    try {
+      const response = await fetch('/api/chatbot-monitor/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          message: message,
+          conversationId: this.conversationId 
+        })
+      });
+      
+      const data = await response.json();
+      
+      this.hideTypingIndicator();
+      
+      if (data.success) {
+        this.addBotMessage(data.response, data.intent);
+        
+        // Speak the response if TTS is available
+        if (data.voiceEnabled && this.synthesis) {
+          this.speakText(data.response);
+        }
+      } else {
+        this.addBotMessage('Sorry, I encountered an error. Please try again.', 'error');
+      }
+      
+    } catch (error) {
+      console.error('Chat error:', error);
+      this.hideTypingIndicator();
+      this.addBotMessage('Connection error. Please check your network and try again.', 'error');
+    }
+  }
+  
+  addUserMessage(message) {
+    const container = qs('chat-container');
+    const msgDiv = document.createElement('div');
+    msgDiv.className = 'ai-msg';
+    msgDiv.innerHTML = `
+      <div class="ai-avatar user-avatar">👤</div>
+      <div class="ai-msg-content user-msg-content">
+        <div class="ai-msg-text">${this.escapeHtml(message)}</div>
+        <div class="ai-msg-timestamp">${new Date().toLocaleTimeString()}</div>
+      </div>
+    `;
+    
+    container.appendChild(msgDiv);
+    container.scrollTop = container.scrollHeight;
+  }
+  
+  addBotMessage(message, intent) {
+    const container = qs('chat-container');
+    const msgDiv = document.createElement('div');
+    msgDiv.className = 'ai-msg';
+    
+    // Format the message with proper HTML
+    const formattedMessage = message.replace(/\n/g, '<br>');
+    
+    msgDiv.innerHTML = `
+      <div class="ai-avatar">🤖</div>
+      <div class="ai-msg-content">
+        <div class="ai-msg-text">${formattedMessage}</div>
+        <div class="ai-msg-timestamp">${new Date().toLocaleTimeString()} • ${intent || 'general'}</div>
+      </div>
+    `;
+    
+    container.appendChild(msgDiv);
+    container.scrollTop = container.scrollHeight;
+  }
+  
+  showTypingIndicator() {
+    const container = qs('chat-container');
+    const typingDiv = document.createElement('div');
+    typingDiv.className = 'ai-msg ai-typing-msg';
+    typingDiv.id = 'typing-indicator';
+    typingDiv.innerHTML = `
+      <div class="ai-avatar">🤖</div>
+      <div class="ai-msg-content">
+        <div class="ai-typing">
+          <div class="typing-dot"></div>
+          <div class="typing-dot"></div>
+          <div class="typing-dot"></div>
+        </div>
+      </div>
+    `;
+    
+    container.appendChild(typingDiv);
+    container.scrollTop = container.scrollHeight;
+  }
+  
+  hideTypingIndicator() {
+    const indicator = qs('typing-indicator');
+    if (indicator) {
+      indicator.remove();
+    }
+  }
+  
+  speakText(text) {
+    if (!this.synthesis || !this.selectedVoice) return;
+    
+    // Stop any ongoing speech
+    this.synthesis.cancel();
+    
+    // Clean text for TTS (remove emojis and special chars)
+    const cleanText = text
+      .replace(/[🤖📊💾🔧⚡🟢📈📉⚠️🔴✅🚨🔮🗄️👥📦🏪]/g, '')
+      .replace(/\n/g, '. ')
+      .replace(/•/g, '')
+      .replace(/─/g, '')
+      .trim();
+    
+    if (cleanText.length > 0) {
+      const utterance = new SpeechSynthesisUtterance(cleanText);
+      utterance.voice = this.selectedVoice;
+      utterance.rate = 0.9;
+      utterance.pitch = 1.0;
+      utterance.volume = 0.8;
+      
+      this.synthesis.speak(utterance);
+      console.log('🔊 Speaking:', cleanText.substring(0, 50) + '...');
+    }
+  }
+  
+  updateVoiceUI(state) {
+    const listenBtn = qs('voice-listen-btn');
+    const stopBtn = qs('voice-stop-btn');
+    const indicator = qs('voice-indicator');
+    
+    listenBtn.classList.remove('active', 'voice-listening', 'voice-processing');
+    
+    switch (state) {
+      case 'listening':
+        listenBtn.classList.add('active', 'voice-listening');
+        listenBtn.style.display = 'none';
+        stopBtn.style.display = 'flex';
+        break;
+      case 'processing':
+        listenBtn.classList.add('voice-processing');
+        break;
+      case 'error':
+      case 'idle':
+      default:
+        listenBtn.style.display = 'flex';
+        stopBtn.style.display = 'none';
+        break;
+    }
+  }
+  
+  async loadSuggestions() {
+    try {
+      const response = await fetch('/api/chatbot-monitor/suggestions');
+      const data = await response.json();
+      
+      if (data.success) {
+        const container = qs('ai-suggestions');
+        container.innerHTML = '';
+        
+        data.suggestions.slice(0, 4).forEach(suggestion => {
+          const btn = document.createElement('button');
+          btn.className = 'ai-suggestion';
+          btn.textContent = suggestion.text;
+          btn.onclick = () => {
+            qs('chat-input').value = suggestion.command;
+            this.sendMessage(suggestion.command);
+          };
+          container.appendChild(btn);
+        });
+      }
+    } catch (error) {
+      console.warn('Failed to load suggestions:', error);
+    }
+  }
+  
+  async updateQuickStats() {
+    try {
+      // Update health score
+      const healthResponse = await fetch('/api/chatbot-monitor/quick/health');
+      const healthData = await healthResponse.json();
+      
+      if (healthData.success && healthData.data) {
+        const memPercent = parseFloat(healthData.data.memory?.percent || 0);
+        const healthScore = Math.max(0, 100 - memPercent);
+        
+        qs('health-score').textContent = Math.round(healthScore) + '/100';
+        
+        // Update pulse status
+        const pulseText = qs('pulse-text');
+        if (healthScore > 80) {
+          pulseText.textContent = 'HEALTHY';
+          pulseText.parentElement.style.background = 'radial-gradient(circle,var(--green),rgba(0,255,157,.3))';
+        } else if (healthScore > 60) {
+          pulseText.textContent = 'WARNING';
+          pulseText.parentElement.style.background = 'radial-gradient(circle,var(--orange),rgba(255,140,66,.3))';
+        } else {
+          pulseText.textContent = 'CRITICAL';
+          pulseText.parentElement.style.background = 'radial-gradient(circle,var(--red),rgba(255,71,87,.3))';
+        }
+      }
+      
+      // Update database status
+      const dbResponse = await fetch('/api/chatbot-monitor/quick/database');
+      const dbData = await dbResponse.json();
+      
+      if (dbData.success && dbData.data?.syncStatus?.databases) {
+        const healthyDbs = dbData.data.syncStatus.databases.filter(db => db.healthy).length;
+        const totalDbs = dbData.data.syncStatus.databases.length;
+        qs('active-dbs').textContent = `${healthyDbs}/${totalDbs}`;
+      }
+      
+      // Update alerts
+      const criticalResponse = await fetch('/api/chatbot-monitor/quick/critical');
+      const criticalData = await criticalResponse.json();
+      
+      if (criticalData.success && criticalData.data?.issues) {
+        qs('alert-count').textContent = criticalData.data.issues.length;
+      }
+      
+    } catch (error) {
+      console.warn('Failed to update quick stats:', error);
+    }
+  }
+  
+  startActivityFeed() {
+    const updateActivity = async () => {
+      try {
+        const response = await fetch('/api/chatbot-monitor/quick/activities');
+        const data = await response.json();
+        
+        if (data.success && data.data?.activities) {
+          const feed = qs('activity-feed');
+          feed.innerHTML = '';
+          
+          data.data.activities.slice(0, 8).forEach(activity => {
+            const item = document.createElement('div');
+            item.className = 'activity-item';
+            item.innerHTML = `
+              <div class="activity-icon">📊</div>
+              <div class="activity-text">${activity.description}</div>
+              <div class="activity-time">${activity.timestamp}</div>
+            `;
+            feed.appendChild(item);
+          });
+        }
+      } catch (error) {
+        console.warn('Failed to update activity feed:', error);
+      }
+    };
+    
+    updateActivity();
+    setInterval(updateActivity, 30000); // Update every 30 seconds
+  }
+  
+  escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+}
+
+// Initialize AI Chatbot when DOM is loaded
+let aiChatbot;
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => {
+    aiChatbot = new AIChatbot();
+  });
+} else {
+  aiChatbot = new AIChatbot();
+}
+
 </script>
 </body>
 </html>
