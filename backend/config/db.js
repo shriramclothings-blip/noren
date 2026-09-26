@@ -2606,7 +2606,7 @@ function getPoolStats() {
     const p = pools[i];
     return {
       node:       i + 1,
-      active:     i === activeIndex,
+      active:     i === primaryIndex,  // Fixed: use primaryIndex instead of activeIndex
       totalCount: p?.totalCount ?? null,
       idleCount:  p?.idleCount  ?? null,
       waitingCount: p?.waitingCount ?? null,
@@ -2614,9 +2614,19 @@ function getPoolStats() {
   });
 }
 
-// Expose activeIndex as a readable property
-Object.defineProperty(module, '_activeIndex', { get: () => activeIndex });
-
-module.exports = { pool, initDB, logAudit, forceSwitch, pingAllNodes, copyDatabase, getPoolStats, RAW_URLS, get activeIndex() { return activeIndex; } };
+// Export for backward compatibility
+module.exports = { 
+  pool, 
+  initDB, 
+  logAudit, 
+  forceSwitch, 
+  pingAllNodes, 
+  copyDatabase, 
+  getPoolStats, 
+  RAW_URLS,
+  get activeIndex() { return primaryIndex; },  // Backward compatibility
+  get primaryIndex() { return primaryIndex; },
+  get activeReadIndex() { return activeReadIndex; }
+};
 
 
