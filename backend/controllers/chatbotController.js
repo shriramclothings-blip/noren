@@ -47,14 +47,21 @@ async function callGemini(prompt, temperature = 0.7, maxTokens = 1024) {
   });
 }
 
-// Helper: Fetch product information for context
+// Helper: Fetch product information with images for context
 async function fetchProductContext(query) {
   try {
-    // Search products by name, category, or description
+    // Search products by name, category, or description with images
     const searchQuery = `%${query}%`;
     const result = await pool.query(
       `SELECT p.id, p.name, p.description, p.price, p.discount_price, p.category, 
-              p.stock_quantity, p.status, p.brand, p.rating, p.review_count
+              p.stock_quantity, p.status, p.brand, p.rating, p.review_count,
+              (SELECT image_url FROM src_product_images 
+               WHERE product_id = p.id AND is_primary = TRUE 
+               LIMIT 1) as primary_image,
+              (SELECT image_url FROM src_product_images 
+               WHERE product_id = p.id 
+               ORDER BY is_primary DESC, sort_order ASC 
+               LIMIT 1) as first_image
        FROM src_products p
        WHERE p.deleted_at IS NULL 
          AND p.status = 'approved'
@@ -63,43 +70,75 @@ async function fetchProductContext(query) {
               OR LOWER(p.description) LIKE LOWER($1)
               OR LOWER(p.brand) LIKE LOWER($1))
        ORDER BY p.rating DESC, p.review_count DESC
-       LIMIT 10`,
+       LIMIT 6`,
       [searchQuery]
     );
-    return result.rows;
+    
+    // Add product URLs and format for frontend
+    return result.rows.map(p => ({
+      ...p,
+      image: p.primary_image || p.first_image || 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=400',
+      url: `https://www.norenfastion.shop/product/${p.id}`,
+      final_price: p.discount_price || p.price,
+      has_discount: !!p.discount_price,
+    }));
   } catch (err) {
     console.error('Product context fetch error:', err);
     return [];
   }
 }
 
-// Helper: Fetch order information by order ID
+// Helper: Fetch order information by order ID with full details
 async function fetchOrderDetails(orderId) {
   try {
-    const result = await pool.query(
+    // First try exact match, then partial match
+    let result = await pool.query(
       `SELECT o.order_id, o.status, o.payment_status, o.total, o.subtotal, 
               o.delivery_charge, o.discount_amount, o.full_name, o.mobile, 
               o.address, o.city, o.state, o.pincode, o.created_at, o.updated_at,
-              o.tracking_id, o.courier_name, o.estimated_delivery
+              o.tracking_id, o.courier_name, o.estimated_delivery, o.notes
        FROM src_orders o
        WHERE UPPER(o.order_id) = UPPER($1)
        LIMIT 1`,
       [orderId]
     );
     
+    // If not found, try partial match (in case user didn't include full ID)
+    if (result.rows.length === 0) {
+      result = await pool.query(
+        `SELECT o.order_id, o.status, o.payment_status, o.total, o.subtotal, 
+                o.delivery_charge, o.discount_amount, o.full_name, o.mobile, 
+                o.address, o.city, o.state, o.pincode, o.created_at, o.updated_at,
+                o.tracking_id, o.courier_name, o.estimated_delivery, o.notes
+         FROM src_orders o
+         WHERE UPPER(o.order_id) LIKE UPPER($1)
+         ORDER BY o.created_at DESC
+         LIMIT 1`,
+        [`%${orderId}%`]
+      );
+    }
+    
     if (result.rows.length === 0) return null;
     
     const order = result.rows[0];
     
-    // Fetch order items
+    // Fetch order items with product images
     const itemsResult = await pool.query(
-      `SELECT oi.title, oi.size, oi.color, oi.quantity, oi.price, oi.line_total
+      `SELECT oi.title, oi.size, oi.color, oi.quantity, oi.price, oi.line_total,
+              oi.product_id,
+              (SELECT image_url FROM src_product_images 
+               WHERE product_id = oi.product_id AND is_primary = TRUE 
+               LIMIT 1) as image
        FROM src_order_items oi
        WHERE oi.order_id = $1`,
       [order.order_id]
     );
     
-    order.items = itemsResult.rows;
+    order.items = itemsResult.rows.map(item => ({
+      ...item,
+      image: item.image || 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=200'
+    }));
+    
     return order;
   } catch (err) {
     console.error('Order fetch error:', err);
