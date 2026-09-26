@@ -191,6 +191,8 @@ async function fetchProductContext(query) {
 // Helper: Fetch order information by order ID with full details
 async function fetchOrderDetails(orderId) {
   try {
+    console.log(`🔍 Searching for order: ${orderId}`);
+    
     // First try exact match, then partial match
     let result = await pool.query(
       `SELECT o.order_id, o.status, o.payment_status, o.total, o.subtotal, 
@@ -203,8 +205,11 @@ async function fetchOrderDetails(orderId) {
       [orderId]
     );
     
+    console.log(`📊 Exact match results: ${result.rows.length}`);
+    
     // If not found, try partial match (in case user didn't include full ID)
     if (result.rows.length === 0) {
+      console.log(`🔄 Trying partial match for: ${orderId}`);
       result = await pool.query(
         `SELECT o.order_id, o.status, o.payment_status, o.total, o.subtotal, 
                 o.delivery_charge, o.discount_amount, o.full_name, o.mobile, 
@@ -216,32 +221,37 @@ async function fetchOrderDetails(orderId) {
          LIMIT 1`,
         [`%${orderId}%`]
       );
+      console.log(`📊 Partial match results: ${result.rows.length}`);
     }
     
-    if (result.rows.length === 0) return null;
+    if (result.rows.length === 0) {
+      console.log(`❌ No order found for: ${orderId}`);
+      return null;
+    }
     
     const order = result.rows[0];
+    console.log(`✅ Found order: ${order.order_id} (${order.status})`);
     
     // Fetch order items with product images
     const itemsResult = await pool.query(
-      `SELECT oi.title, oi.size, oi.color, oi.quantity, oi.price, oi.line_total,
-              oi.product_id,
-              (SELECT image_url FROM src_product_images 
-               WHERE product_id = oi.product_id AND is_primary = TRUE 
-               LIMIT 1) as image
+      `SELECT oi.title, oi.size, oi.quantity, oi.price, 
+              (oi.price * oi.quantity) as line_total,
+              oi.product_id, oi.image_url as image
        FROM src_order_items oi
        WHERE oi.order_id = $1`,
-      [order.order_id]
+      [order.id] // Use order.id instead of order.order_id for the relationship
     );
     
     order.items = itemsResult.rows.map(item => ({
       ...item,
+      color: 'N/A', // Default color since it's not stored
       image: item.image || 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=200'
     }));
     
+    console.log(`📦 Order has ${order.items.length} items`);
     return order;
   } catch (err) {
-    console.error('Order fetch error:', err);
+    console.error('❌ Order fetch error:', err.message);
     return null;
   }
 }
@@ -312,10 +322,42 @@ const chat = async (req, res) => {
           (orderDetails.courier_name ? `- Courier: ${orderDetails.courier_name}\n` : '') +
           (orderDetails.estimated_delivery ? `- Estimated Delivery: ${new Date(orderDetails.estimated_delivery).toLocaleDateString('en-IN')}\n` : '') +
           `- Items Ordered:\n${orderDetails.items.map((item, i) => 
-            `  ${i + 1}. ${item.title} (${item.size}, ${item.color}) - Qty: ${item.quantity} - ₹${item.line_total}`
+            `  ${i + 1}. ${item.title} (Size: ${item.size || 'N/A'}) - Qty: ${item.quantity} - ₹${item.line_total || (item.price * item.quantity)}`
           ).join('\n')}`;
       } else {
-        contextData = `\n\nORDER NOT FOUND: No order found with ID ${orderIdMatch[0]}. The customer may have entered an incorrect order ID.`;
+        // Enhanced order not found response with helpful suggestions
+        const searchId = orderIdMatch[0];
+        
+        // Check if there are similar order IDs (fuzzy matching)
+        let similarOrders = [];
+        try {
+          const similarResult = await pool.query(
+            `SELECT order_id, status, created_at, full_name 
+             FROM src_orders 
+             WHERE order_id ILIKE $1 
+             OR SUBSTRING(order_id FROM 4) ILIKE $2
+             ORDER BY created_at DESC 
+             LIMIT 3`,
+            [`%${searchId.substring(3)}%`, `%${searchId.substring(3)}%`]
+          );
+          similarOrders = similarResult.rows;
+        } catch (err) {
+          console.error('Error finding similar orders:', err);
+        }
+        
+        contextData = `\n\nORDER NOT FOUND: No order found with ID "${searchId}".\n\n` +
+          `POSSIBLE REASONS:\n` +
+          `1. Order ID might be typed incorrectly (please double-check)\n` +
+          `2. Order might be from a different website/store\n` +
+          `3. Order might be very old or not yet processed\n\n` +
+          (similarOrders.length > 0 ? 
+            `SIMILAR ORDER IDs FOUND:\n${similarOrders.map((order, i) => 
+              `${i + 1}. ${order.order_id} (${order.status}) - Customer: ${order.full_name} - ${new Date(order.created_at).toLocaleDateString('en-IN')}`
+            ).join('\n')}\n\n` : '') +
+          `WHAT TO DO NEXT:\n` +
+          `- Check your email for the correct order ID\n` +
+          `- Contact support at support@norenfastion.shop with your phone/email\n` +
+          `- Provide your order confirmation email or screenshot`;
       }
     } else if (isProductQuery && !isGeneralQuery) {
       // ONLY fetch products if user is asking about products AND not asking general questions
@@ -365,6 +407,14 @@ CRITICAL RULES:
 4. Use EXACT prices from database (₹ symbol)
 5. Address the customer by name when appropriate
 6. Be helpful and context-aware
+7. If ORDER NOT FOUND → Be empathetic, provide helpful next steps, and offer alternatives
+
+SPECIAL HANDLING FOR ORDER NOT FOUND:
+- Acknowledge their frustration professionally
+- Suggest they double-check the order ID
+- Offer alternative ways to help (phone/email lookup)
+- Provide support contact information
+- If similar orders shown, mention they can verify if any match
 
 STORE INFORMATION:
 - Website: www.norenfastion.shop
