@@ -1,6 +1,6 @@
 {
-  "buildCommand": "cd noren-messaging-frontend && npm install --legacy-peer-deps && npm run build",
-  "outputDirectory": "noren-messaging-frontend/dist",
+  "buildCommand": "cd frontend && npm install --legacy-peer-deps && npm run build",
+  "outputDirectory": "frontend/dist",
   "installCommand": "echo skip",
   "framework": null,
   "headers": [
