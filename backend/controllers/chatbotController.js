@@ -278,6 +278,100 @@ async function getStoreInfo() {
   }
 }
 
+// Helper: Fetch specific product by ID or title
+async function fetchSpecificProduct(query) {
+  try {
+    console.log(`🔍 Searching for specific product: ${query}`);
+    
+    // Try to extract product ID if present
+    const productIdMatch = query.match(/\b(\d+)\b/);
+    let result;
+    
+    if (productIdMatch) {
+      // Search by ID first
+      const productId = productIdMatch[1];
+      result = await pool.query(
+        `SELECT p.id, p.title, p.description, p.price, p.discount_percent, p.gender,
+                c.name as category,
+                (SELECT image_url FROM src_product_images 
+                 WHERE product_id = p.id AND is_primary = TRUE 
+                 LIMIT 1) as primary_image,
+                (SELECT image_url FROM src_product_images 
+                 WHERE product_id = p.id 
+                 ORDER BY is_primary DESC, sort_order ASC 
+                 LIMIT 1) as first_image,
+                (SELECT AVG(rating)::NUMERIC(3,1) FROM src_reviews 
+                 WHERE product_id = p.id AND is_hidden = FALSE) as avg_rating,
+                (SELECT COUNT(*) FROM src_reviews 
+                 WHERE product_id = p.id AND is_hidden = FALSE) as review_count
+         FROM src_products p
+         LEFT JOIN src_categories c ON p.category_id = c.id
+         WHERE p.deleted_at IS NULL 
+           AND p.status = 'approved'
+           AND p.id = $1
+         LIMIT 1`,
+        [productId]
+      );
+    }
+    
+    // If no ID match or no results, search by title/description
+    if (!result || result.rows.length === 0) {
+      const searchQuery = `%${query}%`;
+      result = await pool.query(
+        `SELECT p.id, p.title, p.description, p.price, p.discount_percent, p.gender,
+                c.name as category,
+                (SELECT image_url FROM src_product_images 
+                 WHERE product_id = p.id AND is_primary = TRUE 
+                 LIMIT 1) as primary_image,
+                (SELECT image_url FROM src_product_images 
+                 WHERE product_id = p.id 
+                 ORDER BY is_primary DESC, sort_order ASC 
+                 LIMIT 1) as first_image,
+                (SELECT AVG(rating)::NUMERIC(3,1) FROM src_reviews 
+                 WHERE product_id = p.id AND is_hidden = FALSE) as avg_rating,
+                (SELECT COUNT(*) FROM src_reviews 
+                 WHERE product_id = p.id AND is_hidden = FALSE) as review_count
+         FROM src_products p
+         LEFT JOIN src_categories c ON p.category_id = c.id
+         WHERE p.deleted_at IS NULL 
+           AND p.status = 'approved'
+           AND (LOWER(p.title) LIKE LOWER($1) 
+                OR LOWER(p.description) LIKE LOWER($1))
+         ORDER BY 
+           CASE 
+             WHEN LOWER(p.title) LIKE LOWER($1) THEN 1
+             ELSE 2
+           END,
+           p.views DESC, 
+           p.created_at DESC
+         LIMIT 3`,
+        [searchQuery]
+      );
+    }
+    
+    // Format products for frontend
+    return result.rows.map(p => ({
+      id: p.id,
+      name: p.title,
+      title: p.title,
+      description: p.description,
+      price: p.price,
+      discount_price: p.discount_percent > 0 ? Math.round(p.price * (1 - p.discount_percent / 100)) : null,
+      category: p.category,
+      gender: p.gender,
+      rating: parseFloat(p.avg_rating) || 0,
+      review_count: parseInt(p.review_count) || 0,
+      image: p.primary_image || p.first_image || 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=400',
+      url: `https://www.norenfastion.shop/product/${p.id}`,
+      final_price: p.discount_percent > 0 ? Math.round(p.price * (1 - p.discount_percent / 100)) : p.price,
+      has_discount: p.discount_percent > 0,
+    }));
+  } catch (err) {
+    console.error('Specific product fetch error:', err);
+    return [];
+  }
+}
+
 // Helper: Fetch all products for email catalog
 async function fetchAllProductsForEmail() {
   try {
@@ -324,62 +418,157 @@ async function fetchAllProductsForEmail() {
   }
 }
 
-// Helper: Generate product catalog email HTML
-function generateProductCatalogHTML(products, customerEmail, customerName) {
+// Helper: Generate product catalog email HTML with NOREN branding
+function generateProductCatalogHTML(products, customerEmail, customerName, isSpecificProduct = false) {
   const currentDate = new Date().toLocaleDateString('en-IN', {
     year: 'numeric',
     month: 'long',
     day: 'numeric'
   });
   
-  // Group products by category
+  // NOREN Brand Colors
+  const colors = {
+    black: '#1a1a18',
+    charcoal: '#2c2c29',
+    graphite: '#3d3d39',
+    beige: '#e8ddd0',
+    sand: '#d4c4b0',
+    stone: '#b8a898',
+    cream: '#f5f0e8',
+    gold: '#c9a96e',
+    bronze: '#a8834a',
+    champagne: '#e8d5a8',
+    white: '#faf9f7',
+    offWhite: '#f2ede6',
+    lightGray: '#e6e0d8',
+    midGray: '#9e9a94',
+    darkGray: '#5a5750'
+  };
+  
+  // Group products by category for catalog view
   const productsByCategory = {};
-  products.forEach(product => {
-    const category = product.category || 'Uncategorized';
-    if (!productsByCategory[category]) {
-      productsByCategory[category] = [];
-    }
-    productsByCategory[category].push(product);
-  });
+  if (!isSpecificProduct) {
+    products.forEach(product => {
+      const category = product.category || 'Uncategorized';
+      if (!productsByCategory[category]) {
+        productsByCategory[category] = [];
+      }
+      productsByCategory[category].push(product);
+    });
+  }
 
-  const categorySections = Object.entries(productsByCategory).map(([category, categoryProducts]) => `
-    <div style="margin-bottom: 40px;">
-      <h2 style="color: #2D3748; font-size: 24px; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #E2E8F0;">
-        ${category}
-      </h2>
-      <div style="display: flex; flex-wrap: wrap; gap: 20px;">
-        ${categoryProducts.map(product => `
-          <div style="border: 1px solid #E2E8F0; border-radius: 12px; padding: 15px; width: 280px; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-            <img src="${product.image}" alt="${product.title}" style="width: 100%; height: 200px; object-fit: cover; border-radius: 8px; margin-bottom: 10px;">
-            <h3 style="color: #2D3748; font-size: 16px; margin: 10px 0; font-weight: 600;">${product.title}</h3>
-            <p style="color: #4A5568; font-size: 14px; margin: 8px 0; line-height: 1.4;">${product.description ? product.description.substring(0, 120) + '...' : 'Premium fashion item from NOREN'}</p>
+  const productSections = isSpecificProduct ? 
+    // Single product detailed view
+    products.map(product => `
+      <div style="margin-bottom: 40px; background: ${colors.white}; border: 1px solid ${colors.lightGray}; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 16px rgba(26,26,24,0.08);">
+        <div style="display: flex; flex-wrap: wrap; min-height: 400px;">
+          <!-- Product Image -->
+          <div style="flex: 1; min-width: 300px; background: ${colors.cream}; display: flex; align-items: center; justify-content: center; padding: 20px;">
+            <img src="${product.image}" alt="${product.title}" style="width: 100%; max-width: 350px; height: auto; max-height: 400px; object-fit: cover; border-radius: 6px; box-shadow: 0 2px 12px rgba(0,0,0,0.1);">
+          </div>
+          
+          <!-- Product Details -->
+          <div style="flex: 1; min-width: 300px; padding: 40px;">
+            <h2 style="color: ${colors.black}; font-family: 'Cormorant Garamond', serif; font-size: 28px; font-weight: 600; margin: 0 0 16px; letter-spacing: 0.5px;">${product.title}</h2>
             
-            <div style="margin: 10px 0;">
+            <div style="margin: 16px 0;">
               ${product.has_discount ? `
-                <span style="color: #E53E3E; font-size: 18px; font-weight: bold;">₹${product.final_price}</span>
-                <span style="color: #A0AEC0; font-size: 14px; text-decoration: line-through; margin-left: 8px;">₹${product.price}</span>
-                <span style="color: #38A169; font-size: 12px; margin-left: 8px; background: #F0FFF4; padding: 2px 6px; border-radius: 4px;">
+                <div style="display: flex; align-items: baseline; gap: 12px; margin-bottom: 8px;">
+                  <span style="color: ${colors.black}; font-size: 24px; font-weight: 700;">₹${product.final_price}</span>
+                  <span style="color: ${colors.midGray}; font-size: 18px; text-decoration: line-through;">₹${product.price}</span>
+                </div>
+                <span style="color: ${colors.gold}; font-size: 12px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; background: ${colors.champagne}; padding: 4px 8px; border-radius: 3px;">
                   ${Math.round(((product.price - product.final_price) / product.price) * 100)}% OFF
                 </span>
               ` : `
-                <span style="color: #2D3748; font-size: 18px; font-weight: bold;">₹${product.final_price}</span>
+                <span style="color: ${colors.black}; font-size: 24px; font-weight: 700;">₹${product.final_price}</span>
               `}
             </div>
             
-            ${product.rating > 0 ? `
-              <div style="margin: 8px 0; color: #4A5568; font-size: 14px;">
-                ⭐ ${product.rating.toFixed(1)}/5 ${product.review_count > 0 ? `(${product.review_count} reviews)` : ''}
-              </div>
-            ` : ''}
+            <div style="margin: 20px 0;">
+              <p style="color: ${colors.darkGray}; font-size: 16px; line-height: 1.6; margin: 0;">
+                ${product.description || 'Premium luxury fashion piece from NOREN. Crafted with attention to detail and designed for the modern lifestyle. Experience quiet luxury with bold identity.'}
+              </p>
+            </div>
             
-            <a href="${product.url}" style="display: inline-block; background: #3182CE; color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px; margin-top: 10px; font-weight: 500; text-align: center; width: calc(100% - 40px);">
-              View Product
+            <div style="margin: 20px 0; padding: 16px; background: ${colors.cream}; border-radius: 6px;">
+              <div style="display: flex; flex-wrap: wrap; gap: 20px; font-size: 14px; color: ${colors.darkGray};">
+                ${product.category ? `<div><strong>Category:</strong> ${product.category}</div>` : ''}
+                ${product.gender ? `<div><strong>For:</strong> ${product.gender}</div>` : ''}
+                ${product.rating > 0 ? `
+                  <div>
+                    <strong>Rating:</strong> 
+                    <span style="color: ${colors.gold};">⭐ ${product.rating.toFixed(1)}/5</span>
+                    ${product.review_count > 0 ? `(${product.review_count} reviews)` : ''}
+                  </div>
+                ` : ''}
+              </div>
+            </div>
+            
+            <a href="${product.url}" style="display: inline-block; background: ${colors.black}; color: ${colors.white}; padding: 16px 32px; text-decoration: none; border-radius: 4px; margin-top: 16px; font-weight: 600; font-size: 13px; letter-spacing: 0.12em; text-transform: uppercase; transition: background 0.3s ease;">
+              VIEW PRODUCT
             </a>
           </div>
-        `).join('')}
+        </div>
       </div>
-    </div>
-  `).join('');
+    `).join('') :
+    // Category-grouped catalog view
+    Object.entries(productsByCategory).map(([category, categoryProducts]) => `
+      <div style="margin-bottom: 50px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h2 style="color: ${colors.black}; font-family: 'Cormorant Garamond', serif; font-size: 28px; font-weight: 600; margin: 0 0 8px; letter-spacing: 1px;">${category}</h2>
+          <div style="width: 48px; height: 1px; background: linear-gradient(90deg, transparent, ${colors.gold}, transparent); margin: 0 auto;"></div>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px;">
+          ${categoryProducts.map(product => `
+            <div style="border: 1px solid ${colors.lightGray}; border-radius: 8px; overflow: hidden; background: ${colors.white}; box-shadow: 0 2px 12px rgba(26,26,24,0.06); transition: transform 0.3s ease, box-shadow 0.3s ease;">
+              <div style="position: relative; background: ${colors.cream};">
+                <img src="${product.image}" alt="${product.title}" style="width: 100%; height: 240px; object-fit: cover;">
+                ${product.has_discount ? `
+                  <div style="position: absolute; top: 12px; right: 12px; background: ${colors.gold}; color: ${colors.white}; font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; padding: 4px 8px; border-radius: 3px;">
+                    ${Math.round(((product.price - product.final_price) / product.price) * 100)}% OFF
+                  </div>
+                ` : ''}
+              </div>
+              
+              <div style="padding: 20px;">
+                <h3 style="color: ${colors.black}; font-size: 18px; font-weight: 600; margin: 0 0 8px; line-height: 1.3;">${product.title}</h3>
+                <p style="color: ${colors.darkGray}; font-size: 14px; margin: 8px 0; line-height: 1.4;">
+                  ${product.description ? product.description.substring(0, 100) + '...' : 'Premium fashion from NOREN'}
+                </p>
+                
+                <div style="margin: 16px 0;">
+                  ${product.has_discount ? `
+                    <div style="display: flex; align-items: baseline; gap: 8px;">
+                      <span style="color: ${colors.black}; font-size: 20px; font-weight: 700;">₹${product.final_price}</span>
+                      <span style="color: ${colors.midGray}; font-size: 14px; text-decoration: line-through;">₹${product.price}</span>
+                    </div>
+                  ` : `
+                    <span style="color: ${colors.black}; font-size: 20px; font-weight: 700;">₹${product.final_price}</span>
+                  `}
+                </div>
+                
+                ${product.rating > 0 ? `
+                  <div style="margin: 12px 0; color: ${colors.darkGray}; font-size: 13px;">
+                    <span style="color: ${colors.gold};">⭐ ${product.rating.toFixed(1)}/5</span>
+                    ${product.review_count > 0 ? ` (${product.review_count})` : ''}
+                  </div>
+                ` : ''}
+                
+                <a href="${product.url}" style="display: inline-block; background: ${colors.black}; color: ${colors.white}; padding: 12px 24px; text-decoration: none; border-radius: 4px; margin-top: 12px; font-weight: 500; font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; width: calc(100% - 48px); text-align: center;">
+                  VIEW PRODUCT
+                </a>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `).join('');
+
+  const emailTitle = isSpecificProduct ? 
+    (products.length === 1 ? `${products[0].title} - Product Details` : 'Selected Products') :
+    `Complete Product Catalog - ${products.length} Products Available!`;
 
   return `
     <!DOCTYPE html>
@@ -387,48 +576,56 @@ function generateProductCatalogHTML(products, customerEmail, customerName) {
     <head>
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>NOREN Product Catalog</title>
+      <title>NOREN ${emailTitle}</title>
+      <link rel="preconnect" href="https://fonts.googleapis.com">
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+      <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,600&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     </head>
-    <body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; margin: 0; padding: 0; background-color: #F7FAFC;">
-      <div style="max-width: 800px; margin: 0 auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+    <body style="font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; line-height: 1.6; margin: 0; padding: 0; background-color: ${colors.offWhite};">
+      <div style="max-width: 900px; margin: 0 auto; background: ${colors.white}; box-shadow: 0 8px 32px rgba(26,26,24,0.12);">
         
         <!-- Header -->
-        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px 40px; text-align: center;">
-          <h1 style="margin: 0; font-size: 32px; font-weight: 700;">NOREN Fashion</h1>
-          <p style="margin: 10px 0 0; font-size: 18px; opacity: 0.9;">Complete Product Catalog</p>
+        <div style="background: ${colors.black}; color: ${colors.white}; padding: 40px; text-align: center; position: relative;">
+          <div style="position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, ${colors.gold}, ${colors.champagne}, ${colors.gold});"></div>
+          <h1 style="margin: 0; font-family: 'Cormorant Garamond', serif; font-size: 36px; font-weight: 700; letter-spacing: 0.3em; text-transform: uppercase;">NOREN</h1>
+          <p style="margin: 12px 0 0; font-size: 14px; color: ${colors.stone}; letter-spacing: 0.15em; text-transform: uppercase;">Wear the Silence</p>
+          <div style="margin: 20px auto 0; width: 48px; height: 1px; background: linear-gradient(90deg, transparent, ${colors.gold}, transparent);"></div>
+          <p style="margin: 16px 0 0; font-size: 16px; opacity: 0.9;">${isSpecificProduct ? 'Product Details' : 'Product Catalog'}</p>
         </div>
         
         <!-- Greeting -->
-        <div style="padding: 30px 40px; background: #F8F9FA; border-bottom: 1px solid #E9ECEF;">
-          <h2 style="color: #2D3748; margin: 0 0 15px; font-size: 24px;">Hi ${customerName || 'Valued Customer'}! 👋</h2>
-          <p style="color: #4A5568; margin: 0; font-size: 16px; line-height: 1.5;">
-            Thank you for your interest in our products! As requested by our AI assistant, here's our complete product catalog with detailed information, pricing, and photos. 
-            Browse through our collection and click on any product to visit our website for more details.
+        <div style="padding: 40px; background: ${colors.cream}; border-bottom: 1px solid ${colors.lightGray};">
+          <h2 style="color: ${colors.black}; margin: 0 0 16px; font-family: 'Cormorant Garamond', serif; font-size: 24px; font-weight: 600;">Hello ${customerName || 'Valued Customer'}! ✨</h2>
+          <p style="color: ${colors.darkGray}; margin: 0; font-size: 16px; line-height: 1.6;">
+            ${isSpecificProduct ? 
+              'Thank you for your interest in this product! Here are the detailed information and photos you requested from our AI assistant.' :
+              'Thank you for your interest in our collection! As requested by our AI assistant, here\'s our complete product catalog with detailed information, pricing, and photos.'
+            }
           </p>
-          <div style="background: #EDF2F7; padding: 15px; border-radius: 8px; margin-top: 15px;">
-            <p style="margin: 0; color: #4A5568; font-size: 14px;">
-              📧 <strong>Email sent by:</strong> NOREN AI Assistant<br>
-              📅 <strong>Generated on:</strong> ${currentDate}<br>
-              📦 <strong>Total Products:</strong> ${products.length} items
+          <div style="background: ${colors.white}; padding: 20px; border-radius: 6px; margin-top: 20px; border: 1px solid ${colors.lightGray};">
+            <p style="margin: 0; color: ${colors.darkGray}; font-size: 14px;">
+              <strong style="color: ${colors.black};">📧 Email sent by:</strong> NOREN AI Assistant<br>
+              <strong style="color: ${colors.black};">📅 Generated on:</strong> ${currentDate}<br>
+              <strong style="color: ${colors.black};">📦 ${isSpecificProduct ? 'Product' : 'Total Products'}:</strong> ${products.length} ${products.length === 1 ? 'item' : 'items'}
             </p>
           </div>
         </div>
         
         <!-- Products -->
-        <div style="padding: 30px 40px;">
-          ${categorySections}
+        <div style="padding: 40px;">
+          ${productSections}
         </div>
         
         <!-- Footer -->
-        <div style="background: #2D3748; color: white; padding: 30px 40px; text-align: center;">
-          <h3 style="margin: 0 0 15px; font-size: 20px;">Visit Our Store</h3>
-          <p style="margin: 0 0 20px; opacity: 0.9;">Explore more products and place your order on our website</p>
-          <a href="https://www.norenfastion.shop" style="display: inline-block; background: #3182CE; color: white; padding: 12px 30px; text-decoration: none; border-radius: 8px; font-weight: 600; margin: 0 10px 10px;">
-            Shop Now
+        <div style="background: ${colors.black}; color: ${colors.white}; padding: 40px; text-align: center;">
+          <h3 style="margin: 0 0 16px; font-family: 'Cormorant Garamond', serif; font-size: 22px; font-weight: 600; letter-spacing: 0.5px;">Visit Our Store</h3>
+          <p style="margin: 0 0 24px; color: ${colors.stone}; font-size: 16px;">Experience luxury fashion at NOREN</p>
+          <a href="https://www.norenfastion.shop" style="display: inline-block; background: ${colors.gold}; color: ${colors.white}; padding: 16px 32px; text-decoration: none; border-radius: 4px; font-weight: 600; font-size: 13px; letter-spacing: 0.12em; text-transform: uppercase; margin: 0 8px 16px; transition: background 0.3s ease;">
+            SHOP NOW
           </a>
-          <div style="margin-top: 20px; font-size: 14px; opacity: 0.8;">
-            <p>📧 support@norenfastion.shop | 🌐 www.norenfastion.shop</p>
-            <p>This email was generated automatically by NOREN AI Assistant</p>
+          <div style="margin-top: 24px; padding-top: 24px; border-top: 1px solid ${colors.charcoal}; font-size: 14px; color: ${colors.stone};">
+            <p style="margin: 0 0 8px;">📧 supportnoren1@gmail.com | 🌐 www.norenfastion.shop</p>
+            <p style="margin: 0; font-size: 12px; opacity: 0.8;">This email was generated automatically by NOREN AI Assistant</p>
           </div>
         </div>
         
@@ -438,31 +635,50 @@ function generateProductCatalogHTML(products, customerEmail, customerName) {
   `;
 }
 
-// Helper: Send product catalog email
-async function sendProductCatalogEmail(customerEmail, customerName) {
+// Helper: Send product catalog or specific product email
+async function sendProductCatalogEmail(customerEmail, customerName, isSpecificProduct = false, productQuery = '') {
   try {
-    console.log(`📧 Preparing product catalog email for: ${customerEmail}`);
+    console.log(`📧 Preparing ${isSpecificProduct ? 'specific product' : 'catalog'} email for: ${customerEmail}`);
     
-    // Fetch all products
-    const products = await fetchAllProductsForEmail();
+    let products = [];
     
-    if (products.length === 0) {
-      console.log('❌ No products found for catalog');
-      return {
-        success: false,
-        message: "Sorry, no products are currently available in our catalog."
-      };
+    if (isSpecificProduct && productQuery) {
+      // Fetch specific product(s)
+      products = await fetchSpecificProduct(productQuery);
+      if (products.length === 0) {
+        console.log('❌ No specific products found');
+        return {
+          success: false,
+          message: `Sorry, I couldn't find any products matching "${productQuery}". Please try with a different product name or browse our full catalog.`
+        };
+      }
+    } else {
+      // Fetch all products for catalog
+      products = await fetchAllProductsForEmail();
+      if (products.length === 0) {
+        console.log('❌ No products found for catalog');
+        return {
+          success: false,
+          message: "Sorry, no products are currently available in our catalog."
+        };
+      }
     }
     
-    // Generate HTML email
-    const emailHTML = generateProductCatalogHTML(products, customerEmail, customerName);
-    const emailSubject = `NOREN Complete Product Catalog - ${products.length} Products Available!`;
+    // Generate HTML email with appropriate template
+    const emailHTML = generateProductCatalogHTML(products, customerEmail, customerName, isSpecificProduct);
+    
+    const emailSubject = isSpecificProduct ? 
+      (products.length === 1 ? 
+        `NOREN Product Details - ${products[0].title}` :
+        `NOREN Selected Products - ${products.length} Items Found`
+      ) :
+      `NOREN Complete Product Catalog - ${products.length} Products Available!`;
     
     // Send email
     const emailSent = await sendMail(customerEmail, emailSubject, emailHTML);
     
     if (emailSent) {
-      console.log(`✅ Product catalog email sent successfully to: ${customerEmail}`);
+      console.log(`✅ ${isSpecificProduct ? 'Specific product' : 'Catalog'} email sent successfully to: ${customerEmail}`);
       
       // Log the email in the database for tracking
       try {
@@ -479,10 +695,12 @@ async function sendProductCatalogEmail(customerEmail, customerName) {
             'customer',
             emailSubject,
             emailHTML,
-            'transactional', // Changed from 'ai_catalog' to valid type
+            'transactional',
             'sent',
             JSON.stringify({
               product_count: products.length,
+              is_specific_product: isSpecificProduct,
+              product_query: productQuery || null,
               generated_by: 'ai_assistant',
               request_date: new Date().toISOString()
             })
@@ -495,15 +713,22 @@ async function sendProductCatalogEmail(customerEmail, customerName) {
       
       return {
         success: true,
-        message: `Perfect! I've sent a complete product catalog with ${products.length} products to ${customerEmail}. The email includes detailed photos, pricing, and direct links to each product. Please check your inbox (and spam folder just in case)!`,
+        message: isSpecificProduct ? 
+          (products.length === 1 ?
+            `Perfect! I've sent detailed information about "${products[0].title}" to ${customerEmail}. The email includes high-quality photos, pricing, specifications, and a direct link to purchase. Please check your inbox (and spam folder just in case)!` :
+            `Perfect! I've sent details about ${products.length} products matching "${productQuery}" to ${customerEmail}. The email includes detailed photos, pricing, and direct links. Please check your inbox (and spam folder just in case)!`
+          ) :
+          `Perfect! I've sent a complete product catalog with ${products.length} products to ${customerEmail}. The email includes detailed photos, pricing, and direct links to each product. Please check your inbox (and spam folder just in case)!`,
         productCount: products.length,
-        categories: [...new Set(products.map(p => p.category))].filter(Boolean)
+        categories: [...new Set(products.map(p => p.category))].filter(Boolean),
+        isSpecificProduct,
+        products: isSpecificProduct ? products.map(p => ({ id: p.id, title: p.title, price: p.final_price })) : undefined
       };
     } else {
-      console.log(`❌ Failed to send product catalog email to: ${customerEmail}`);
+      console.log(`❌ Failed to send email to: ${customerEmail}`);
       return {
         success: false,
-        message: "Sorry, there was an issue sending the email. Please check your email address or try again later. You can also contact our support at support@norenfastion.shop"
+        message: "Sorry, there was an issue sending the email. Please check your email address or try again later. You can also contact our support at supportnoren1@gmail.com"
       };
     }
     
@@ -511,7 +736,7 @@ async function sendProductCatalogEmail(customerEmail, customerName) {
     console.error('Error in sendProductCatalogEmail:', err);
     return {
       success: false,
-      message: "Sorry, there was a technical issue preparing your product catalog. Please try again later or contact support@norenfastion.shop"
+      message: "Sorry, there was a technical issue preparing your email. Please try again later or contact supportnoren1@gmail.com"
     };
   }
 }
@@ -533,8 +758,11 @@ const chat = async (req, res) => {
     // Detect intent from message - IMPROVED SMART DETECTION
     const isOrderQuery = /order|track|status|delivery|shipped|delivered|order\s*id|#src/i.test(userMessage);
     
-    // Detect email request - NEW FEATURE
-    const isEmailRequest = /send\s+.*email|email\s+.*products|email\s+.*catalog|email\s+.*details|products\s+.*email|catalog\s+.*email|send.*all.*products|email.*all.*items|mail.*products/i.test(userMessage);
+    // Detect email request - ENHANCED FEATURE
+    const isEmailRequest = /send\s+.*email|email\s+.*products|email\s+.*catalog|email\s+.*details|products\s+.*email|catalog\s+.*email|send.*all.*products|email.*all.*items|mail.*products|email.*about|email.*me.*about/i.test(userMessage);
+    
+    // Detect specific product email request
+    const isSpecificProductEmailRequest = /email\s+.*about\s+.*|send.*details.*about.*|email.*me.*about.*|email.*information.*about.*|mail.*about.*|send.*email.*about.*/i.test(userMessage);
     
     // ONLY show products if user is CLEARLY asking about products
     const isProductQuery = /\b(product|show|find|search|looking for|want|need|buy|purchase|price|available|stock|dress|shirt|top|saree|kurti|jeans|clothes|clothing|fashion|wear|ethnic|western|kurta|lehenga|suit|outfit|collection)\b/i.test(userMessage);
@@ -548,7 +776,7 @@ const chat = async (req, res) => {
     // Check if message contains an order ID (format: SRC followed by alphanumeric)
     const orderIdMatch = userMessage.match(/SRC[A-Z0-9]+/i);
     
-    // Handle email request - NEW FEATURE
+    // Handle email request - ENHANCED FEATURE
     if (isEmailRequest) {
       console.log('🔍 Email request detected:', userMessage);
       
@@ -556,12 +784,78 @@ const chat = async (req, res) => {
       const emailMatch = userMessage.match(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
       
       if (emailMatch) {
-        // Email found in message, send catalog
         const customerEmail = emailMatch[0];
         const customerName = user_context.user_name || 'Valued Customer';
         
+        // Check if this is a specific product request
+        if (isSpecificProductEmailRequest) {
+          // Extract product name/query from message
+          let productQuery = '';
+          
+          // Try different patterns to extract product info
+          const patterns = [
+            /email.*about\s+(.*?)(?:\s+to\s+|$)/i,
+            /send.*details.*about\s+(.*?)(?:\s+to\s+|$)/i,
+            /email.*me.*about\s+(.*?)(?:\s+to\s+|$)/i,
+            /mail.*about\s+(.*?)(?:\s+to\s+|$)/i,
+            /email.*information.*about\s+(.*?)(?:\s+to\s+|$)/i,
+            /send.*email.*about\s+(.*?)(?:\s+to\s+|$)/i
+          ];
+          
+          for (const pattern of patterns) {
+            const match = userMessage.match(pattern);
+            if (match && match[1]) {
+              productQuery = match[1].trim();
+              break;
+            }
+          }
+          
+          // If no specific product found, try to extract from general context
+          if (!productQuery) {
+            // Remove email-related words and extract remaining product terms
+            const cleanedMessage = userMessage
+              .replace(/email|send|mail|about|to|me|details|information/gi, '')
+              .replace(emailMatch[0], '')
+              .trim();
+            
+            if (cleanedMessage.length > 0) {
+              productQuery = cleanedMessage;
+            }
+          }
+          
+          if (productQuery) {
+            console.log(`📧 Sending specific product email about: "${productQuery}" to: ${customerEmail}`);
+            const emailResult = await sendProductCatalogEmail(customerEmail, customerName, true, productQuery);
+            
+            if (emailResult.success) {
+              return res.json({
+                response: emailResult.message,
+                context: {
+                  type: 'specific_product_email_sent',
+                  data: {
+                    email: customerEmail,
+                    productCount: emailResult.productCount,
+                    productQuery: productQuery,
+                    products: emailResult.products,
+                    isSpecificProduct: true,
+                    sent_by: 'NOREN AI Assistant'
+                  }
+                },
+                timestamp: new Date().toISOString(),
+              });
+            } else {
+              return res.json({
+                response: emailResult.message,
+                context: { type: 'email_error', data: { error: true, productQuery } },
+                timestamp: new Date().toISOString(),
+              });
+            }
+          }
+        }
+        
+        // Default to catalog email if no specific product detected
         console.log(`📧 Sending product catalog to: ${customerEmail}`);
-        const emailResult = await sendProductCatalogEmail(customerEmail, customerName);
+        const emailResult = await sendProductCatalogEmail(customerEmail, customerName, false);
         
         if (emailResult.success) {
           return res.json({
@@ -587,6 +881,22 @@ const chat = async (req, res) => {
       } else {
         // Ask for email address
         const storeInfo = await getStoreInfo();
+        
+        // Check if they mentioned a specific product but no email
+        if (isSpecificProductEmailRequest) {
+          return res.json({
+            response: `I'd be happy to email you detailed information about that product! 📧\n\nPlease provide your email address and I'll send the details right away. For example: "Send details about [product name] to john@example.com"`,
+            context: { 
+              type: 'specific_product_email_request', 
+              data: { 
+                awaiting_email: true,
+                message_context: userMessage
+              } 
+            },
+            timestamp: new Date().toISOString(),
+          });
+        }
+        
         return res.json({
           response: `I'd be happy to email you our complete product catalog with ${storeInfo.total_products}+ items including detailed photos, pricing, and descriptions! 📧\n\nPlease provide your email address and I'll send it right away. For example, just say: "Send catalog to john@example.com"`,
           context: { 
@@ -834,9 +1144,9 @@ const getSuggestions = async (req, res) => {
   }
 };
 
-// Send product catalog via email - NEW FEATURE
+// Send product catalog or specific product via email - ENHANCED FEATURE
 const sendProductEmail = async (req, res) => {
-  const { email, customerName } = req.body;
+  const { email, customerName, productQuery, isSpecificProduct } = req.body;
   
   if (!email || typeof email !== 'string') {
     return res.status(400).json({ 
@@ -855,8 +1165,14 @@ const sendProductEmail = async (req, res) => {
   }
   
   try {
-    console.log(`📧 API: Sending product catalog to: ${email}`);
-    const result = await sendProductCatalogEmail(email, customerName);
+    console.log(`📧 API: Sending ${isSpecificProduct ? 'specific product' : 'catalog'} email to: ${email}`);
+    
+    const result = await sendProductCatalogEmail(
+      email, 
+      customerName, 
+      isSpecificProduct || false, 
+      productQuery || ''
+    );
     
     if (result.success) {
       res.json({
@@ -866,6 +1182,8 @@ const sendProductEmail = async (req, res) => {
           email: email,
           productCount: result.productCount,
           categories: result.categories,
+          isSpecificProduct: result.isSpecificProduct,
+          products: result.products,
           sent_by: 'NOREN AI Assistant'
         }
       });
