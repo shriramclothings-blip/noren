@@ -322,6 +322,7 @@ export default function ChatBot() {
     'Track my order',
     'What\'s your return policy?',
   ]);
+  const [popularProducts, setPopularProducts] = useState([]);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -349,6 +350,10 @@ export default function ChatBot() {
       if (response.data?.quick_questions && Array.isArray(response.data.quick_questions)) {
         setSuggestions(response.data.quick_questions);
       }
+      // Load popular products for display
+      if (response.data?.popular_products && Array.isArray(response.data.popular_products)) {
+        setPopularProducts(response.data.popular_products);
+      }
     } catch (error) {
       console.error('Failed to load suggestions:', error);
       // Keep default suggestions on error
@@ -357,6 +362,7 @@ export default function ChatBot() {
         'Track my order',
         'What\'s your return policy?',
       ]);
+      setPopularProducts([]);
     }
   };
 
@@ -810,6 +816,40 @@ export default function ChatBot() {
             
             <div ref={messagesEndRef} />
           </div>
+
+          {/* Popular Products with Photos */}
+          {messages.length <= 2 && popularProducts.length > 0 && !isLoading && (
+            <div style={{ 
+              padding: '16px 22px', 
+              borderTop: '1px solid #e6e0d8',
+              backgroundColor: '#faf9f7',
+            }}>
+              <p style={{ 
+                fontSize: '12px', 
+                color: '#5a5750', 
+                marginBottom: '12px', 
+                fontWeight: 600,
+                letterSpacing: '0.06em',
+                textTransform: 'uppercase',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+              }}>
+                <ShoppingBag style={{ width: '14px', height: '14px', color: '#c9a96e' }} />
+                Popular Products
+              </p>
+              <div style={{ 
+                display: 'grid', 
+                gridTemplateColumns: 'repeat(2, 1fr)', 
+                gap: '12px',
+                marginBottom: '18px',
+              }}>
+                {popularProducts.slice(0, 4).map((product, idx) => (
+                  <ProductCard key={idx} product={product} />
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Quick Suggestions */}
           {messages.length <= 2 && suggestions.length > 0 && !isLoading && (

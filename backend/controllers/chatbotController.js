@@ -312,8 +312,17 @@ const getSuggestions = async (req, res) => {
       pool.query(
         `SELECT p.id, p.title, p.price, p.discount_percent,
                 c.name as category,
+                (SELECT image_url FROM src_product_images 
+                 WHERE product_id = p.id AND is_primary = TRUE 
+                 LIMIT 1) as primary_image,
+                (SELECT image_url FROM src_product_images 
+                 WHERE product_id = p.id 
+                 ORDER BY is_primary DESC, sort_order ASC 
+                 LIMIT 1) as first_image,
                 (SELECT AVG(rating)::NUMERIC(3,1) FROM src_reviews 
-                 WHERE product_id = p.id AND is_hidden = FALSE) as avg_rating
+                 WHERE product_id = p.id AND is_hidden = FALSE) as avg_rating,
+                (SELECT COUNT(*) FROM src_reviews 
+                 WHERE product_id = p.id AND is_hidden = FALSE) as review_count
          FROM src_products p
          LEFT JOIN src_categories c ON p.category_id = c.id
          WHERE p.deleted_at IS NULL AND p.status = 'approved'
@@ -335,10 +344,17 @@ const getSuggestions = async (req, res) => {
       popular_products: popularProducts.rows.map(p => ({
         id: p.id,
         name: p.title,
+        title: p.title,
         category: p.category,
         price: p.price,
         discount_price: p.discount_percent > 0 ? Math.round(p.price * (1 - p.discount_percent / 100)) : null,
+        discount_percent: p.discount_percent,
+        final_price: p.discount_percent > 0 ? Math.round(p.price * (1 - p.discount_percent / 100)) : p.price,
+        has_discount: p.discount_percent > 0,
         rating: parseFloat(p.avg_rating) || 0,
+        review_count: parseInt(p.review_count) || 0,
+        image: p.primary_image || p.first_image || 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=400',
+        url: `https://www.norenfastion.shop/product/${p.id}`,
       })),
       categories: categories.rows,
       quick_questions: [
