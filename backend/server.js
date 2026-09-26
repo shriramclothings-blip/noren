@@ -207,6 +207,9 @@ app.use('/api/email', require('./routes/emailPortal'));
 app.use('/api/monitor', require('./routes/monitor'));
 app.get('/monitor', (_, res) => res.sendFile(path.join(__dirname, 'public', 'monitor.html')));
 
+// ── Database Status & Health API ──────────────────────────────────────────────
+app.use('/api/database', require('./routes/databaseStatus'));
+
 // ════════════════════════════════════════════════════════════════════════════
 //  SEO: SITEMAP INDEX + PRODUCT / STATIC SITEMAPS  (v3 — with image tags)
 // ════════════════════════════════════════════════════════════════════════════
@@ -564,6 +567,9 @@ testMailConfig().catch(() => {});
 // Import the broadcast scheduler
 const broadcastScheduler = require('./services/broadcastScheduler');
 
+// Import the database scheduler for automatic sync
+const getDatabaseScheduler = require('./database-scheduler');
+
 httpServer.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 NOREN API running on port ${PORT}`);
   console.log(`📧 Email Portal: ${process.env.NODE_ENV === 'production' ? 'https://noren-iqk3.onrender.com' : `http://localhost:${PORT}`}`);
@@ -572,6 +578,14 @@ httpServer.listen(PORT, '0.0.0.0', () => {
   setTimeout(() => {
     broadcastScheduler.start();
   }, 3000); // Wait 3 seconds for server to fully start
+
+  // Start database sync scheduler (automatic synchronization)
+  setTimeout(() => {
+    const dbScheduler = getDatabaseScheduler();
+    dbScheduler.start().catch(err => {
+      console.error('Failed to start database scheduler:', err.message);
+    });
+  }, 5000); // Wait 5 seconds for database connections to stabilize
 });
 
   // ── Socket.IO real-time chat ──────────────────────────────────────────────

@@ -10,499 +10,262 @@
             padding: 0;
             box-sizing: border-box;
         }
+        
         body {
-            margin: 0;
-            padding: 0;
             font-family: 'Arial', sans-serif;
-            background-color: #f0f2f5;
+            line-height: 1.6;
             color: #333;
-        }
-        .email-container {
-            max-width: 600px;
-            margin: 0 auto;
-            background-color: #ffffff;
-            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            background-color: #f4f4f4;
         }
         
-        /* Header Section */
+        .email-container {
+            max-width: 600px;
+            margin: 20px auto;
+            background-color: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+        
+        /* Header with Logo */
         .header {
             background-color: #ffffff;
-            padding: 30px;
-            border-bottom: 1px solid #e5e5e5;
+            padding: 40px 30px;
+            text-align: center;
+            border-bottom: 2px solid #f0f0f0;
         }
-        .logo-section {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
+        
         .logo {
-            display: flex;
-            align-items: center;
+            width: 200px;
+            height: 150px;
+            margin: 0 auto 20px;
+            background: url('data:image/svg+xml;charset=utf-8,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300"%3E%3Crect width="400" height="300" fill="%23ffffff"/%3E%3Cg transform="translate(50,50)"%3E%3Cpath d="M50 50h80c40 0 40 40 40 40v60c0 40-40 40-40 40H50z" fill="%23000"/%3E%3Cpath d="M50 100c20-20 40-20 60 0s40 20 60 0" stroke="%23000" stroke-width="3" fill="none"/%3E%3Crect x="20" y="20" width="6" height="6" fill="%23000"/%3E%3Crect x="28" y="20" width="6" height="6" fill="%23000"/%3E%3Crect x="36" y="20" width="6" height="6" fill="%23000"/%3E%3Crect x="20" y="28" width="6" height="6" fill="%23000"/%3E%3Crect x="28" y="28" width="6" height="6" fill="%23000"/%3E%3C/g%3E%3Ctext x="200" y="220" text-anchor="middle" font-family="Arial,sans-serif" font-weight="bold" font-size="24" fill="%23000"%3EDINESH GLOBAL%3C/text%3E%3Ctext x="200" y="245" text-anchor="middle" font-family="Arial,sans-serif" font-size="12" fill="%23666"%3EENTERPRISES PRIVATE LIMITED%3C/text%3E%3Ctext x="200" y="270" text-anchor="middle" font-family="Arial,sans-serif" font-size="10" fill="%23888"%3ESOFTWARE | SOLUTIONS | MANAGEMENT%3C/text%3E%3C/svg%3E') no-repeat center center;
+            background-size: contain;
         }
-        .logo-icon {
-            width: 50px;
-            height: 50px;
-            background: linear-gradient(45deg, #1e3a8a, #3b82f6);
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-right: 15px;
-            position: relative;
-        }
-        .logo-icon::before {
-            content: 'D';
-            color: white;
+        
+        .company-name {
             font-size: 28px;
             font-weight: bold;
-        }
-        .logo-text {
-            color: #1e3a8a;
-            font-weight: bold;
-        }
-        .company-name {
-            font-size: 18px;
-            line-height: 1.2;
-        }
-        .company-subtitle {
-            font-size: 11px;
-            text-transform: uppercase;
+            color: #333;
+            margin-bottom: 5px;
             letter-spacing: 1px;
-            margin-top: 2px;
         }
+        
+        .company-subtitle {
+            font-size: 14px;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 5px;
+        }
+        
         .tagline {
-            color: #6b7280;
             font-size: 12px;
-            text-align: right;
-            line-height: 1.3;
+            color: #888;
+            font-style: italic;
         }
-
-        /* Hero Section */
-        .hero {
-            background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
-            padding: 40px 30px;
-            color: white;
-            position: relative;
-            overflow: hidden;
-        }
-        .hero-content {
-            position: relative;
-            z-index: 2;
-        }
-        .hero-greeting {
-            font-size: 16px;
-            margin-bottom: 8px;
-        }
-        .hero-title {
-            font-size: 32px;
-            font-weight: bold;
-            line-height: 1.2;
-            margin-bottom: 15px;
-        }
-        .hero-subtitle {
-            font-size: 16px;
-            opacity: 0.9;
-            line-height: 1.4;
-        }
-        .hero-logo {
-            position: absolute;
-            right: 30px;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 80px;
-            height: 80px;
-            background: rgba(255,255,255,0.1);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .hero-logo::before {
-            content: 'D';
-            color: white;
-            font-size: 40px;
-            font-weight: bold;
-        }
-
+        
         /* Content Section */
         .content {
             padding: 40px 30px;
         }
+        
         .greeting {
-            font-size: 16px;
+            font-size: 18px;
             font-weight: 600;
             color: #333;
-            margin-bottom: 20px;
-        }
-        .message-content {
-            font-size: 14px;
-            line-height: 1.6;
-            color: #4b5563;
             margin-bottom: 25px;
         }
-        .company-highlight {
-            font-weight: 600;
-            color: #1e3a8a;
-        }
-
-        /* Success Section */
-        .success-section {
-            background-color: #f8fafc;
-            padding: 25px;
-            margin: 30px 0;
+        
+        .message {
+            background-color: #f8f9fa;
+            padding: 30px;
             border-radius: 8px;
+            margin: 25px 0;
+            border-left: 4px solid #333;
         }
-        .success-header {
-            display: flex;
-            align-items: center;
-            margin-bottom: 15px;
+        
+        .message-content {
+            font-size: 16px;
+            line-height: 1.6;
+            color: #555;
         }
-        .success-icon {
-            width: 40px;
-            height: 40px;
-            background-color: #1e3a8a;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-right: 15px;
-        }
-        .success-icon::before {
-            content: '🤝';
-            font-size: 20px;
-        }
-        .success-title {
-            font-size: 18px;
-            font-weight: 600;
-            color: #374151;
-        }
-        .success-text {
-            font-size: 14px;
-            color: #6b7280;
-            line-height: 1.5;
-        }
-
-        /* Services Section */
-        .services-section {
-            margin: 30px 0;
-        }
-        .services-title {
-            font-size: 18px;
-            font-weight: 600;
-            color: #374151;
-            margin-bottom: 20px;
-        }
-        .services-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 20px;
-        }
-        .service-item {
-            text-align: center;
-            padding: 15px;
-        }
-        .service-icon {
-            width: 50px;
-            height: 50px;
-            background-color: #f1f5f9;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto 10px;
-            font-size: 24px;
-        }
-        .service-name {
-            font-size: 12px;
-            font-weight: 600;
-            color: #374151;
-            line-height: 1.3;
-        }
-
+        
         /* CTA Section */
         .cta-section {
             text-align: center;
-            margin: 30px 0;
+            margin: 35px 0;
         }
+        
         .cta-button {
             display: inline-block;
-            background: linear-gradient(135deg, #1e3a8a, #3b82f6);
-            color: white;
-            padding: 12px 30px;
-            border-radius: 50px;
+            background-color: #333;
+            color: #fff;
+            padding: 15px 30px;
+            border-radius: 5px;
             text-decoration: none;
             font-weight: 600;
-            font-size: 14px;
-            box-shadow: 0 4px 15px rgba(30, 58, 138, 0.3);
+            font-size: 16px;
+            transition: background-color 0.3s ease;
         }
-        .cta-subtitle {
-            font-size: 12px;
-            color: #6b7280;
-            margin-top: 10px;
+        
+        .cta-button:hover {
+            background-color: #555;
         }
-
-        /* Signature Section */
+        
+        /* Signature */
         .signature {
-            margin: 30px 0;
+            margin-top: 40px;
+            padding-top: 25px;
+            border-top: 1px solid #eee;
         }
+        
         .signature-text {
             font-size: 14px;
-            color: #4b5563;
+            color: #666;
             line-height: 1.5;
         }
+        
         .signature-name {
             font-weight: 600;
-            color: #1e3a8a;
+            color: #333;
         }
-        .signature-title {
-            font-size: 12px;
-            color: #6b7280;
-        }
-
-        /* Footer Section */
+        
+        /* Footer */
         .footer {
-            background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
-            color: white;
+            background-color: #333;
+            color: #fff;
             padding: 30px;
+            text-align: center;
         }
-        .footer-content {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 25px;
-        }
-        .footer-logo {
-            display: flex;
-            align-items: center;
-        }
-        .footer-logo-icon {
-            width: 40px;
-            height: 40px;
-            background: rgba(255,255,255,0.2);
-            border-radius: 6px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-right: 12px;
-        }
-        .footer-logo-icon::before {
-            content: 'D';
-            color: white;
-            font-size: 24px;
-            font-weight: bold;
-        }
+        
         .footer-company {
-            font-size: 14px;
+            font-size: 18px;
             font-weight: bold;
-            line-height: 1.2;
+            margin-bottom: 5px;
         }
+        
         .footer-subtitle {
-            font-size: 10px;
+            font-size: 12px;
             opacity: 0.8;
             text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-top: 2px;
+            letter-spacing: 0.5px;
+            margin-bottom: 20px;
         }
+        
         .footer-contact {
-            text-align: right;
-            font-size: 12px;
-            line-height: 1.5;
+            margin: 20px 0;
         }
+        
         .footer-contact div {
-            margin-bottom: 3px;
+            margin-bottom: 5px;
+            font-size: 14px;
         }
-        .social-links {
-            display: flex;
-            justify-content: center;
-            gap: 15px;
-            margin-top: 20px;
-        }
-        .social-link {
-            width: 32px;
-            height: 32px;
-            background: rgba(255,255,255,0.2);
-            border-radius: 6px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            text-decoration: none;
-            color: white;
-            font-size: 16px;
-        }
+        
         .footer-bottom {
-            text-align: center;
-            font-size: 11px;
-            opacity: 0.8;
-            border-top: 1px solid rgba(255,255,255,0.2);
+            margin-top: 20px;
             padding-top: 20px;
+            border-top: 1px solid #555;
+            font-size: 12px;
+            opacity: 0.8;
         }
-
+        
         /* Mobile Responsive */
         @media only screen and (max-width: 600px) {
             .email-container {
-                margin: 0;
+                margin: 10px;
             }
+            
             .header {
-                padding: 20px;
+                padding: 25px 20px;
             }
-            .logo-section {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 15px;
+            
+            .logo {
+                width: 150px;
+                height: 112px;
             }
-            .tagline {
-                text-align: left;
+            
+            .company-name {
+                font-size: 22px;
             }
-            .hero {
-                padding: 30px 20px;
-                text-align: center;
+            
+            .company-subtitle {
+                font-size: 12px;
             }
-            .hero-title {
-                font-size: 24px;
-            }
-            .hero-logo {
-                position: static;
-                transform: none;
-                margin: 20px auto 0;
-            }
+            
             .content {
                 padding: 30px 20px;
             }
-            .services-grid {
-                grid-template-columns: 1fr;
-                gap: 15px;
+            
+            .greeting {
+                font-size: 16px;
             }
+            
+            .message {
+                padding: 20px;
+            }
+            
+            .message-content {
+                font-size: 15px;
+            }
+            
+            .cta-button {
+                padding: 12px 25px;
+                font-size: 15px;
+            }
+            
             .footer {
                 padding: 25px 20px;
-            }
-            .footer-content {
-                flex-direction: column;
-                gap: 20px;
-            }
-            .footer-contact {
-                text-align: left;
             }
         }
     </style>
 </head>
 <body>
     <div class="email-container">
-        <!-- Header -->
+        <!-- Header with Logo -->
         <div class="header">
-            <div class="logo-section">
-                <div class="logo">
-                    <div class="logo-icon"></div>
-                    <div class="logo-text">
-                        <div class="company-name">DINESH GLOBAL</div>
-                        <div class="company-subtitle">ENTERPRISES PRIVATE LIMITED</div>
-                    </div>
-                </div>
-                <div class="tagline">
-                    BUILDING DIGITAL SOLUTIONS<br>
-                    FOR A BETTER TOMORROW
-                </div>
-            </div>
+            <div class="logo"></div>
+            <div class="company-name">DINESH GLOBAL</div>
+            <div class="company-subtitle">ENTERPRISES PRIVATE LIMITED</div>
+            <div class="tagline">SOFTWARE | SOLUTIONS | MANAGEMENT</div>
         </div>
-
-        <!-- Hero Section -->
-        <div class="hero">
-            <div class="hero-content">
-                <div class="hero-greeting">HELLO</div>
-                <div class="hero-title">You're Important<br><span style="color: #60a5fa;">to Us!</span></div>
-                <div class="hero-subtitle">Thank you for being a part of<br>Dinesh Global Enterprises Pvt Ltd.</div>
-            </div>
-            <div class="hero-logo"></div>
-        </div>
-
+        
         <!-- Content -->
         <div class="content">
             <div class="greeting">Dear {{recipient_name}},</div>
             
-            <div class="message-content">
-                We hope this message finds you well. This is a quick note from the 
-                <span class="company-highlight">Dinesh Global Enterprises Pvt Ltd</span> team. We appreciate your trust 
-                and support, and we're always here to help you with our products, 
-                services and solutions.
+            <!-- Custom Message -->
+            <div class="message">
+                <div class="message-content">{{custom_content}}</div>
             </div>
-
-            <!-- Success Section -->
-            <div class="success-section">
-                <div class="success-header">
-                    <div class="success-icon"></div>
-                    <div class="success-title">Your Success Matters</div>
-                </div>
-                <div class="success-text">
-                    We are committed to delivering innovative software, 
-                    reliable solutions and dedicated support to help you 
-                    grow and achieve your goals.
-                </div>
-            </div>
-
-            <!-- Services -->
-            <div class="services-section">
-                <div class="services-title">Our Services</div>
-                <div class="services-grid">
-                    <div class="service-item">
-                        <div class="service-icon">&lt;/&gt;</div>
-                        <div class="service-name">Software<br>Development</div>
-                    </div>
-                    <div class="service-item">
-                        <div class="service-icon">☁</div>
-                        <div class="service-name">Cloud &<br>Infrastructure</div>
-                    </div>
-                    <div class="service-item">
-                        <div class="service-icon">⚙</div>
-                        <div class="service-name">Business<br>Solutions</div>
-                    </div>
-                    <div class="service-item">
-                        <div class="service-icon">👥</div>
-                        <div class="service-name">IT Consulting<br>& Support</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- CTA -->
+            
+            <!-- Call to Action -->
             <div class="cta-section">
-                <a href="#" class="cta-button">Get in Touch →</a>
-                <div class="cta-subtitle">We're just an email away, Feel free to reach out anytime!</div>
+                <a href="{{cta_url}}" class="cta-button">{{cta_text}}</a>
             </div>
-
+            
             <!-- Signature -->
             <div class="signature">
                 <div class="signature-text">
-                    Warm Regards,<br>
-                    <span class="signature-name">Team Dinesh Global Pvt Ltd</span><br>
-                    <span class="signature-title">Software | Solutions | Management</span>
+                    Best regards,<br>
+                    <span class="signature-name">Team Dinesh Global Enterprises</span>
                 </div>
             </div>
         </div>
-
+        
         <!-- Footer -->
         <div class="footer">
-            <div class="footer-content">
-                <div class="footer-logo">
-                    <div class="footer-logo-icon"></div>
-                    <div>
-                        <div class="footer-company">DINESH GLOBAL</div>
-                        <div class="footer-subtitle">ENTERPRISES PRIVATE LIMITED</div>
-                    </div>
-                </div>
-                <div class="footer-contact">
-                    <div>📱 +91 9894626447</div>
-                    <div>✉ info@dineshglobal.in</div>
-                    <div>🌐 www.dineshglobal.in</div>
-                </div>
-            </div>
+            <div class="footer-company">DINESH GLOBAL</div>
+            <div class="footer-subtitle">ENTERPRISES PRIVATE LIMITED</div>
             
-            <div class="social-links">
-                <a href="#" class="social-link">📘</a>
-                <a href="#" class="social-link">📷</a>
-                <a href="#" class="social-link">📺</a>
-                <a href="#" class="social-link">✕</a>
+            <div class="footer-contact">
+                <div>📱 +91 9894626447</div>
+                <div>✉️ info@dineshglobal.in</div>
+                <div>🌐 www.dineshglobal.in</div>
             </div>
             
             <div class="footer-bottom">
-                © {{current_year}} Dinesh Global Enterprises Pvt Ltd. All rights reserved.
+                © {{current_year}} Dinesh Global Enterprises Private Limited. All rights reserved.
             </div>
         </div>
     </div>
