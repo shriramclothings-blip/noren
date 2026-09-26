@@ -50,37 +50,49 @@ async function callGemini(prompt, temperature = 0.7, maxTokens = 1024) {
 // Helper: Fetch product information with images for context
 async function fetchProductContext(query) {
   try {
-    // Search products by name, category, or description with images
+    // Search products by title, category, or description with images
     const searchQuery = `%${query}%`;
     const result = await pool.query(
-      `SELECT p.id, p.name, p.description, p.price, p.discount_price, p.category, 
-              p.stock_quantity, p.status, p.brand, p.rating, p.review_count,
+      `SELECT p.id, p.title, p.description, p.price, p.discount_percent, p.stock_quantity, 
+              p.status, p.rating, p.gender,
+              c.name as category,
               (SELECT image_url FROM src_product_images 
                WHERE product_id = p.id AND is_primary = TRUE 
                LIMIT 1) as primary_image,
               (SELECT image_url FROM src_product_images 
                WHERE product_id = p.id 
                ORDER BY is_primary DESC, sort_order ASC 
-               LIMIT 1) as first_image
+               LIMIT 1) as first_image,
+              (SELECT COUNT(*) FROM src_reviews 
+               WHERE product_id = p.id AND is_hidden = FALSE) as review_count
        FROM src_products p
+       LEFT JOIN src_categories c ON p.category_id = c.id
        WHERE p.deleted_at IS NULL 
          AND p.status = 'approved'
-         AND (LOWER(p.name) LIKE LOWER($1) 
-              OR LOWER(p.category) LIKE LOWER($1) 
-              OR LOWER(p.description) LIKE LOWER($1)
-              OR LOWER(p.brand) LIKE LOWER($1))
-       ORDER BY p.rating DESC, p.review_count DESC
+         AND (LOWER(p.title) LIKE LOWER($1) 
+              OR LOWER(c.name) LIKE LOWER($1) 
+              OR LOWER(p.description) LIKE LOWER($1))
+       ORDER BY p.rating DESC NULLS LAST, p.created_at DESC
        LIMIT 6`,
       [searchQuery]
     );
     
     // Add product URLs and format for frontend
     return result.rows.map(p => ({
-      ...p,
+      id: p.id,
+      name: p.title, // Map title to name for consistency
+      title: p.title,
+      description: p.description,
+      price: p.price,
+      discount_price: p.discount_percent > 0 ? (p.price * (1 - p.discount_percent / 100)).toFixed(0) : null,
+      category: p.category,
+      stock_quantity: p.stock_quantity,
+      rating: p.rating || 0,
+      review_count: parseInt(p.review_count) || 0,
       image: p.primary_image || p.first_image || 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=400',
       url: `https://www.norenfastion.shop/product/${p.id}`,
-      final_price: p.discount_price || p.price,
-      has_discount: !!p.discount_price,
+      final_price: p.discount_percent > 0 ? (p.price * (1 - p.discount_percent / 100)).toFixed(0) : p.price,
+      has_discount: p.discount_percent > 0,
     }));
   } catch (err) {
     console.error('Product context fetch error:', err);
@@ -149,20 +161,21 @@ async function fetchOrderDetails(orderId) {
 // Helper: Get general store information
 async function getStoreInfo() {
   try {
-    const [productsResult, categoriesResult, brandsResult] = await Promise.all([
+    const [productsResult, categoriesResult] = await Promise.all([
       pool.query(`SELECT COUNT(*) as total FROM src_products WHERE deleted_at IS NULL AND status = 'approved'`),
-      pool.query(`SELECT DISTINCT category FROM src_products WHERE deleted_at IS NULL AND status = 'approved' AND category IS NOT NULL ORDER BY category`),
-      pool.query(`SELECT DISTINCT brand FROM src_products WHERE deleted_at IS NULL AND status = 'approved' AND brand IS NOT NULL ORDER BY brand`),
+      pool.query(`SELECT DISTINCT c.name as category FROM src_products p 
+                  LEFT JOIN src_categories c ON p.category_id = c.id
+                  WHERE p.deleted_at IS NULL AND p.status = 'approved' AND c.name IS NOT NULL 
+                  ORDER BY c.name`),
     ]);
     
     return {
       total_products: parseInt(productsResult.rows[0]?.total || 0),
       categories: categoriesResult.rows.map(r => r.category),
-      brands: brandsResult.rows.map(r => r.brand),
     };
   } catch (err) {
     console.error('Store info fetch error:', err);
-    return { total_products: 0, categories: [], brands: [] };
+    return { total_products: 0, categories: [] };
   }
 }
 
@@ -215,12 +228,11 @@ const chat = async (req, res) => {
         specificData = { type: 'products', data: products };
         contextData = `\n\nRELEVANT PRODUCTS FROM NOREN CATALOG:\n` +
           products.map((p, i) => 
-            `${i + 1}. ${p.name}\n` +
+            `${i + 1}. ${p.title}\n` +
             `   - Category: ${p.category || 'N/A'}\n` +
-            `   - Brand: ${p.brand || 'N/A'}\n` +
-            `   - Price: ₹${p.discount_price || p.price} ${p.discount_price ? `(Original: ₹${p.price})` : ''}\n` +
+            `   - Price: ₹${p.final_price} ${p.has_discount ? `(Original: ₹${p.price})` : ''}\n` +
             `   - Stock: ${p.stock_quantity > 0 ? 'In Stock' : 'Out of Stock'}\n` +
-            `   - Rating: ${p.rating || 'N/A'} (${p.review_count || 0} reviews)\n` +
+            `   - Rating: ${p.rating || 'New'} ${p.review_count > 0 ? `(${p.review_count} reviews)` : ''}\n` +
             `   - Description: ${p.description?.substring(0, 150) || 'N/A'}...`
           ).join('\n\n');
       }
@@ -244,7 +256,6 @@ STORE INFORMATION:
 - Website: www.norenfastion.shop
 - Total Products Available: ${storeInfo.total_products}
 - Categories: ${storeInfo.categories.join(', ') || 'Various fashion categories'}
-- Brands: ${storeInfo.brands.slice(0, 10).join(', ') || 'Multiple brands'}${storeInfo.brands.length > 10 ? ' and more' : ''}
 
 GUIDELINES:
 - Be friendly, helpful, and professional
@@ -289,24 +300,34 @@ const getSuggestions = async (req, res) => {
   try {
     const [popularProducts, categories] = await Promise.all([
       pool.query(
-        `SELECT p.id, p.name, p.category, p.price, p.discount_price, p.rating
+        `SELECT p.id, p.title, p.price, p.discount_percent, p.rating,
+                c.name as category
          FROM src_products p
+         LEFT JOIN src_categories c ON p.category_id = c.id
          WHERE p.deleted_at IS NULL AND p.status = 'approved' AND p.stock_quantity > 0
-         ORDER BY p.rating DESC, p.review_count DESC
+         ORDER BY p.rating DESC NULLS LAST, p.views DESC
          LIMIT 6`
       ),
       pool.query(
-        `SELECT DISTINCT category, COUNT(*) as product_count
-         FROM src_products
-         WHERE deleted_at IS NULL AND status = 'approved'
-         GROUP BY category
+        `SELECT c.name as category, COUNT(*) as product_count
+         FROM src_products p
+         LEFT JOIN src_categories c ON p.category_id = c.id
+         WHERE p.deleted_at IS NULL AND p.status = 'approved' AND c.name IS NOT NULL
+         GROUP BY c.name
          ORDER BY product_count DESC
          LIMIT 8`
       ),
     ]);
     
     res.json({
-      popular_products: popularProducts.rows,
+      popular_products: popularProducts.rows.map(p => ({
+        id: p.id,
+        name: p.title,
+        category: p.category,
+        price: p.price,
+        discount_price: p.discount_percent > 0 ? (p.price * (1 - p.discount_percent / 100)).toFixed(0) : null,
+        rating: p.rating || 0,
+      })),
       categories: categories.rows,
       quick_questions: [
         "What are your best-selling products?",
