@@ -53,8 +53,7 @@ async function fetchProductContext(query) {
     // Search products by title, category, or description with images
     const searchQuery = `%${query}%`;
     const result = await pool.query(
-      `SELECT p.id, p.title, p.description, p.price, p.discount_percent, p.stock_quantity, 
-              p.status, p.rating, p.gender,
+      `SELECT p.id, p.title, p.description, p.price, p.discount_percent, p.gender,
               c.name as category,
               (SELECT image_url FROM src_product_images 
                WHERE product_id = p.id AND is_primary = TRUE 
@@ -63,6 +62,8 @@ async function fetchProductContext(query) {
                WHERE product_id = p.id 
                ORDER BY is_primary DESC, sort_order ASC 
                LIMIT 1) as first_image,
+              (SELECT AVG(rating)::NUMERIC(3,1) FROM src_reviews 
+               WHERE product_id = p.id AND is_hidden = FALSE) as avg_rating,
               (SELECT COUNT(*) FROM src_reviews 
                WHERE product_id = p.id AND is_hidden = FALSE) as review_count
        FROM src_products p
@@ -72,7 +73,7 @@ async function fetchProductContext(query) {
          AND (LOWER(p.title) LIKE LOWER($1) 
               OR LOWER(c.name) LIKE LOWER($1) 
               OR LOWER(p.description) LIKE LOWER($1))
-       ORDER BY p.rating DESC NULLS LAST, p.created_at DESC
+       ORDER BY p.views DESC, p.created_at DESC
        LIMIT 6`,
       [searchQuery]
     );
@@ -84,14 +85,13 @@ async function fetchProductContext(query) {
       title: p.title,
       description: p.description,
       price: p.price,
-      discount_price: p.discount_percent > 0 ? (p.price * (1 - p.discount_percent / 100)).toFixed(0) : null,
+      discount_price: p.discount_percent > 0 ? Math.round(p.price * (1 - p.discount_percent / 100)) : null,
       category: p.category,
-      stock_quantity: p.stock_quantity,
-      rating: p.rating || 0,
+      rating: parseFloat(p.avg_rating) || 0,
       review_count: parseInt(p.review_count) || 0,
       image: p.primary_image || p.first_image || 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=400',
       url: `https://www.norenfastion.shop/product/${p.id}`,
-      final_price: p.discount_percent > 0 ? (p.price * (1 - p.discount_percent / 100)).toFixed(0) : p.price,
+      final_price: p.discount_percent > 0 ? Math.round(p.price * (1 - p.discount_percent / 100)) : p.price,
       has_discount: p.discount_percent > 0,
     }));
   } catch (err) {
@@ -229,11 +229,10 @@ const chat = async (req, res) => {
         contextData = `\n\nRELEVANT PRODUCTS FROM NOREN CATALOG:\n` +
           products.map((p, i) => 
             `${i + 1}. ${p.title}\n` +
-            `   - Category: ${p.category || 'N/A'}\n` +
+            `   - Category: ${p.category || 'Fashion'}\n` +
             `   - Price: ₹${p.final_price} ${p.has_discount ? `(Original: ₹${p.price})` : ''}\n` +
-            `   - Stock: ${p.stock_quantity > 0 ? 'In Stock' : 'Out of Stock'}\n` +
-            `   - Rating: ${p.rating || 'New'} ${p.review_count > 0 ? `(${p.review_count} reviews)` : ''}\n` +
-            `   - Description: ${p.description?.substring(0, 150) || 'N/A'}...`
+            `   - Rating: ${p.rating > 0 ? p.rating + ' stars' : 'New product'} ${p.review_count > 0 ? `(${p.review_count} reviews)` : ''}\n` +
+            `   - Description: ${p.description?.substring(0, 120) || 'Stylish fashion item'}...`
           ).join('\n\n');
       }
     }
@@ -300,12 +299,14 @@ const getSuggestions = async (req, res) => {
   try {
     const [popularProducts, categories] = await Promise.all([
       pool.query(
-        `SELECT p.id, p.title, p.price, p.discount_percent, p.rating,
-                c.name as category
+        `SELECT p.id, p.title, p.price, p.discount_percent,
+                c.name as category,
+                (SELECT AVG(rating)::NUMERIC(3,1) FROM src_reviews 
+                 WHERE product_id = p.id AND is_hidden = FALSE) as avg_rating
          FROM src_products p
          LEFT JOIN src_categories c ON p.category_id = c.id
-         WHERE p.deleted_at IS NULL AND p.status = 'approved' AND p.stock_quantity > 0
-         ORDER BY p.rating DESC NULLS LAST, p.views DESC
+         WHERE p.deleted_at IS NULL AND p.status = 'approved'
+         ORDER BY p.views DESC, p.created_at DESC
          LIMIT 6`
       ),
       pool.query(
@@ -325,8 +326,8 @@ const getSuggestions = async (req, res) => {
         name: p.title,
         category: p.category,
         price: p.price,
-        discount_price: p.discount_percent > 0 ? (p.price * (1 - p.discount_percent / 100)).toFixed(0) : null,
-        rating: p.rating || 0,
+        discount_price: p.discount_percent > 0 ? Math.round(p.price * (1 - p.discount_percent / 100)) : null,
+        rating: parseFloat(p.avg_rating) || 0,
       })),
       categories: categories.rows,
       quick_questions: [
