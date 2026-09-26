@@ -261,9 +261,10 @@ export default function ChatBot() {
         <button
           onClick={() => setIsOpen(true)}
           aria-label="Chat with NOREN Assistant"
+          className="chatbot-button"
           style={{
             position: 'fixed',
-            bottom: '32px',
+            bottom: '92px', // Higher than WhatsApp (24px + 52px + 16px margin)
             right: '32px',
             zIndex: 50,
             width: '64px',
@@ -304,23 +305,25 @@ export default function ChatBot() {
 
       {/* Chat Window */}
       {isOpen && (
-        <div style={{
-          position: 'fixed',
-          bottom: '32px',
-          right: '32px',
-          zIndex: 50,
-          width: '420px',
-          maxWidth: 'calc(100vw - 4rem)',
-          height: '650px',
-          maxHeight: 'calc(100vh - 4rem)',
-          display: 'flex',
-          flexDirection: 'column',
-          background: 'linear-gradient(to bottom, #faf9f7, #f5f0e8)',
-          borderRadius: '16px',
-          boxShadow: '0 20px 60px rgba(26, 26, 24, 0.2)',
-          border: '1px solid rgba(201, 169, 110, 0.2)',
-          overflow: 'hidden',
-        }}>
+        <div 
+          className="chatbot-window"
+          style={{
+            position: 'fixed',
+            bottom: '92px', // Same as button to align properly
+            right: '32px',
+            zIndex: 50,
+            width: '420px',
+            maxWidth: 'calc(100vw - 4rem)',
+            height: '650px',
+            maxHeight: 'calc(100vh - 140px)', // Account for bottom spacing
+            display: 'flex',
+            flexDirection: 'column',
+            background: 'linear-gradient(to bottom, #faf9f7, #f5f0e8)',
+            borderRadius: '16px',
+            boxShadow: '0 20px 60px rgba(26, 26, 24, 0.2)',
+            border: '1px solid rgba(201, 169, 110, 0.2)',
+            overflow: 'hidden',
+          }}>
           {/* Header */}
           <div style={{
             padding: '20px 24px',
@@ -676,6 +679,36 @@ export default function ChatBot() {
           75%, 100% {
             transform: scale(2);
             opacity: 0;
+          }
+        }
+        
+        /* Mobile responsive positioning to avoid WhatsApp overlap */
+        @media (max-width: 768px) {
+          .chatbot-button {
+            bottom: 92px !important;
+            right: 20px !important;
+            width: 56px !important;
+            height: 56px !important;
+          }
+          
+          .chatbot-window {
+            bottom: 92px !important;
+            right: 20px !important;
+            width: calc(100vw - 2.5rem) !important;
+            max-height: calc(100vh - 140px) !important;
+          }
+        }
+        
+        @media (max-width: 480px) {
+          .chatbot-button {
+            bottom: 88px !important;
+            right: 16px !important;
+          }
+          
+          .chatbot-window {
+            bottom: 88px !important;
+            right: 16px !important;
+            width: calc(100vw - 2rem) !important;
           }
         }
       `}</style>
