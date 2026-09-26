@@ -281,9 +281,14 @@ const chat = async (req, res) => {
     // Get general store info FIRST (needed for error messages)
     const storeInfo = await getStoreInfo();
     
-    // Detect intent from message - Enhanced detection
+    // Detect intent from message - IMPROVED SMART DETECTION
     const isOrderQuery = /order|track|status|delivery|shipped|delivered|order\s*id|#src/i.test(userMessage);
-    const isProductQuery = /product|price|available|stock|buy|purchase|show|find|search|looking for|want|need|dress|shirt|top|saree|kurti|jeans|clothes|clothing|fashion|wear|ethnic|western|men|women|kids|photo|image|picture/i.test(userMessage);
+    
+    // ONLY show products if user is CLEARLY asking about products
+    const isProductQuery = /\b(product|show|find|search|looking for|want|need|buy|purchase|price|available|stock|dress|shirt|top|saree|kurti|jeans|clothes|clothing|fashion|wear|ethnic|western|kurta|lehenga|suit|outfit|collection)\b/i.test(userMessage);
+    
+    // Detect NON-product queries (shipping, returns, policies, help, etc.)
+    const isGeneralQuery = /\b(ship|delivery|return|exchange|refund|policy|payment|cod|cancel|help|support|contact|email|phone|timing|hours|location|address|store|about|who|what is|how to|guide|size chart|measure)\b/i.test(userMessage);
     
     let contextData = '';
     let specificData = null;
@@ -312,8 +317,8 @@ const chat = async (req, res) => {
       } else {
         contextData = `\n\nORDER NOT FOUND: No order found with ID ${orderIdMatch[0]}. The customer may have entered an incorrect order ID.`;
       }
-    } else if (isProductQuery) {
-      // Fetch relevant products with SMART SEARCH
+    } else if (isProductQuery && !isGeneralQuery) {
+      // ONLY fetch products if user is asking about products AND not asking general questions
       const products = await fetchProductContext(userMessage);
       if (products.length > 0) {
         specificData = { type: 'products', data: products };
@@ -328,20 +333,16 @@ const chat = async (req, res) => {
             `   - Photo: Available below\n` +
             `   - Description: ${p.description?.substring(0, 150) || 'Premium NOREN fashion item'}${p.description?.length > 150 ? '...' : ''}`
           ).join('\n');
-      } else {
-        // This should rarely happen now with smart search fallback
-        contextData = `\n\nSEARCH NOTE: Your smart search tried multiple strategies but found no exact matches for "${userMessage}". Showing popular items instead.`;
       }
     } else {
-      // For general questions, still show some popular products
-      const products = await fetchProductContext('popular');
-      if (products.length > 0) {
-        specificData = { type: 'products', data: products.slice(0, 4) };
-        contextData = `\n\nFOR REFERENCE - POPULAR NOREN PRODUCTS:\n` +
-          products.slice(0, 4).map((p, i) => 
-            `${i + 1}. ${p.title} - ₹${p.final_price} (${p.category})`
-          ).join('\n');
-      }
+      // For general/policy questions, DO NOT show products
+      // Just provide context about available categories if needed
+      contextData = `\n\nSTORE CONTEXT:\n` +
+        `- Total Products: ${storeInfo.total_products}\n` +
+        `- Available Categories: ${storeInfo.categories.join(', ')}\n` +
+        `- Support Email: support@norenfastion.shop\n` +
+        `- Website: www.norenfastion.shop\n\n` +
+        `NOTE: Customer is asking a general/policy question, NOT looking for products. Answer their question directly without showing product recommendations.`;
     }
     
     // Build conversation history (last 6 messages)
@@ -349,37 +350,37 @@ const chat = async (req, res) => {
       `${m.role === 'user' ? 'Customer' : 'NOREN Assistant'}: ${m.content}`
     ).join('\n');
     
-    // Build AI prompt - SMART & FORGIVING MODE
-    const systemPrompt = `You are NOREN's AI Customer Support Assistant with intelligent search capabilities.
+    // Build AI prompt - CONTEXT-AWARE MODE
+    const systemPrompt = `You are NOREN's AI Customer Support Assistant.
 
 CRITICAL RULES:
 1. ONLY use real database information provided below
-2. Be SMART about understanding vague or incomplete queries
-3. If customer asks vaguely (e.g., "show something nice"), use the products found by smart search
-4. ALWAYS mention product photos are shown when products are found
-5. Use EXACT prices from database (₹ symbol)
-6. Even if customer makes typos or incomplete requests, show them products
-7. Be helpful and guide customers naturally
+2. If customer asks about PRODUCTS → Show product cards with photos
+3. If customer asks about POLICIES/HELP (shipping, returns, payment, etc.) → Answer directly WITHOUT showing products
+4. Use EXACT prices from database (₹ symbol)
+5. Be helpful and context-aware
 
 STORE INFORMATION:
 - Website: www.norenfastion.shop
 - Total Products: ${storeInfo.total_products}
-- Categories: ${storeInfo.categories.join(', ') || 'Various fashion categories'}
+- Categories: ${storeInfo.categories.join(', ')}
+- Support: support@norenfastion.shop
 
-${contextData ? `DATABASE RESULTS:${contextData}` : 'NO EXACT MATCHES - But showing popular products below to help the customer.'}
+CUSTOMER QUESTION TYPE:
+${isProductQuery && !isGeneralQuery ? '🛍️ PRODUCT SEARCH - Show products with photos' : '❓ GENERAL/POLICY QUESTION - Answer directly, NO products'}
+
+${contextData}
 
 ${conversationContext ? `CONVERSATION HISTORY:\n${conversationContext}\n` : ''}
 
 Customer asked: "${userMessage}"
 
 YOUR RESPONSE GUIDELINES:
-✅ If products found: Say something like "I found [X] products for you! Check them out below with photos and prices."
-✅ If query is vague: Say "Here are some beautiful pieces from our collection" and show the products
-✅ If customer made typo/mistake: Still show products and say "Here's what I found for you"
-✅ Use exact prices from database
-✅ Be conversational, warm, and helpful
-✅ Keep response to 2-4 sentences (product cards show below)
-✅ Guide them to browse more if they want
+✅ If PRODUCT query: "I found X products for you! Check them below with photos."
+✅ If GENERAL query: Answer their question directly about shipping/returns/policies
+✅ Use conversational, warm tone
+✅ Keep response to 2-4 sentences
+✅ Be helpful and guide them
 
 Your Response:`;
 
