@@ -13,7 +13,7 @@ async function callGroq(prompt, temperature = 0.7, maxTokens = 1024) {
   }
 
   const body = JSON.stringify({
-    model: 'llama-3.1-70b-versatile',
+    model: 'openai/gpt-oss-120b', // Groq's flagship model - fast & powerful
     messages: [{ role: 'user', content: prompt }],
     temperature,
     max_tokens: maxTokens,
