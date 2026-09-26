@@ -1,3 +1,4 @@
+// NOREN AI Chatbot - Dark Theme with Personalization
 import { useState, useRef, useEffect } from 'react';
 import { X, Send, Package, Edit3, RefreshCw, TrendingUp, MapPin, ChevronRight, Paperclip } from 'lucide-react';
 import axios from 'axios';
