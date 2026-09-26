@@ -201,9 +201,9 @@ const chat = async (req, res) => {
   try {
     const userMessage = message.trim();
     
-    // Detect intent from message
+    // Detect intent from message - Enhanced detection
     const isOrderQuery = /order|track|status|delivery|shipped|delivered|order\s*id|#src/i.test(userMessage);
-    const isProductQuery = /product|price|available|stock|buy|purchase|show|find|search|looking for|want|need/i.test(userMessage);
+    const isProductQuery = /product|price|available|stock|buy|purchase|show|find|search|looking for|want|need|dress|shirt|top|saree|kurti|jeans|clothes|clothing|fashion|wear|ethnic|western|men|women|kids|photo|image|picture/i.test(userMessage);
     
     let contextData = '';
     let specificData = null;
@@ -237,14 +237,29 @@ const chat = async (req, res) => {
       const products = await fetchProductContext(userMessage);
       if (products.length > 0) {
         specificData = { type: 'products', data: products };
-        contextData = `\n\nRELEVANT PRODUCTS FROM NOREN CATALOG:\n` +
+        contextData = `\n\nRELEVANT PRODUCTS FROM NOREN DATABASE (${products.length} found):\n` +
           products.map((p, i) => 
-            `${i + 1}. ${p.title}\n` +
+            `\nProduct ${i + 1}: ${p.title}\n` +
+            `   - Product ID: ${p.id}\n` +
             `   - Category: ${p.category || 'Fashion'}\n` +
-            `   - Price: ₹${p.final_price} ${p.has_discount ? `(Original: ₹${p.price})` : ''}\n` +
-            `   - Rating: ${p.rating > 0 ? p.rating + ' stars' : 'New product'} ${p.review_count > 0 ? `(${p.review_count} reviews)` : ''}\n` +
-            `   - Description: ${p.description?.substring(0, 120) || 'Stylish fashion item'}...`
-          ).join('\n\n');
+            `   - Exact Price: ₹${p.final_price}${p.has_discount ? ` (Original Price: ₹${p.price}, Discount: ${Math.round(((p.price - p.final_price) / p.price) * 100)}% OFF)` : ''}\n` +
+            `   - Customer Rating: ${p.rating > 0 ? p.rating.toFixed(1) + '/5 stars' : 'New Product (No reviews yet)'} ${p.review_count > 0 ? `from ${p.review_count} customer reviews` : ''}\n` +
+            `   - Product Photo: Available (will be shown in product card below)\n` +
+            `   - Description: ${p.description?.substring(0, 200) || 'Premium fashion item from NOREN collection'}${p.description?.length > 200 ? '...' : ''}\n` +
+            `   - Product URL: ${p.url}`
+          ).join('\n');
+      } else {
+        contextData = `\n\nDATABASE SEARCH RESULT: No products found matching "${userMessage}". The customer should try different keywords or browse our categories: ${storeInfo.categories.join(', ')}.`;
+      }
+    } else {
+      // For general questions, still show some popular products
+      const products = await fetchProductContext('popular');
+      if (products.length > 0) {
+        specificData = { type: 'products', data: products.slice(0, 4) };
+        contextData = `\n\nFOR REFERENCE - POPULAR NOREN PRODUCTS:\n` +
+          products.slice(0, 4).map((p, i) => 
+            `${i + 1}. ${p.title} - ₹${p.final_price} (${p.category})`
+          ).join('\n');
       }
     }
     
@@ -256,35 +271,38 @@ const chat = async (req, res) => {
       `${m.role === 'user' ? 'Customer' : 'NOREN Assistant'}: ${m.content}`
     ).join('\n');
     
-    // Build AI prompt
-    const systemPrompt = `You are NOREN's AI Customer Support Assistant. You help customers with:
-1. PRODUCT QUESTIONS - Answer questions about products, availability, prices, features, and recommendations
-2. ORDER TRACKING - Provide order status, tracking information, and delivery updates
-3. GENERAL HELP - Answer questions about shipping, returns, payments, and store policies
+    // Build AI prompt - STRICT DATABASE-ONLY MODE
+    const systemPrompt = `You are NOREN's AI Customer Support Assistant with direct access to the product database.
+
+CRITICAL RULES - YOU MUST FOLLOW THESE:
+1. ONLY use information from the database context provided below
+2. NEVER make up or invent product details, prices, or information
+3. If product data is provided, you MUST mention that product cards with photos are shown
+4. ALWAYS use EXACT prices from the database (₹ symbol)
+5. If you don't have data, say "Let me search our catalog" and ask for more details
+6. DO NOT create fake product names, fake prices, or fake descriptions
 
 STORE INFORMATION:
 - Website: www.norenfastion.shop
 - Total Products Available: ${storeInfo.total_products}
 - Categories: ${storeInfo.categories.join(', ') || 'Various fashion categories'}
 
-GUIDELINES:
-- Be friendly, helpful, and professional
-- Use emojis sparingly (1-2 per response)
-- Keep responses concise (3-5 sentences max unless more detail is needed)
-- If you have specific product or order data, reference it directly
-- If you don't have enough information, politely ask for more details
-- For order tracking, always mention the order ID
-- Always encourage customers to contact support@norenfastion.shop for complex issues
-- Format prices in Indian Rupees (₹)
-- Use natural, conversational language
-
-${contextData}
+${contextData ? `DATABASE CONTEXT (USE THIS INFORMATION ONLY):${contextData}` : 'NO DATABASE RESULTS FOUND - Ask the customer to be more specific about what they are looking for.'}
 
 ${conversationContext ? `\nRECENT CONVERSATION:\n${conversationContext}\n` : ''}
 
-Customer asks: ${userMessage}
+Customer Question: ${userMessage}
 
-Provide a helpful, friendly response:`;
+RESPONSE RULES:
+- If product data is provided above, say something like "I found [X] products for you. You can see them with photos below!"
+- Use EXACT prices from database (e.g., ₹1,299 not "around ₹1,300")
+- Reference product names EXACTLY as they appear in database
+- If no database results, say "I couldn't find specific matches. Could you describe what you're looking for?"
+- Be conversational but factual
+- Maximum 3-4 sentences in your text response (product cards will show below)
+
+Your Response:`;
+
 
     // Call Groq AI (Llama 3.1)
     const aiResponse = await callGroq(systemPrompt, 0.8, 800);
