@@ -3,24 +3,35 @@
 const { pool } = require('../config/db');
 const https = require('https');
 
-const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent';
+const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
 
-// Helper: call Gemini AI
-async function callGemini(prompt, temperature = 0.7, maxTokens = 1024) {
-  const apiKey = process.env.GEMINI_API_KEY;
+// Helper: call Groq AI (Llama 3.1 70B)
+async function callGroq(prompt, temperature = 0.7, maxTokens = 1024) {
+  const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey || apiKey.startsWith('REPLACE')) {
-    throw new Error('Gemini API key not configured.');
+    throw new Error('Groq API key not configured. Get your free key at https://console.groq.com');
   }
 
   const body = JSON.stringify({
-    contents: [{ role: 'user', parts: [{ text: prompt }] }],
-    generationConfig: { temperature, maxOutputTokens: maxTokens, topP: 0.9 },
+    model: 'llama-3.1-70b-versatile',
+    messages: [{ role: 'user', content: prompt }],
+    temperature,
+    max_tokens: maxTokens,
+    top_p: 0.9,
+    stream: false,
   });
 
   return new Promise((resolve, reject) => {
     const req = https.request(
-      `${GEMINI_URL}?key=${apiKey}`,
-      { method: 'POST', headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) } },
+      GROQ_URL,
+      { 
+        method: 'POST', 
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Length': Buffer.byteLength(body)
+        } 
+      },
       (res) => {
         let data = '';
         res.on('data', c => { data += c; });
@@ -28,20 +39,20 @@ async function callGemini(prompt, temperature = 0.7, maxTokens = 1024) {
           try {
             const json = JSON.parse(data);
             if (res.statusCode !== 200) {
-              const errMsg = json.error?.message || ('Gemini HTTP ' + res.statusCode);
+              const errMsg = json.error?.message || ('Groq API error: HTTP ' + res.statusCode);
               return reject(new Error(errMsg));
             }
-            const text = json?.candidates?.[0]?.content?.parts?.[0]?.text;
-            if (!text) return reject(new Error('Gemini returned empty response'));
+            const text = json?.choices?.[0]?.message?.content;
+            if (!text) return reject(new Error('Groq returned empty response'));
             resolve(text.trim());
           } catch (e) {
-            reject(new Error('Failed to parse Gemini response'));
+            reject(new Error('Failed to parse Groq response: ' + e.message));
           }
         });
       }
     );
     req.on('error', reject);
-    req.setTimeout(20000, () => { req.destroy(); reject(new Error('Gemini timeout')); });
+    req.setTimeout(30000, () => { req.destroy(); reject(new Error('Groq API timeout')); });
     req.write(body);
     req.end();
   });
@@ -275,8 +286,8 @@ Customer asks: ${userMessage}
 
 Provide a helpful, friendly response:`;
 
-    // Call Gemini AI
-    const aiResponse = await callGemini(systemPrompt, 0.8, 800);
+    // Call Groq AI (Llama 3.1)
+    const aiResponse = await callGroq(systemPrompt, 0.8, 800);
     
     // Return response
     res.json({
