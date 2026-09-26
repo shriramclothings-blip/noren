@@ -9,7 +9,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import ScrollToTop from './components/ScrollToTop';
 import PushPrompt from './components/PushPrompt';
 import SeoManager from './components/SeoManager';
-import ChatBot from './components/ChatBot';
+import ChatBot from './components/ChatBotDark';
 
 const Home          = lazy(() => import('./pages/Home'));
 const Shop          = lazy(() => import('./pages/Shop'));
