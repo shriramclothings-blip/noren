@@ -188,6 +188,7 @@ app.use('/api/erp/sales', require('./routes/salesOrders'));
 app.use('/api/erp/payroll', require('./routes/payroll'));
 app.use('/api/homepage', require('./routes/homepage'));
 app.use('/api/contact', require('./routes/contact'));
+app.use('/api/chatbot', require('./routes/chatbot'));
 app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/newsletter',    require('./routes/newsletter'));
 app.use('/api/seller',        require('./routes/seller'));

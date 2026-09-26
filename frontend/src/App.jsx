@@ -9,6 +9,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import ScrollToTop from './components/ScrollToTop';
 import PushPrompt from './components/PushPrompt';
 import SeoManager from './components/SeoManager';
+import ChatBot from './components/ChatBot';
 
 const Home          = lazy(() => import('./pages/Home'));
 const Shop          = lazy(() => import('./pages/Shop'));
@@ -115,6 +116,7 @@ export default function App() {
                   <Route path="/disclaimer" element={<DisclaimerPolicy />} />
                   <Route path="/legal" element={<LegalNotice />} />
                 </Routes>
+                <ChatBot />
               </Layout>
             } />
           </Routes>
