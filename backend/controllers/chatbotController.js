@@ -58,12 +58,22 @@ async function callGroq(prompt, temperature = 0.7, maxTokens = 1024) {
   });
 }
 
-// Helper: Fetch product information with images for context
+// Helper: Fetch product information with SMART SEARCH
 async function fetchProductContext(query) {
   try {
-    // Search products by title, category, or description with images
+    // Extract meaningful keywords from query (remove common words)
+    const stopWords = ['show', 'me', 'find', 'get', 'want', 'need', 'looking', 'for', 'any', 'some', 'the', 'a', 'an', 'with', 'have', 'do', 'you', 'your', 'tell', 'about', 'what', 'which', 'how', 'when', 'where', 'are', 'is', 'in', 'on', 'at', 'to', 'from'];
+    
+    const keywords = query.toLowerCase()
+      .replace(/[^\w\s]/g, ' ') // Remove special characters
+      .split(/\s+/)
+      .filter(word => word.length > 2 && !stopWords.includes(word));
+    
+    let result;
+    
+    // Strategy 1: Try exact phrase match first
     const searchQuery = `%${query}%`;
-    const result = await pool.query(
+    result = await pool.query(
       `SELECT p.id, p.title, p.description, p.price, p.discount_percent, p.gender,
               c.name as category,
               (SELECT image_url FROM src_product_images 
@@ -83,21 +93,88 @@ async function fetchProductContext(query) {
          AND p.status = 'approved'
          AND (LOWER(p.title) LIKE LOWER($1) 
               OR LOWER(c.name) LIKE LOWER($1) 
-              OR LOWER(p.description) LIKE LOWER($1))
-       ORDER BY p.views DESC, p.created_at DESC
-       LIMIT 6`,
+              OR LOWER(p.description) LIKE LOWER($1)
+              OR LOWER(p.gender) LIKE LOWER($1))
+       ORDER BY 
+         CASE 
+           WHEN LOWER(p.title) LIKE LOWER($1) THEN 1
+           WHEN LOWER(c.name) LIKE LOWER($1) THEN 2
+           ELSE 3
+         END,
+         p.views DESC, 
+         p.created_at DESC
+       LIMIT 8`,
       [searchQuery]
     );
+    
+    // Strategy 2: If no results, try searching with individual keywords
+    if (result.rows.length === 0 && keywords.length > 0) {
+      const keywordConditions = keywords.map((_, idx) => 
+        `(LOWER(p.title) LIKE LOWER($${idx + 1}) OR LOWER(c.name) LIKE LOWER($${idx + 1}) OR LOWER(p.description) LIKE LOWER($${idx + 1}) OR LOWER(p.gender) LIKE LOWER($${idx + 1}))`
+      ).join(' OR ');
+      
+      const keywordParams = keywords.map(k => `%${k}%`);
+      
+      result = await pool.query(
+        `SELECT p.id, p.title, p.description, p.price, p.discount_percent, p.gender,
+                c.name as category,
+                (SELECT image_url FROM src_product_images 
+                 WHERE product_id = p.id AND is_primary = TRUE 
+                 LIMIT 1) as primary_image,
+                (SELECT image_url FROM src_product_images 
+                 WHERE product_id = p.id 
+                 ORDER BY is_primary DESC, sort_order ASC 
+                 LIMIT 1) as first_image,
+                (SELECT AVG(rating)::NUMERIC(3,1) FROM src_reviews 
+                 WHERE product_id = p.id AND is_hidden = FALSE) as avg_rating,
+                (SELECT COUNT(*) FROM src_reviews 
+                 WHERE product_id = p.id AND is_hidden = FALSE) as review_count
+         FROM src_products p
+         LEFT JOIN src_categories c ON p.category_id = c.id
+         WHERE p.deleted_at IS NULL 
+           AND p.status = 'approved'
+           AND (${keywordConditions})
+         ORDER BY p.views DESC, p.created_at DESC
+         LIMIT 8`,
+        keywordParams
+      );
+    }
+    
+    // Strategy 3: If still no results, show popular/trending products
+    if (result.rows.length === 0) {
+      result = await pool.query(
+        `SELECT p.id, p.title, p.description, p.price, p.discount_percent, p.gender,
+                c.name as category,
+                (SELECT image_url FROM src_product_images 
+                 WHERE product_id = p.id AND is_primary = TRUE 
+                 LIMIT 1) as primary_image,
+                (SELECT image_url FROM src_product_images 
+                 WHERE product_id = p.id 
+                 ORDER BY is_primary DESC, sort_order ASC 
+                 LIMIT 1) as first_image,
+                (SELECT AVG(rating)::NUMERIC(3,1) FROM src_reviews 
+                 WHERE product_id = p.id AND is_hidden = FALSE) as avg_rating,
+                (SELECT COUNT(*) FROM src_reviews 
+                 WHERE product_id = p.id AND is_hidden = FALSE) as review_count
+         FROM src_products p
+         LEFT JOIN src_categories c ON p.category_id = c.id
+         WHERE p.deleted_at IS NULL 
+           AND p.status = 'approved'
+         ORDER BY p.views DESC, p.created_at DESC
+         LIMIT 6`
+      );
+    }
     
     // Add product URLs and format for frontend
     return result.rows.map(p => ({
       id: p.id,
-      name: p.title, // Map title to name for consistency
+      name: p.title,
       title: p.title,
       description: p.description,
       price: p.price,
       discount_price: p.discount_percent > 0 ? Math.round(p.price * (1 - p.discount_percent / 100)) : null,
       category: p.category,
+      gender: p.gender,
       rating: parseFloat(p.avg_rating) || 0,
       review_count: parseInt(p.review_count) || 0,
       image: p.primary_image || p.first_image || 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=400',
@@ -236,23 +313,24 @@ const chat = async (req, res) => {
         contextData = `\n\nORDER NOT FOUND: No order found with ID ${orderIdMatch[0]}. The customer may have entered an incorrect order ID.`;
       }
     } else if (isProductQuery) {
-      // Fetch relevant products
+      // Fetch relevant products with SMART SEARCH
       const products = await fetchProductContext(userMessage);
       if (products.length > 0) {
         specificData = { type: 'products', data: products };
-        contextData = `\n\nRELEVANT PRODUCTS FROM NOREN DATABASE (${products.length} found):\n` +
+        const searchContext = products.length >= 6 ? 'exact matches' : 'relevant products';
+        contextData = `\n\nFOUND ${products.length} ${searchContext.toUpperCase()} FROM DATABASE:\n` +
           products.map((p, i) => 
             `\nProduct ${i + 1}: ${p.title}\n` +
-            `   - Product ID: ${p.id}\n` +
-            `   - Category: ${p.category || 'Fashion'}\n` +
-            `   - Exact Price: ₹${p.final_price}${p.has_discount ? ` (Original Price: ₹${p.price}, Discount: ${Math.round(((p.price - p.final_price) / p.price) * 100)}% OFF)` : ''}\n` +
-            `   - Customer Rating: ${p.rating > 0 ? p.rating.toFixed(1) + '/5 stars' : 'New Product (No reviews yet)'} ${p.review_count > 0 ? `from ${p.review_count} customer reviews` : ''}\n` +
-            `   - Product Photo: Available (will be shown in product card below)\n` +
-            `   - Description: ${p.description?.substring(0, 200) || 'Premium fashion item from NOREN collection'}${p.description?.length > 200 ? '...' : ''}\n` +
-            `   - Product URL: ${p.url}`
+            `   - ID: ${p.id}\n` +
+            `   - Category: ${p.category || 'Fashion'}${p.gender ? ` (${p.gender})` : ''}\n` +
+            `   - Exact Price: ₹${p.final_price}${p.has_discount ? ` (${Math.round(((p.price - p.final_price) / p.price) * 100)}% OFF from ₹${p.price})` : ''}\n` +
+            `   - Rating: ${p.rating > 0 ? p.rating.toFixed(1) + '/5 stars' : 'New'} ${p.review_count > 0 ? `(${p.review_count} reviews)` : ''}\n` +
+            `   - Photo: Available below\n` +
+            `   - Description: ${p.description?.substring(0, 150) || 'Premium NOREN fashion item'}${p.description?.length > 150 ? '...' : ''}`
           ).join('\n');
       } else {
-        contextData = `\n\nDATABASE SEARCH RESULT: No products found matching "${userMessage}". The customer should try different keywords or browse our categories: ${storeInfo.categories.join(', ')}.`;
+        // This should rarely happen now with smart search fallback
+        contextData = `\n\nSEARCH NOTE: Your smart search tried multiple strategies but found no exact matches for "${userMessage}". Showing popular items instead.`;
       }
     } else {
       // For general questions, still show some popular products
@@ -271,35 +349,37 @@ const chat = async (req, res) => {
       `${m.role === 'user' ? 'Customer' : 'NOREN Assistant'}: ${m.content}`
     ).join('\n');
     
-    // Build AI prompt - STRICT DATABASE-ONLY MODE
-    const systemPrompt = `You are NOREN's AI Customer Support Assistant with direct access to the product database.
+    // Build AI prompt - SMART & FORGIVING MODE
+    const systemPrompt = `You are NOREN's AI Customer Support Assistant with intelligent search capabilities.
 
-CRITICAL RULES - YOU MUST FOLLOW THESE:
-1. ONLY use information from the database context provided below
-2. NEVER make up or invent product details, prices, or information
-3. If product data is provided, you MUST mention that product cards with photos are shown
-4. ALWAYS use EXACT prices from the database (₹ symbol)
-5. If you don't have data, say "Let me search our catalog" and ask for more details
-6. DO NOT create fake product names, fake prices, or fake descriptions
+CRITICAL RULES:
+1. ONLY use real database information provided below
+2. Be SMART about understanding vague or incomplete queries
+3. If customer asks vaguely (e.g., "show something nice"), use the products found by smart search
+4. ALWAYS mention product photos are shown when products are found
+5. Use EXACT prices from database (₹ symbol)
+6. Even if customer makes typos or incomplete requests, show them products
+7. Be helpful and guide customers naturally
 
 STORE INFORMATION:
 - Website: www.norenfastion.shop
-- Total Products Available: ${storeInfo.total_products}
+- Total Products: ${storeInfo.total_products}
 - Categories: ${storeInfo.categories.join(', ') || 'Various fashion categories'}
 
-${contextData ? `DATABASE CONTEXT (USE THIS INFORMATION ONLY):${contextData}` : 'NO DATABASE RESULTS FOUND - Ask the customer to be more specific about what they are looking for.'}
+${contextData ? `DATABASE RESULTS:${contextData}` : 'NO EXACT MATCHES - But showing popular products below to help the customer.'}
 
-${conversationContext ? `\nRECENT CONVERSATION:\n${conversationContext}\n` : ''}
+${conversationContext ? `CONVERSATION HISTORY:\n${conversationContext}\n` : ''}
 
-Customer Question: ${userMessage}
+Customer asked: "${userMessage}"
 
-RESPONSE RULES:
-- If product data is provided above, say something like "I found [X] products for you. You can see them with photos below!"
-- Use EXACT prices from database (e.g., ₹1,299 not "around ₹1,300")
-- Reference product names EXACTLY as they appear in database
-- If no database results, say "I couldn't find specific matches. Could you describe what you're looking for?"
-- Be conversational but factual
-- Maximum 3-4 sentences in your text response (product cards will show below)
+YOUR RESPONSE GUIDELINES:
+✅ If products found: Say something like "I found [X] products for you! Check them out below with photos and prices."
+✅ If query is vague: Say "Here are some beautiful pieces from our collection" and show the products
+✅ If customer made typo/mistake: Still show products and say "Here's what I found for you"
+✅ Use exact prices from database
+✅ Be conversational, warm, and helpful
+✅ Keep response to 2-4 sentences (product cards show below)
+✅ Guide them to browse more if they want
 
 Your Response:`;
 
