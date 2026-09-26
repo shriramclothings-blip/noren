@@ -1,4 +1,5 @@
-﻿import { BrowserRouter, Routes, Route } from 'react-router-dom';
+﻿// NOREN Fashion E-commerce - Main App Component
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { lazy, Suspense } from 'react';
 import { AuthProvider } from './context/AuthContext';
