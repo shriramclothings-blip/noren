@@ -479,7 +479,7 @@ async function sendProductCatalogEmail(customerEmail, customerName) {
             'customer',
             emailSubject,
             emailHTML,
-            'ai_catalog',
+            'transactional', // Changed from 'ai_catalog' to valid type
             'sent',
             JSON.stringify({
               product_count: products.length,
