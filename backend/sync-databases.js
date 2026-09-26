@@ -235,7 +235,7 @@ async function syncDatabases(sourceIndex = 0, targetIndices = [1, 2]) {
     return;
   }
   
-  const sourcePo = makePool(RAW_URLS[sourceIndex]);
+  const sourcePool = makePool(RAW_URLS[sourceIndex]);
   
   for (const targetIndex of targetIndices) {
     if (!RAW_URLS[targetIndex]) {

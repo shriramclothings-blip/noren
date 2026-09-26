@@ -11,7 +11,9 @@
     "db:monitor": "node database-monitor.js status",
     "db:watch": "node database-monitor.js watch",
     "db:sync-now": "node database-monitor.js sync",
-    "db:setup": "node setup-database-sync.js"
+    "db:setup": "node setup-database-sync.js",
+    "admin:create": "node createAdmin.js",
+    "admin:fix": "node fix-admin-login.js"
   },
   "type": "commonjs",
   "dependencies": {
