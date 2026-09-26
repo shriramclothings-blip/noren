@@ -2,7 +2,7 @@
 
 const express = require('express');
 const router = express.Router();
-const { chat, getSuggestions } = require('../controllers/chatbotController');
+const { chat, getSuggestions, sendProductEmail } = require('../controllers/chatbotController');
 
 /**
  * POST /api/chatbot/chat
@@ -18,5 +18,13 @@ router.post('/chat', chat);
  * Public endpoint - no authentication required
  */
 router.get('/suggestions', getSuggestions);
+
+/**
+ * POST /api/chatbot/send-product-email
+ * Send complete product catalog via email
+ * Body: { email: string, customerName?: string }
+ * Public endpoint - no authentication required
+ */
+router.post('/send-product-email', sendProductEmail);
 
 module.exports = router;

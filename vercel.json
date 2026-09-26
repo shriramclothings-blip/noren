@@ -3,6 +3,11 @@
   "outputDirectory": "frontend/dist",
   "installCommand": "echo skip",
   "framework": null,
+  "build": {
+    "env": {
+      "FORCE_DEPLOY": "chatbot-enhanced-2026-09-26"
+    }
+  },
   "headers": [
     {
       "source": "/assets/(.*)",

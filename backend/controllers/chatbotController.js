@@ -1,6 +1,7 @@
 'use strict';
 
 const { pool } = require('../config/db');
+const { sendMail } = require('../services/mailService');
 const https = require('https');
 
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
@@ -277,6 +278,244 @@ async function getStoreInfo() {
   }
 }
 
+// Helper: Fetch all products for email catalog
+async function fetchAllProductsForEmail() {
+  try {
+    const result = await pool.query(
+      `SELECT p.id, p.title, p.description, p.price, p.discount_percent, p.gender,
+              c.name as category,
+              (SELECT image_url FROM src_product_images 
+               WHERE product_id = p.id AND is_primary = TRUE 
+               LIMIT 1) as primary_image,
+              (SELECT image_url FROM src_product_images 
+               WHERE product_id = p.id 
+               ORDER BY is_primary DESC, sort_order ASC 
+               LIMIT 1) as first_image,
+              (SELECT AVG(rating)::NUMERIC(3,1) FROM src_reviews 
+               WHERE product_id = p.id AND is_hidden = FALSE) as avg_rating,
+              (SELECT COUNT(*) FROM src_reviews 
+               WHERE product_id = p.id AND is_hidden = FALSE) as review_count
+       FROM src_products p
+       LEFT JOIN src_categories c ON p.category_id = c.id
+       WHERE p.deleted_at IS NULL 
+         AND p.status = 'approved'
+       ORDER BY c.name, p.views DESC, p.created_at DESC
+       LIMIT 50`
+    );
+    
+    return result.rows.map(p => ({
+      id: p.id,
+      title: p.title,
+      description: p.description,
+      price: p.price,
+      discount_price: p.discount_percent > 0 ? Math.round(p.price * (1 - p.discount_percent / 100)) : null,
+      category: p.category,
+      gender: p.gender,
+      rating: parseFloat(p.avg_rating) || 0,
+      review_count: parseInt(p.review_count) || 0,
+      image: p.primary_image || p.first_image || 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=400',
+      url: `https://www.norenfastion.shop/product/${p.id}`,
+      final_price: p.discount_percent > 0 ? Math.round(p.price * (1 - p.discount_percent / 100)) : p.price,
+      has_discount: p.discount_percent > 0,
+    }));
+  } catch (err) {
+    console.error('All products fetch error:', err);
+    return [];
+  }
+}
+
+// Helper: Generate product catalog email HTML
+function generateProductCatalogHTML(products, customerEmail, customerName) {
+  const currentDate = new Date().toLocaleDateString('en-IN', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
+  
+  // Group products by category
+  const productsByCategory = {};
+  products.forEach(product => {
+    const category = product.category || 'Uncategorized';
+    if (!productsByCategory[category]) {
+      productsByCategory[category] = [];
+    }
+    productsByCategory[category].push(product);
+  });
+
+  const categorySections = Object.entries(productsByCategory).map(([category, categoryProducts]) => `
+    <div style="margin-bottom: 40px;">
+      <h2 style="color: #2D3748; font-size: 24px; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #E2E8F0;">
+        ${category}
+      </h2>
+      <div style="display: flex; flex-wrap: wrap; gap: 20px;">
+        ${categoryProducts.map(product => `
+          <div style="border: 1px solid #E2E8F0; border-radius: 12px; padding: 15px; width: 280px; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+            <img src="${product.image}" alt="${product.title}" style="width: 100%; height: 200px; object-fit: cover; border-radius: 8px; margin-bottom: 10px;">
+            <h3 style="color: #2D3748; font-size: 16px; margin: 10px 0; font-weight: 600;">${product.title}</h3>
+            <p style="color: #4A5568; font-size: 14px; margin: 8px 0; line-height: 1.4;">${product.description ? product.description.substring(0, 120) + '...' : 'Premium fashion item from NOREN'}</p>
+            
+            <div style="margin: 10px 0;">
+              ${product.has_discount ? `
+                <span style="color: #E53E3E; font-size: 18px; font-weight: bold;">₹${product.final_price}</span>
+                <span style="color: #A0AEC0; font-size: 14px; text-decoration: line-through; margin-left: 8px;">₹${product.price}</span>
+                <span style="color: #38A169; font-size: 12px; margin-left: 8px; background: #F0FFF4; padding: 2px 6px; border-radius: 4px;">
+                  ${Math.round(((product.price - product.final_price) / product.price) * 100)}% OFF
+                </span>
+              ` : `
+                <span style="color: #2D3748; font-size: 18px; font-weight: bold;">₹${product.final_price}</span>
+              `}
+            </div>
+            
+            ${product.rating > 0 ? `
+              <div style="margin: 8px 0; color: #4A5568; font-size: 14px;">
+                ⭐ ${product.rating.toFixed(1)}/5 ${product.review_count > 0 ? `(${product.review_count} reviews)` : ''}
+              </div>
+            ` : ''}
+            
+            <a href="${product.url}" style="display: inline-block; background: #3182CE; color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px; margin-top: 10px; font-weight: 500; text-align: center; width: calc(100% - 40px);">
+              View Product
+            </a>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `).join('');
+
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>NOREN Product Catalog</title>
+    </head>
+    <body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; margin: 0; padding: 0; background-color: #F7FAFC;">
+      <div style="max-width: 800px; margin: 0 auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+        
+        <!-- Header -->
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px 40px; text-align: center;">
+          <h1 style="margin: 0; font-size: 32px; font-weight: 700;">NOREN Fashion</h1>
+          <p style="margin: 10px 0 0; font-size: 18px; opacity: 0.9;">Complete Product Catalog</p>
+        </div>
+        
+        <!-- Greeting -->
+        <div style="padding: 30px 40px; background: #F8F9FA; border-bottom: 1px solid #E9ECEF;">
+          <h2 style="color: #2D3748; margin: 0 0 15px; font-size: 24px;">Hi ${customerName || 'Valued Customer'}! 👋</h2>
+          <p style="color: #4A5568; margin: 0; font-size: 16px; line-height: 1.5;">
+            Thank you for your interest in our products! As requested by our AI assistant, here's our complete product catalog with detailed information, pricing, and photos. 
+            Browse through our collection and click on any product to visit our website for more details.
+          </p>
+          <div style="background: #EDF2F7; padding: 15px; border-radius: 8px; margin-top: 15px;">
+            <p style="margin: 0; color: #4A5568; font-size: 14px;">
+              📧 <strong>Email sent by:</strong> NOREN AI Assistant<br>
+              📅 <strong>Generated on:</strong> ${currentDate}<br>
+              📦 <strong>Total Products:</strong> ${products.length} items
+            </p>
+          </div>
+        </div>
+        
+        <!-- Products -->
+        <div style="padding: 30px 40px;">
+          ${categorySections}
+        </div>
+        
+        <!-- Footer -->
+        <div style="background: #2D3748; color: white; padding: 30px 40px; text-align: center;">
+          <h3 style="margin: 0 0 15px; font-size: 20px;">Visit Our Store</h3>
+          <p style="margin: 0 0 20px; opacity: 0.9;">Explore more products and place your order on our website</p>
+          <a href="https://www.norenfastion.shop" style="display: inline-block; background: #3182CE; color: white; padding: 12px 30px; text-decoration: none; border-radius: 8px; font-weight: 600; margin: 0 10px 10px;">
+            Shop Now
+          </a>
+          <div style="margin-top: 20px; font-size: 14px; opacity: 0.8;">
+            <p>📧 support@norenfastion.shop | 🌐 www.norenfastion.shop</p>
+            <p>This email was generated automatically by NOREN AI Assistant</p>
+          </div>
+        </div>
+        
+      </div>
+    </body>
+    </html>
+  `;
+}
+
+// Helper: Send product catalog email
+async function sendProductCatalogEmail(customerEmail, customerName) {
+  try {
+    console.log(`📧 Preparing product catalog email for: ${customerEmail}`);
+    
+    // Fetch all products
+    const products = await fetchAllProductsForEmail();
+    
+    if (products.length === 0) {
+      console.log('❌ No products found for catalog');
+      return {
+        success: false,
+        message: "Sorry, no products are currently available in our catalog."
+      };
+    }
+    
+    // Generate HTML email
+    const emailHTML = generateProductCatalogHTML(products, customerEmail, customerName);
+    const emailSubject = `NOREN Complete Product Catalog - ${products.length} Products Available!`;
+    
+    // Send email
+    const emailSent = await sendMail(customerEmail, emailSubject, emailHTML);
+    
+    if (emailSent) {
+      console.log(`✅ Product catalog email sent successfully to: ${customerEmail}`);
+      
+      // Log the email in the database for tracking
+      try {
+        await pool.query(
+          `INSERT INTO src_email_sent (
+            sender_email, sender_name, recipient_email, recipient_name,
+            recipient_type, subject, body_html, email_type, status, metadata
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+          [
+            process.env.EMAIL_FROM || 'noreply@norenfastion.shop',
+            'NOREN AI Assistant',
+            customerEmail,
+            customerName || null,
+            'customer',
+            emailSubject,
+            emailHTML,
+            'ai_catalog',
+            'sent',
+            JSON.stringify({
+              product_count: products.length,
+              generated_by: 'ai_assistant',
+              request_date: new Date().toISOString()
+            })
+          ]
+        );
+      } catch (dbErr) {
+        console.error('Error logging email to database:', dbErr);
+        // Don't fail the request if logging fails
+      }
+      
+      return {
+        success: true,
+        message: `Perfect! I've sent a complete product catalog with ${products.length} products to ${customerEmail}. The email includes detailed photos, pricing, and direct links to each product. Please check your inbox (and spam folder just in case)!`,
+        productCount: products.length,
+        categories: [...new Set(products.map(p => p.category))].filter(Boolean)
+      };
+    } else {
+      console.log(`❌ Failed to send product catalog email to: ${customerEmail}`);
+      return {
+        success: false,
+        message: "Sorry, there was an issue sending the email. Please check your email address or try again later. You can also contact our support at support@norenfastion.shop"
+      };
+    }
+    
+  } catch (err) {
+    console.error('Error in sendProductCatalogEmail:', err);
+    return {
+      success: false,
+      message: "Sorry, there was a technical issue preparing your product catalog. Please try again later or contact support@norenfastion.shop"
+    };
+  }
+}
+
 // Main chatbot endpoint
 const chat = async (req, res) => {
   const { message, conversation_history = [], user_context = {} } = req.body;
@@ -294,6 +533,9 @@ const chat = async (req, res) => {
     // Detect intent from message - IMPROVED SMART DETECTION
     const isOrderQuery = /order|track|status|delivery|shipped|delivered|order\s*id|#src/i.test(userMessage);
     
+    // Detect email request - NEW FEATURE
+    const isEmailRequest = /send\s+.*email|email\s+.*products|email\s+.*catalog|email\s+.*details|products\s+.*email|catalog\s+.*email|send.*all.*products|email.*all.*items|mail.*products/i.test(userMessage);
+    
     // ONLY show products if user is CLEARLY asking about products
     const isProductQuery = /\b(product|show|find|search|looking for|want|need|buy|purchase|price|available|stock|dress|shirt|top|saree|kurti|jeans|clothes|clothing|fashion|wear|ethnic|western|kurta|lehenga|suit|outfit|collection)\b/i.test(userMessage);
     
@@ -305,6 +547,60 @@ const chat = async (req, res) => {
     
     // Check if message contains an order ID (format: SRC followed by alphanumeric)
     const orderIdMatch = userMessage.match(/SRC[A-Z0-9]+/i);
+    
+    // Handle email request - NEW FEATURE
+    if (isEmailRequest) {
+      console.log('🔍 Email request detected:', userMessage);
+      
+      // Extract email from message or ask for it
+      const emailMatch = userMessage.match(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
+      
+      if (emailMatch) {
+        // Email found in message, send catalog
+        const customerEmail = emailMatch[0];
+        const customerName = user_context.user_name || 'Valued Customer';
+        
+        console.log(`📧 Sending product catalog to: ${customerEmail}`);
+        const emailResult = await sendProductCatalogEmail(customerEmail, customerName);
+        
+        if (emailResult.success) {
+          return res.json({
+            response: emailResult.message,
+            context: {
+              type: 'email_sent',
+              data: {
+                email: customerEmail,
+                productCount: emailResult.productCount,
+                categories: emailResult.categories,
+                sent_by: 'NOREN AI Assistant'
+              }
+            },
+            timestamp: new Date().toISOString(),
+          });
+        } else {
+          return res.json({
+            response: emailResult.message,
+            context: { type: 'email_error', data: { error: true } },
+            timestamp: new Date().toISOString(),
+          });
+        }
+      } else {
+        // Ask for email address
+        const storeInfo = await getStoreInfo();
+        return res.json({
+          response: `I'd be happy to email you our complete product catalog with ${storeInfo.total_products}+ items including detailed photos, pricing, and descriptions! 📧\n\nPlease provide your email address and I'll send it right away. For example, just say: "Send catalog to john@example.com"`,
+          context: { 
+            type: 'email_request', 
+            data: { 
+              awaiting_email: true,
+              total_products: storeInfo.total_products,
+              categories: storeInfo.categories
+            } 
+          },
+          timestamp: new Date().toISOString(),
+        });
+      }
+    }
     
     if (isOrderQuery && orderIdMatch) {
       // Fetch order details
@@ -404,10 +700,16 @@ CRITICAL RULES:
 1. ONLY use real database information provided below
 2. If customer asks about PRODUCTS → Show product cards with photos
 3. If customer asks about POLICIES/HELP (shipping, returns, payment, etc.) → Answer directly WITHOUT showing products
-4. Use EXACT prices from database (₹ symbol)
-5. Address the customer by name when appropriate
-6. Be helpful and context-aware
-7. If ORDER NOT FOUND → Be empathetic, provide helpful next steps, and offer alternatives
+4. If customer asks for EMAIL CATALOG → Ask for their email address and offer to send complete catalog
+5. Use EXACT prices from database (₹ symbol)
+6. Address the customer by name when appropriate
+7. Be helpful and context-aware
+8. If ORDER NOT FOUND → Be empathetic, provide helpful next steps, and offer alternatives
+
+EMAIL CATALOG FEATURE:
+- When customer asks to "email products", "send catalog", or similar requests
+- Respond: "I can email you our complete product catalog! Please provide your email address."
+- Example: "Send all products to john@example.com" or "Email catalog to me at jane@gmail.com"
 
 SPECIAL HANDLING FOR ORDER NOT FOUND:
 - Acknowledge their frustration professionally
@@ -423,7 +725,9 @@ STORE INFORMATION:
 - Support: support@norenfastion.shop
 
 CUSTOMER QUESTION TYPE:
-${isProductQuery && !isGeneralQuery ? '🛍️ PRODUCT SEARCH - Show products with photos' : '❓ GENERAL/POLICY QUESTION - Answer directly, NO products'}
+${isEmailRequest ? '📧 EMAIL CATALOG REQUEST - Guide them to provide email address' : 
+  isProductQuery && !isGeneralQuery ? '🛍️ PRODUCT SEARCH - Show products with photos' : 
+  '❓ GENERAL/POLICY QUESTION - Answer directly, NO products'}
 
 ${contextData}
 
@@ -434,6 +738,7 @@ Customer asked: "${userMessage}"
 YOUR RESPONSE GUIDELINES:
 ✅ If PRODUCT query: "I found X products for you! Check them below with photos."
 ✅ If GENERAL query: Answer their question directly about shipping/returns/policies
+✅ If EMAIL request: "I can email you our complete catalog! Please provide your email address."
 ✅ Use conversational, warm tone
 ✅ Use customer's name occasionally (not every message)
 ✅ Keep response to 2-4 sentences
@@ -516,6 +821,8 @@ const getSuggestions = async (req, res) => {
       quick_questions: [
         "What are your best-selling products?",
         "Do you have any ongoing sales or discounts?",
+        "Email me all product details",
+        "Send product catalog to my email",
         "What is your return policy?",
         "How long does delivery usually take?",
         "Track my order"
@@ -527,4 +834,55 @@ const getSuggestions = async (req, res) => {
   }
 };
 
-module.exports = { chat, getSuggestions };
+// Send product catalog via email - NEW FEATURE
+const sendProductEmail = async (req, res) => {
+  const { email, customerName } = req.body;
+  
+  if (!email || typeof email !== 'string') {
+    return res.status(400).json({ 
+      success: false,
+      message: 'Valid email address is required' 
+    });
+  }
+  
+  // Validate email format
+  const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+  if (!emailRegex.test(email)) {
+    return res.status(400).json({ 
+      success: false,
+      message: 'Please provide a valid email address' 
+    });
+  }
+  
+  try {
+    console.log(`📧 API: Sending product catalog to: ${email}`);
+    const result = await sendProductCatalogEmail(email, customerName);
+    
+    if (result.success) {
+      res.json({
+        success: true,
+        message: result.message,
+        data: {
+          email: email,
+          productCount: result.productCount,
+          categories: result.categories,
+          sent_by: 'NOREN AI Assistant'
+        }
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        message: result.message
+      });
+    }
+    
+  } catch (err) {
+    console.error('Send product email error:', err);
+    res.status(500).json({ 
+      success: false,
+      message: 'Sorry, there was an error sending the email. Please try again later.' 
+    });
+  }
+};
+
+module.exports = { chat, getSuggestions, sendProductEmail };
