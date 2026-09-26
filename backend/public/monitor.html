@@ -1,8 +1,9 @@
 ﻿<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-<title>NOREN — Server Control Center</title>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>NOREN — Enhanced Control Center</title>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@300;400;500&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
 <style>
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
@@ -392,12 +393,56 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 <!-- ═══════ TAB: DATABASE ═══════ -->
 <div class="tab-content" id="tab-database">
 <div class="con">
+  <!-- DATABASE SYNC STATUS -->
+  <div class="sl">// Database Synchronization Status</div>
+  <div class="card" style="margin-bottom:14px">
+    <div class="ch">
+      <span class="ct">Multi-Database Sync Health</span>
+      <button class="btn" onclick="loadDatabaseSync()">↻ Check Sync</button>
+    </div>
+    <div id="db-sync-status" style="margin-bottom:14px">
+      <div class="empty">Loading sync status...</div>
+    </div>
+    <div style="display:flex;gap:12px;flex-wrap:wrap">
+      <button class="btn green" onclick="triggerManualSync()">🔄 Manual Sync Now</button>
+      <button class="btn gold" onclick="loadSyncHistory()">📊 Sync History</button>
+      <button class="btn" onclick="loadSyncSettings()">⚙️ Sync Settings</button>
+    </div>
+  </div>
+  
   <!-- DB NODE CARDS -->
-  <div class="sl">// Failover Nodes</div>
+  <div class="sl">// Database Failover Nodes</div>
   <div class="g3" id="db-nodes-grid">
-    <div class="dbnode"><div class="dnn">DB1</div><div class="dns idle">CHECKING…</div></div>
-    <div class="dbnode"><div class="dnn">DB2</div><div class="dns standby">STANDBY</div></div>
-    <div class="dbnode"><div class="dnn">DB3</div><div class="dns standby">STANDBY</div></div>
+    <div class="dbnode">
+      <div class="dnn">DB1 (Primary)</div>
+      <div class="dns idle">CHECKING…</div>
+      <div class="dnl">
+        Users: <span id="db1-users">—</span><br>
+        Orders: <span id="db1-orders">—</span><br>
+        Products: <span id="db1-products">—</span><br>
+        Last Sync: <span id="db1-sync">—</span>
+      </div>
+    </div>
+    <div class="dbnode">
+      <div class="dnn">DB2 (Backup)</div>
+      <div class="dns standby">STANDBY</div>
+      <div class="dnl">
+        Users: <span id="db2-users">—</span><br>
+        Orders: <span id="db2-orders">—</span><br>
+        Products: <span id="db2-products">—</span><br>
+        Last Sync: <span id="db2-sync">—</span>
+      </div>
+    </div>
+    <div class="dbnode">
+      <div class="dnn">DB3 (Backup)</div>
+      <div class="dns standby">STANDBY</div>
+      <div class="dnl">
+        Users: <span id="db3-users">—</span><br>
+        Orders: <span id="db3-orders">—</span><br>
+        Products: <span id="db3-products">—</span><br>
+        Last Sync: <span id="db3-sync">—</span>
+      </div>
+    </div>
   </div>
   <div class="card" style="margin-bottom:14px">
     <div class="ch"><span class="ct">Connection Info</span><button class="btn" onclick="loadDB()">↻ Ping Active</button></div>
@@ -476,7 +521,66 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 <!-- ═══════ TAB: SYSTEM ═══════ -->
 <div class="tab-content" id="tab-system">
 <div class="con">
+  <!-- SYSTEM OVERVIEW -->
+  <div class="sl">// System Health Overview</div>
+  <div class="g4">
+    <div class="card">
+      <div class="ch"><span class="ct">CPU Usage</span><span>🔥</span></div>
+      <div class="sv" id="cpu-usage">—</div>
+      <div class="ss">Load Average</div>
+      <div class="sd" id="cpu-load">—</div>
+    </div>
+    <div class="card">
+      <div class="ch"><span class="ct">Memory Usage</span><span>💾</span></div>
+      <div class="sv" id="mem-usage-pct">—</div>
+      <div class="ss">Used / Total</div>
+      <div class="sd" id="mem-details">—</div>
+    </div>
+    <div class="card">
+      <div class="ch"><span class="ct">Disk Usage</span><span>💽</span></div>
+      <div class="sv" id="disk-usage">—</div>
+      <div class="ss">Available Space</div>
+      <div class="sd" id="disk-free">—</div>
+    </div>
+    <div class="card">
+      <div class="ch"><span class="ct">Network I/O</span><span>🌐</span></div>
+      <div class="sv" id="network-io">—</div>
+      <div class="ss">In / Out</div>
+      <div class="sd" id="network-details">—</div>
+    </div>
+  </div>
+  
+  <!-- ENHANCED MONITORING -->
   <div class="g2">
+    <div class="card">
+      <div class="ch"><span class="ct">Application Health</span><button class="btn" onclick="loadAppHealth()">↻ Refresh</button></div>
+      <div class="svcgrid" id="app-health-grid">
+        <div class="sc"><span class="scd ok"></span><span class="scn">API Server</span><span class="scs ok">HEALTHY</span></div>
+        <div class="sc"><span class="scd ok"></span><span class="scn">Database Pool</span><span class="scs ok">CONNECTED</span></div>
+        <div class="sc"><span class="scd ok"></span><span class="scn">Socket.IO</span><span class="scs ok">ACTIVE</span></div>
+        <div class="sc"><span class="scd ok"></span><span class="scn">Scheduler</span><span class="scs ok">RUNNING</span></div>
+        <div class="sc"><span class="scd ok"></span><span class="scn">Auto-Sync</span><span class="scs ok">ENABLED</span></div>
+        <div class="sc"><span class="scd ok"></span><span class="scn">Email Queue</span><span class="scs ok">ACTIVE</span></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="ch"><span class="ct">Resource Monitoring</span></div>
+      <div id="resource-charts">
+        <div class="hbar">
+          <div class="hbar-top"><span style="color:var(--dim)">CPU Load</span><span id="cpu-load-val">—</span></div>
+          <div class="hbar-track"><div class="hbar-fill" id="cpu-bar" style="background:var(--cyan);width:0%"></div></div>
+        </div>
+        <div class="hbar">
+          <div class="hbar-top"><span style="color:var(--dim)">Memory Usage</span><span id="mem-usage-val">—</span></div>
+          <div class="hbar-track"><div class="hbar-fill" id="mem-bar" style="background:var(--purple);width:0%"></div></div>
+        </div>
+        <div class="hbar">
+          <div class="hbar-top"><span style="color:var(--dim)">Disk Usage</span><span id="disk-usage-val">—</span></div>
+          <div class="hbar-track"><div class="hbar-fill" id="disk-bar" style="background:var(--orange);width:0%"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
     <div class="card">
       <div class="ch"><span class="ct">Memory Usage</span><button class="btn" onclick="loadHealth()">↻ Refresh</button></div>
       <div id="mem-bars">
@@ -662,7 +766,140 @@ function toggleLoginBlock(){loadLoginBlockStatus().then(()=>{const btn=qs('#btn-
 async function execLoginBlock(){const secEl=qs('#login-block-secret'),reasonEl=qs('#login-block-reason');if(!secEl||!reasonEl){console.error('Modal elements not found');return toast('Form error - refresh page','err')}const sec=secEl.value.trim(),reason=reasonEl.value.trim();console.log('Block attempt:',{secLen:sec.length,reasonLen:reason.length});if(!sec||sec.length===0)return toast('Enter MONITOR_SECRET','err');if(!reason||reason.length===0)return toast('Enter reason for blocking','err');closeModal('modal-login-block');try{const r=await fetch('/api/monitor/login-block/block',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({secret:sec,reason,confirm:true})});const d=await r.json();if(d.ok){toast('All login services blocked','ok');setTimeout(()=>loadLoginBlockStatus(),500)}else toast(d.error||'Block failed','err')}catch(e){toast(e.message,'err')}}
 async function execLoginResume(){const secEl=qs('#login-resume-secret'),reasonEl=qs('#login-resume-reason');if(!secEl||!reasonEl){console.error('Modal elements not found');return toast('Form error - refresh page','err')}const sec=secEl.value.trim(),reason=reasonEl.value.trim();console.log('Resume attempt:',{secLen:sec.length,reasonLen:reason.length});if(!sec||sec.length===0)return toast('Enter MONITOR_SECRET','err');if(!reason||reason.length===0)return toast('Enter reason for resuming','err');closeModal('modal-login-resume');try{const r=await fetch('/api/monitor/login-block/resume',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({secret:sec,reason,confirm:true})});const d=await r.json();if(d.ok){toast('Login services resumed','ok');setTimeout(()=>loadLoginBlockStatus(),500)}else toast(d.error||'Resume failed','err')}catch(e){toast(e.message,'err')}}
 async function execShutdown(){const sec=qs('shutdown-secret').value,reason=qs('shutdown-reason').value;if(!sec)return toast('Enter MONITOR_SECRET','err');if(!reason)return toast('Enter reason','err');closeModal('modal-shutdown');try{const r=await fetch('/api/monitor/system/shutdown',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({secret:sec,reason,confirm:true})});const d=await r.json();if(d.ok){toast('Server shutting down…','ok');setTimeout(()=>document.body.innerHTML='<div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;background:var(--bg);color:var(--text);font-family:Orbitron"><h1 style="color:var(--red);font-size:32px">Server Offline</h1><p style="color:var(--dim);margin-top:10px">Restarting…</p></div>',2500)}else toast(d.error||'Shutdown denied','err')}catch(e){toast(e.message,'err')}}
-function renderMini(data){const el=qs('rpm-chart');if(!el)return;const max=Math.max(...data,1),l=data.slice(-20);el.innerHTML=l.map((v,i)=>`<div class="mb ${i===l.length-1?'cur':''}" style="height:${Math.max(2,Math.round(v/max*30))}px"></div>`).join('')}
+async function loadDatabaseSync(){
+  try {
+    const r = await fetch('/api/database/status');
+    const d = await r.json();
+    
+    const syncEl = qs('db-sync-status');
+    if (!d.success) {
+      syncEl.innerHTML = '<div style="color:var(--red)">❌ Unable to load sync status</div>';
+      return;
+    }
+    
+    const healthyCount = d.databases ? d.databases.filter(db => db.healthy).length : 0;
+    const totalCount = d.databases ? d.databases.length : 0;
+    const allHealthy = healthyCount === totalCount;
+    
+    syncEl.innerHTML = `
+      <div style="display:flex;gap:12px;align-items:center;margin-bottom:10px">
+        <div class="bd ${allHealthy ? 'ok' : 'error'}"></div>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:13px;color:${allHealthy ? 'var(--green)' : 'var(--red)'}">
+          ${allHealthy ? 'ALL DATABASES HEALTHY' : 'DATABASE ISSUES DETECTED'}
+        </span>
+        <span style="color:var(--dim);font-size:11px">${healthyCount}/${totalCount} healthy</span>
+      </div>
+      <div style="font-size:11px;color:var(--dim);line-height:1.8">
+        Auto-Sync: <span style="color:var(--green)">ENABLED</span> •
+        Scheduler: <span style="color:var(--green)">RUNNING</span> •
+        Last Check: <span>${new Date().toLocaleTimeString()}</span>
+      </div>
+    `;
+    
+    // Update individual DB node info
+    if (d.databases) {
+      d.databases.forEach((db, index) => {
+        const dbNum = index + 1;
+        const node = qs(`.dbnode:nth-child(${dbNum})`);
+        if (node) {
+          const status = node.querySelector('.dns');
+          const metrics = node.querySelector('.dnl');
+          
+          if (status) {
+            status.className = `dns ${db.healthy ? 'ok' : 'error'}`;
+            status.textContent = db.healthy ? 'HEALTHY' : 'ERROR';
+            if (db.responseTime) status.textContent += ` • ${db.responseTime}ms`;
+          }
+          
+          if (metrics && db.metrics) {
+            const userSpan = qs(`#db${dbNum}-users`);
+            const orderSpan = qs(`#db${dbNum}-orders`);
+            const productSpan = qs(`#db${dbNum}-products`);
+            
+            if (userSpan) userSpan.textContent = fmt(db.metrics.user_count);
+            if (orderSpan) orderSpan.textContent = fmt(db.metrics.order_count);
+            if (productSpan) productSpan.textContent = fmt(db.metrics.product_count || 0);
+          }
+        }
+      });
+    }
+    
+  } catch (e) {
+    qs('db-sync-status').innerHTML = '<div style="color:var(--red)">❌ ' + e.message + '</div>';
+  }
+}
+
+async function triggerManualSync(){
+  const secret = promptSecret('Manual Database Sync');
+  if (!secret) return;
+  
+  try {
+    toast('Starting manual sync...', 'ok');
+    const r = await fetch('/api/database/sync', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({secret, sourceIndex: 0})
+    });
+    const d = await r.json();
+    
+    if (d.success) {
+      toast('Manual sync started successfully', 'ok');
+      setTimeout(() => loadDatabaseSync(), 2000);
+    } else {
+      toast(d.error || 'Sync failed', 'err');
+    }
+  } catch (e) {
+    toast(e.message, 'err');
+  }
+}
+
+async function loadAppHealth(){
+  try {
+    const r = await fetch('/api/monitor/system/health');
+    const d = await r.json();
+    
+    const grid = qs('app-health-grid');
+    if (!grid) return;
+    
+    // Update application health indicators
+    const healthChecks = [
+      {name: 'API Server', status: 'ok', label: 'HEALTHY'},
+      {name: 'Database Pool', status: d.database?.connected ? 'ok' : 'error', label: d.database?.connected ? 'CONNECTED' : 'ERROR'},
+      {name: 'Socket.IO', status: 'ok', label: 'ACTIVE'},
+      {name: 'Scheduler', status: d.scheduler?.running ? 'ok' : 'error', label: d.scheduler?.running ? 'RUNNING' : 'STOPPED'},
+      {name: 'Auto-Sync', status: d.autoSync?.enabled ? 'ok' : 'warn', label: d.autoSync?.enabled ? 'ENABLED' : 'DISABLED'},
+      {name: 'Email Queue', status: 'ok', label: 'ACTIVE'}
+    ];
+    
+    grid.innerHTML = healthChecks.map(check => 
+      `<div class="sc">
+        <span class="scd ${check.status}"></span>
+        <span class="scn">${check.name}</span>
+        <span class="scs ${check.status}">${check.label}</span>
+      </div>`
+    ).join('');
+    
+    // Update resource bars
+    if (d.memory) {
+      const memUsage = ((d.memory.heapUsedMB / d.memory.heapTotalMB) * 100).toFixed(1);
+      qs('mem-usage-pct').textContent = memUsage + '%';
+      qs('mem-usage-val').textContent = `${d.memory.heapUsed} / ${d.memory.heapTotal}`;
+      qs('mem-bar').style.width = memUsage + '%';
+      qs('mem-details').textContent = `RSS: ${d.memory.rss}`;
+    }
+    
+    if (d.os) {
+      const cpuLoad = d.os.loadAvg ? d.os.loadAvg['1m'] : '0.00';
+      qs('cpu-usage').textContent = cpuLoad;
+      qs('cpu-load-val').textContent = cpuLoad;
+      qs('cpu-bar').style.width = Math.min((parseFloat(cpuLoad) * 25), 100) + '%';
+      qs('cpu-load').textContent = `5m: ${d.os.loadAvg?.['5m']} • 15m: ${d.os.loadAvg?.['15m']}`;
+    }
+    
+  } catch (e) {
+    toast('Failed to load app health: ' + e.message, 'err');
+  }
+}
 function renderMethods(mc){if(!mc)return;const el=qs('method-bars'),ms=['GET','POST','PUT','PATCH','DELETE'],co={GET:'var(--green)',POST:'var(--cyan)',PUT:'var(--gold)',PATCH:'var(--purple)',DELETE:'var(--red)'},tot=Object.values(mc).reduce((a,b)=>a+b,0)||1;el.innerHTML=ms.map(m=>{const v=mc[m]||0,pct=((v/tot)*100).toFixed(1);return`<div style="margin-bottom:7px"><div style="display:flex;justify-content:space-between;font-family:'JetBrains Mono',monospace;font-size:10px;margin-bottom:3px"><span style="color:${co[m]}">${m}</span><span style="color:var(--dim)">${fmt(v)} (${pct}%)</span></div><div style="height:4px;background:rgba(255,255,255,.04);border-radius:2px"><div style="height:100%;width:${pct}%;background:${co[m]};border-radius:2px;transition:width .6s"></div></div></div>`}).join('')}
 function updateRing(rate){const c=qs('err-circle'),v=qs('err-pct'),r=parseFloat(rate)||0,dl=170,off=dl-(r/100)*dl;if(c){c.style.strokeDashoffset=off;c.style.stroke=r>10?'var(--red)':r>3?'var(--orange)':'var(--green)'}if(v){v.textContent=r.toFixed(1)+'%';v.style.color=r>10?'var(--red)':r>3?'var(--orange)':'var(--green)'}}
 function renderRoutes(rts){const tb=qs('routes-tb');if(!tb||!rts?.length)return;const max=rts[0]?.hits||1;tb.innerHTML=rts.slice(0,12).map(r=>{const [m,p]=r.route.split(' '),pct=((r.hits/max)*100).toFixed(0),co={GET:'var(--green)',POST:'var(--cyan)',PUT:'var(--gold)',PATCH:'var(--purple)',DELETE:'var(--red)'};return`<tr><td><span style="color:${co[m]||'var(--cyan)'};font-family:'JetBrains Mono',monospace;font-size:10px">${m}</span> <span style="color:var(--dim);font-family:'JetBrains Mono',monospace;font-size:11px">${(p||'').replace(/\/api\//,'/<b>api</b>/')}</span></td><td style="font-family:'JetBrains Mono',monospace;text-align:right">${fmt(r.hits)}</td><td><div style="display:flex;align-items:center;gap:6px"><div style="flex:1;height:4px;background:rgba(255,255,255,.05);border-radius:2px"><div style="height:100%;width:${pct}%;background:var(--cyan);border-radius:2px;transition:width .6s"></div></div></div></td></tr>`}).join('')}
