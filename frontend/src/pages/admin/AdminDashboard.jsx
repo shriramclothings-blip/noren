@@ -41,6 +41,7 @@ const AdminInfluencerConversions = lazy(() => import('./erp/AdminInfluencerConve
 const AdminInfluencerFraud     = lazy(() => import('./erp/AdminInfluencerFraud'));
 const AdminInfluencerAudit     = lazy(() => import('./erp/AdminInfluencerAudit'));
 const AdminPos                 = lazy(() => import('./erp/AdminPos'));
+const POSManagement            = lazy(() => import('./POSManagement'));
 const AdminInventory           = lazy(() => import('./erp/AdminInventory'));
 const AdminWarehouse           = lazy(() => import('./erp/AdminWarehouse'));
 const AdminCustomers           = lazy(() => import('./erp/AdminCustomers'));
@@ -130,6 +131,7 @@ function renderSection(section, user, navigate) {
     case 'dashboard':         return <AdminOverview onOpenCloud={() => navigate('/admin/cloud')} />;
     case 'erp':               return <AdminErp />;
     case 'pos':               return <AdminPos />;
+    case 'pos-management':    return <POSManagement />;
     case 'inventory':         return <AdminInventory />;
     case 'warehouse':         return <AdminWarehouse />;
     case 'brands':            return <AdminBrands />;

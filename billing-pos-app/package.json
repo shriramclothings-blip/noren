@@ -1,0 +1,132 @@
+{
+  "name": "vendexa-retailos",
+  "version": "2.0.0",
+  "description": "VENDEXA RetailOS™ — by Dinesh Global Enterprises Pvt Ltd | Offline Retail Billing, Inventory & POS System",
+  "private": true,
+  "main": "electron-main.js",
+  "homepage": "./",
+  "dependencies": {
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^13.5.0",
+    "autoprefixer": "^10.4.27",
+    "bwip-js": "^4.7.0",
+    "date-fns": "^4.1.0",
+    "idb": "^8.0.3",
+    "jsbarcode": "^3.12.3",
+    "jspdf": "^4.2.1",
+    "jspdf-autotable": "^5.0.7",
+    "lucide-react": "^1.6.0",
+    "paytmchecksum": "^1.5.1",
+    "postcss": "^8.5.8",
+    "qrcode.react": "^4.2.0",
+    "quagga": "^0.12.1",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "react-hot-toast": "^2.6.0",
+    "react-router-dom": "^7.13.2",
+    "react-scripts": "5.0.1",
+    "react-to-print": "^3.3.0",
+    "recharts": "^3.8.0",
+    "tailwindcss": "^3.4.19",
+    "web-vitals": "^2.1.4",
+    "xlsx": "^0.18.5"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "cross-env CI=true GENERATE_SOURCEMAP=false node --max-old-space-size=12288 --max-semi-space-size=256 ./node_modules/react-scripts/scripts/build.js",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject",
+    "cloud-sync-server": "node server/cloud-sync-server.js",
+    "electron:dev": "concurrently \"cross-env BROWSER=none npm start\" \"wait-on http://localhost:3000 && cross-env NODE_ENV=development electron .\"",
+    "electron:build": "cross-env NODE_OPTIONS=--max-old-space-size=12288 npm run build && cross-env CSC_IDENTITY_AUTO_DISCOVERY=false NODE_OPTIONS=--max-old-space-size=12288 electron-builder --win --x64",
+    "electron:build:dir": "cross-env NODE_OPTIONS=--max-old-space-size=12288 npm run build && cross-env CSC_IDENTITY_AUTO_DISCOVERY=false NODE_OPTIONS=--max-old-space-size=12288 electron-builder --win --x64 --dir",
+    "postinstall": "echo skipping"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "cross-env": "^10.1.0",
+    "electron": "^41.0.3",
+    "electron-builder": "^26.8.1",
+    "wait-on": "^9.0.4",
+    "ws": "^8.18.0",
+    "yaml": "^2.9.0"
+  },
+  "build": {
+    "appId": "com.dineshglobalenterprises.vendexaretailos",
+    "productName": "VENDEXA RetailOS",
+    "copyright": "Copyright © 2024 Dinesh Global Enterprises Pvt Ltd",
+    "extends": null,
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "build/**/*",
+      "electron-main.js",
+      "electron-preload.js",
+      "electron-network-server.js",
+      "electron-network-client.js",
+      "electron-network-discovery.js",
+      "public/icon.png",
+      "public/icon.ico"
+    ],
+    "extraMetadata": {
+      "main": "electron-main.js"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "public/icon.ico",
+      "requestedExecutionLevel": "asInvoker"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "allowElevation": true,
+      "installerIcon": "public/icon.ico",
+      "uninstallerIcon": "public/icon.ico",
+      "installerHeaderIcon": "public/icon.ico",
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "VENDEXA RetailOS",
+      "include": "installer.nsh"
+    },
+    "portable": {
+      "artifactName": "VENDEXA-RetailOS-Portable-${version}.exe"
+    },
+    "publish": null
+  }
+}

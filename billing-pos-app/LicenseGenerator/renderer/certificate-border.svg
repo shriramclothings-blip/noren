@@ -1,0 +1,366 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+  viewBox="0 0 794 1123" width="794" height="1123"
+  style="background:#ffffff;"
+  shape-rendering="geometricPrecision" text-rendering="geometricPrecision">
+
+<defs>
+  <!-- ═══ EMERALD GRADIENTS ═══ -->
+  <linearGradient id="gOuter" x1="0%" y1="0%" x2="100%" y2="100%">
+    <stop offset="0%"   stop-color="#062e1d"/>
+    <stop offset="30%"  stop-color="#0B5D3B"/>
+    <stop offset="70%"  stop-color="#0e7a4e"/>
+    <stop offset="100%" stop-color="#062e1d"/>
+  </linearGradient>
+  <linearGradient id="gSideH" x1="0%" y1="0%" x2="100%" y2="0%">
+    <stop offset="0%"   stop-color="#062e1d"/>
+    <stop offset="20%"  stop-color="#0B5D3B"/>
+    <stop offset="50%"  stop-color="#0e7a4e"/>
+    <stop offset="80%"  stop-color="#0B5D3B"/>
+    <stop offset="100%" stop-color="#062e1d"/>
+  </linearGradient>
+  <linearGradient id="gSideV" x1="0%" y1="0%" x2="0%" y2="100%">
+    <stop offset="0%"   stop-color="#062e1d"/>
+    <stop offset="20%"  stop-color="#0B5D3B"/>
+    <stop offset="50%"  stop-color="#0e7a4e"/>
+    <stop offset="80%"  stop-color="#0B5D3B"/>
+    <stop offset="100%" stop-color="#062e1d"/>
+  </linearGradient>
+  <linearGradient id="gCorner1" x1="0%" y1="0%" x2="100%" y2="100%">
+    <stop offset="0%"   stop-color="#062e1d"/>
+    <stop offset="60%"  stop-color="#0B5D3B"/>
+    <stop offset="100%" stop-color="#0e7a4e"/>
+  </linearGradient>
+  <linearGradient id="gCorner2" x1="100%" y1="0%" x2="0%" y2="100%">
+    <stop offset="0%"   stop-color="#062e1d"/>
+    <stop offset="60%"  stop-color="#0B5D3B"/>
+    <stop offset="100%" stop-color="#0e7a4e"/>
+  </linearGradient>
+  <linearGradient id="gCorner3" x1="0%" y1="100%" x2="100%" y2="0%">
+    <stop offset="0%"   stop-color="#062e1d"/>
+    <stop offset="60%"  stop-color="#0B5D3B"/>
+    <stop offset="100%" stop-color="#0e7a4e"/>
+  </linearGradient>
+  <linearGradient id="gCorner4" x1="100%" y1="100%" x2="0%" y2="0%">
+    <stop offset="0%"   stop-color="#062e1d"/>
+    <stop offset="60%"  stop-color="#0B5D3B"/>
+    <stop offset="100%" stop-color="#0e7a4e"/>
+  </linearGradient>
+
+  <!-- ═══ GUILLOCHE WAVE PATTERN ═══ -->
+  <pattern id="guillocheH" x="0" y="0" width="40" height="18" patternUnits="userSpaceOnUse">
+    <path d="M0,9 C5,2 10,2 15,9 C20,16 25,16 30,9 C35,2 40,2 45,9"
+          fill="none" stroke="#1a7a4e" stroke-width="0.6" opacity="0.7"/>
+    <path d="M0,9 C5,16 10,16 15,9 C20,2 25,2 30,9 C35,16 40,16 45,9"
+          fill="none" stroke="#0d4a2e" stroke-width="0.4" opacity="0.6"/>
+    <path d="M0,9 C5,4 10,4 15,9 C20,14 25,14 30,9 C35,4 40,4 45,9"
+          fill="none" stroke="#0e6640" stroke-width="0.3" opacity="0.5"/>
+  </pattern>
+  <pattern id="guillocheV" x="0" y="0" width="18" height="40" patternUnits="userSpaceOnUse">
+    <path d="M9,0 C2,5 2,10 9,15 C16,20 16,25 9,30 C2,35 2,40 9,45"
+          fill="none" stroke="#1a7a4e" stroke-width="0.6" opacity="0.7"/>
+    <path d="M9,0 C16,5 16,10 9,15 C2,20 2,25 9,30 C16,35 16,40 9,45"
+          fill="none" stroke="#0d4a2e" stroke-width="0.4" opacity="0.6"/>
+    <path d="M9,0 C4,5 4,10 9,15 C14,20 14,25 9,30 C4,35 4,40 9,45"
+          fill="none" stroke="#0e6640" stroke-width="0.3" opacity="0.5"/>
+  </pattern>
+
+  <!-- ═══ MICRO SECURITY HATCHING ═══ -->
+  <pattern id="microHatch" x="0" y="0" width="4" height="4" patternUnits="userSpaceOnUse">
+    <line x1="0" y1="0" x2="4" y2="4" stroke="#0a4a2d" stroke-width="0.25" opacity="0.5"/>
+    <line x1="0" y1="4" x2="4" y2="0" stroke="#0e6640" stroke-width="0.15" opacity="0.3"/>
+  </pattern>
+  <pattern id="microDot" x="0" y="0" width="3" height="3" patternUnits="userSpaceOnUse">
+    <circle cx="1.5" cy="1.5" r="0.4" fill="#0B5D3B" opacity="0.5"/>
+  </pattern>
+</defs>
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     LAYER 1 — OUTERMOST SOLID FRAME BAND (8px)
+     ═══════════════════════════════════════════════════════════════════════ -->
+<rect x="6" y="6" width="782" height="1111" rx="4" ry="4"
+      fill="none" stroke="url(#gOuter)" stroke-width="9"/>
+
+<!-- ═══ LAYER 2 — SECURITY MICRO-HATCH FILL BAND ═══ -->
+<rect x="15" y="15" width="764" height="1093" rx="3" ry="3"
+      fill="url(#microHatch)" stroke="none" opacity="0.6"/>
+<rect x="15" y="15" width="764" height="1093" rx="3" ry="3"
+      fill="none" stroke="#0B5D3B" stroke-width="1.2"/>
+
+<!-- ═══ LAYER 3 — GUILLOCHE WAVE BANDS ═══ -->
+<!-- Top band -->
+<clipPath id="clipTop"><rect x="15" y="15" width="764" height="70"/></clipPath>
+<rect x="15" y="15" width="764" height="70" fill="url(#guillocheH)" clip-path="url(#clipTop)" opacity="0.9"/>
+<!-- Bottom band -->
+<clipPath id="clipBot"><rect x="15" y="1038" width="764" height="70"/></clipPath>
+<rect x="15" y="1038" width="764" height="70" fill="url(#guillocheH)" clip-path="url(#clipBot)" opacity="0.9"/>
+<!-- Left band -->
+<clipPath id="clipLeft"><rect x="15" y="15" width="70" height="1093"/></clipPath>
+<rect x="15" y="15" width="70" height="1093" fill="url(#guillocheV)" clip-path="url(#clipLeft)" opacity="0.9"/>
+<!-- Right band -->
+<clipPath id="clipRight"><rect x="709" y="15" width="70" height="1093"/></clipPath>
+<rect x="709" y="15" width="70" height="1093" fill="url(#guillocheV)" clip-path="url(#clipRight)" opacity="0.9"/>
+
+<!-- ═══ LAYER 4 — MICRO DOT SECURITY OVERLAY ═══ -->
+<clipPath id="clipBands">
+  <rect x="15" y="15" width="764" height="70"/>
+  <rect x="15" y="1038" width="764" height="70"/>
+  <rect x="15" y="15" width="70" height="1093"/>
+  <rect x="709" y="15" width="70" height="1093"/>
+</clipPath>
+<rect x="15" y="15" width="764" height="1093" fill="url(#microDot)" clip-path="url(#clipBands)" opacity="0.4"/>
+
+<!-- ═══ LAYER 5 — INNER SOLID BORDER LINES (triple rule) ═══ -->
+<rect x="24" y="24" width="746" height="1075" rx="2" ry="2"
+      fill="none" stroke="#0B5D3B" stroke-width="2.5"/>
+<rect x="28" y="28" width="738" height="1067" rx="2" ry="2"
+      fill="none" stroke="#1a7a4e" stroke-width="0.8"/>
+<rect x="32" y="32" width="730" height="1059" rx="2" ry="2"
+      fill="none" stroke="#0B5D3B" stroke-width="1.5"/>
+<rect x="78" y="78" width="638" height="967" rx="2" ry="2"
+      fill="none" stroke="#0B5D3B" stroke-width="1.8"/>
+<rect x="82" y="82" width="630" height="959" rx="2" ry="2"
+      fill="none" stroke="#1a7a4e" stroke-width="0.6"/>
+<rect x="86" y="86" width="622" height="951" rx="2" ry="2"
+      fill="none" stroke="#0B5D3B" stroke-width="1.2"/>
+
+<!-- ═══ LAYER 6 — WHITE CENTER ═══ -->
+<rect x="90" y="90" width="614" height="943" fill="#ffffff"/>
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     CORNER ORNAMENTS — TOP LEFT
+     ═══════════════════════════════════════════════════════════════════════ -->
+<g id="cornerTL" transform="translate(15,15)">
+  <!-- Square base plate -->
+  <rect x="0" y="0" width="75" height="75" fill="url(#gCorner1)"/>
+  <!-- Concentric arc rings -->
+  <path d="M75,0 A75,75 0 0,0 0,75" fill="none" stroke="#0e7a4e" stroke-width="1.2"/>
+  <path d="M70,0 A70,70 0 0,0 0,70" fill="none" stroke="#62c999" stroke-width="0.5"/>
+  <path d="M63,0 A63,63 0 0,0 0,63" fill="none" stroke="#0e7a4e" stroke-width="0.8"/>
+  <path d="M56,0 A56,56 0 0,0 0,56" fill="none" stroke="#62c999" stroke-width="0.4"/>
+  <path d="M48,0 A48,48 0 0,0 0,48" fill="none" stroke="#0e7a4e" stroke-width="0.7"/>
+  <path d="M40,0 A40,40 0 0,0 0,40" fill="none" stroke="#62c999" stroke-width="0.4"/>
+  <!-- Radial spoke lines -->
+  <line x1="0" y1="0" x2="75" y2="0" stroke="#0e7a4e" stroke-width="0.5"/>
+  <line x1="0" y1="0" x2="0" y2="75" stroke="#0e7a4e" stroke-width="0.5"/>
+  <line x1="0" y1="0" x2="53" y2="53" stroke="#0e7a4e" stroke-width="0.4" opacity="0.6"/>
+  <line x1="0" y1="0" x2="75" y2="37" stroke="#0e7a4e" stroke-width="0.3" opacity="0.5"/>
+  <line x1="0" y1="0" x2="37" y2="75" stroke="#0e7a4e" stroke-width="0.3" opacity="0.5"/>
+  <!-- Center rosette -->
+  <circle cx="14" cy="14" r="11" fill="#0B5D3B" stroke="#62c999" stroke-width="0.8"/>
+  <circle cx="14" cy="14" r="7"  fill="#062e1d" stroke="#62c999" stroke-width="0.6"/>
+  <circle cx="14" cy="14" r="3.5" fill="#0e7a4e"/>
+  <!-- 8 petal rosette -->
+  <g transform="translate(14,14)">
+    <ellipse rx="3" ry="8" fill="#0e7a4e" opacity="0.7"/>
+    <ellipse rx="3" ry="8" fill="#0e7a4e" opacity="0.7" transform="rotate(45)"/>
+    <ellipse rx="3" ry="8" fill="#0e7a4e" opacity="0.7" transform="rotate(90)"/>
+    <ellipse rx="3" ry="8" fill="#0e7a4e" opacity="0.7" transform="rotate(135)"/>
+  </g>
+  <!-- Outer floral scrolls from corner -->
+  <path d="M75,0 C65,0 58,5 55,14 C52,23 56,30 62,30 C68,30 70,25 66,22 C63,20 60,22 62,26"
+        fill="none" stroke="#62c999" stroke-width="0.8"/>
+  <path d="M0,75 C0,65 5,58 14,55 C23,52 30,56 30,62 C30,68 25,70 22,66 C20,63 22,60 26,62"
+        fill="none" stroke="#62c999" stroke-width="0.8"/>
+  <!-- Leaf flourish  -->
+  <path d="M32,6 C36,10 34,16 28,18 C22,20 18,16 22,12 C26,8 30,10 28,14"
+        fill="none" stroke="#4db87a" stroke-width="0.7"/>
+  <path d="M6,32 C10,36 16,34 18,28 C20,22 16,18 12,22 C8,26 10,30 14,28"
+        fill="none" stroke="#4db87a" stroke-width="0.7"/>
+  <!-- Small diamond accents -->
+  <path d="M38,2 L40,5 L38,8 L36,5 Z" fill="#62c999" opacity="0.8"/>
+  <path d="M2,38 L5,40 L2,43 L-1,40 Z" fill="#62c999" opacity="0.8" transform="translate(1,0)"/>
+  <path d="M50,2 L52,5 L50,8 L48,5 Z" fill="#4db87a" opacity="0.6"/>
+  <path d="M2,50 L5,52 L2,55 L-1,52 Z" fill="#4db87a" opacity="0.6" transform="translate(1,0)"/>
+</g>
+
+<!-- CORNER TOP RIGHT -->
+<g id="cornerTR" transform="translate(779,15) scale(-1,1)">
+  <rect x="0" y="0" width="75" height="75" fill="url(#gCorner2)"/>
+  <path d="M75,0 A75,75 0 0,0 0,75" fill="none" stroke="#0e7a4e" stroke-width="1.2"/>
+  <path d="M70,0 A70,70 0 0,0 0,70" fill="none" stroke="#62c999" stroke-width="0.5"/>
+  <path d="M63,0 A63,63 0 0,0 0,63" fill="none" stroke="#0e7a4e" stroke-width="0.8"/>
+  <path d="M56,0 A56,56 0 0,0 0,56" fill="none" stroke="#62c999" stroke-width="0.4"/>
+  <path d="M48,0 A48,48 0 0,0 0,48" fill="none" stroke="#0e7a4e" stroke-width="0.7"/>
+  <path d="M40,0 A40,40 0 0,0 0,40" fill="none" stroke="#62c999" stroke-width="0.4"/>
+  <line x1="0" y1="0" x2="75" y2="0" stroke="#0e7a4e" stroke-width="0.5"/>
+  <line x1="0" y1="0" x2="0" y2="75" stroke="#0e7a4e" stroke-width="0.5"/>
+  <line x1="0" y1="0" x2="53" y2="53" stroke="#0e7a4e" stroke-width="0.4" opacity="0.6"/>
+  <line x1="0" y1="0" x2="75" y2="37" stroke="#0e7a4e" stroke-width="0.3" opacity="0.5"/>
+  <line x1="0" y1="0" x2="37" y2="75" stroke="#0e7a4e" stroke-width="0.3" opacity="0.5"/>
+  <circle cx="14" cy="14" r="11" fill="#0B5D3B" stroke="#62c999" stroke-width="0.8"/>
+  <circle cx="14" cy="14" r="7"  fill="#062e1d" stroke="#62c999" stroke-width="0.6"/>
+  <circle cx="14" cy="14" r="3.5" fill="#0e7a4e"/>
+  <g transform="translate(14,14)">
+    <ellipse rx="3" ry="8" fill="#0e7a4e" opacity="0.7"/>
+    <ellipse rx="3" ry="8" fill="#0e7a4e" opacity="0.7" transform="rotate(45)"/>
+    <ellipse rx="3" ry="8" fill="#0e7a4e" opacity="0.7" transform="rotate(90)"/>
+    <ellipse rx="3" ry="8" fill="#0e7a4e" opacity="0.7" transform="rotate(135)"/>
+  </g>
+  <path d="M75,0 C65,0 58,5 55,14 C52,23 56,30 62,30 C68,30 70,25 66,22 C63,20 60,22 62,26"
+        fill="none" stroke="#62c999" stroke-width="0.8"/>
+  <path d="M0,75 C0,65 5,58 14,55 C23,52 30,56 30,62 C30,68 25,70 22,66 C20,63 22,60 26,62"
+        fill="none" stroke="#62c999" stroke-width="0.8"/>
+  <path d="M32,6 C36,10 34,16 28,18 C22,20 18,16 22,12 C26,8 30,10 28,14"
+        fill="none" stroke="#4db87a" stroke-width="0.7"/>
+  <path d="M6,32 C10,36 16,34 18,28 C20,22 16,18 12,22 C8,26 10,30 14,28"
+        fill="none" stroke="#4db87a" stroke-width="0.7"/>
+  <path d="M38,2 L40,5 L38,8 L36,5 Z" fill="#62c999" opacity="0.8"/>
+  <path d="M2,38 L5,40 L2,43 L-1,40 Z" fill="#62c999" opacity="0.8" transform="translate(1,0)"/>
+  <path d="M50,2 L52,5 L50,8 L48,5 Z" fill="#4db87a" opacity="0.6"/>
+</g>
+
+<!-- CORNER BOTTOM LEFT -->
+<g id="cornerBL" transform="translate(15,1108) scale(1,-1)">
+  <rect x="0" y="0" width="75" height="75" fill="url(#gCorner3)"/>
+  <path d="M75,0 A75,75 0 0,0 0,75" fill="none" stroke="#0e7a4e" stroke-width="1.2"/>
+  <path d="M70,0 A70,70 0 0,0 0,70" fill="none" stroke="#62c999" stroke-width="0.5"/>
+  <path d="M63,0 A63,63 0 0,0 0,63" fill="none" stroke="#0e7a4e" stroke-width="0.8"/>
+  <path d="M56,0 A56,56 0 0,0 0,56" fill="none" stroke="#62c999" stroke-width="0.4"/>
+  <path d="M48,0 A48,48 0 0,0 0,48" fill="none" stroke="#0e7a4e" stroke-width="0.7"/>
+  <path d="M40,0 A40,40 0 0,0 0,40" fill="none" stroke="#62c999" stroke-width="0.4"/>
+  <line x1="0" y1="0" x2="75" y2="0" stroke="#0e7a4e" stroke-width="0.5"/>
+  <line x1="0" y1="0" x2="0" y2="75" stroke="#0e7a4e" stroke-width="0.5"/>
+  <line x1="0" y1="0" x2="53" y2="53" stroke="#0e7a4e" stroke-width="0.4" opacity="0.6"/>
+  <circle cx="14" cy="14" r="11" fill="#0B5D3B" stroke="#62c999" stroke-width="0.8"/>
+  <circle cx="14" cy="14" r="7"  fill="#062e1d" stroke="#62c999" stroke-width="0.6"/>
+  <circle cx="14" cy="14" r="3.5" fill="#0e7a4e"/>
+  <g transform="translate(14,14)">
+    <ellipse rx="3" ry="8" fill="#0e7a4e" opacity="0.7"/>
+    <ellipse rx="3" ry="8" fill="#0e7a4e" opacity="0.7" transform="rotate(45)"/>
+    <ellipse rx="3" ry="8" fill="#0e7a4e" opacity="0.7" transform="rotate(90)"/>
+    <ellipse rx="3" ry="8" fill="#0e7a4e" opacity="0.7" transform="rotate(135)"/>
+  </g>
+  <path d="M75,0 C65,0 58,5 55,14 C52,23 56,30 62,30 C68,30 70,25 66,22 C63,20 60,22 62,26"
+        fill="none" stroke="#62c999" stroke-width="0.8"/>
+  <path d="M0,75 C0,65 5,58 14,55 C23,52 30,56 30,62 C30,68 25,70 22,66 C20,63 22,60 26,62"
+        fill="none" stroke="#62c999" stroke-width="0.8"/>
+  <path d="M32,6 C36,10 34,16 28,18 C22,20 18,16 22,12 C26,8 30,10 28,14"
+        fill="none" stroke="#4db87a" stroke-width="0.7"/>
+  <path d="M6,32 C10,36 16,34 18,28 C20,22 16,18 12,22 C8,26 10,30 14,28"
+        fill="none" stroke="#4db87a" stroke-width="0.7"/>
+  <path d="M38,2 L40,5 L38,8 L36,5 Z" fill="#62c999" opacity="0.8"/>
+  <path d="M2,38 L5,40 L2,43 L-1,40 Z" fill="#62c999" opacity="0.8" transform="translate(1,0)"/>
+</g>
+
+<!-- CORNER BOTTOM RIGHT -->
+<g id="cornerBR" transform="translate(779,1108) scale(-1,-1)">
+  <rect x="0" y="0" width="75" height="75" fill="url(#gCorner4)"/>
+  <path d="M75,0 A75,75 0 0,0 0,75" fill="none" stroke="#0e7a4e" stroke-width="1.2"/>
+  <path d="M70,0 A70,70 0 0,0 0,70" fill="none" stroke="#62c999" stroke-width="0.5"/>
+  <path d="M63,0 A63,63 0 0,0 0,63" fill="none" stroke="#0e7a4e" stroke-width="0.8"/>
+  <path d="M56,0 A56,56 0 0,0 0,56" fill="none" stroke="#62c999" stroke-width="0.4"/>
+  <path d="M48,0 A48,48 0 0,0 0,48" fill="none" stroke="#0e7a4e" stroke-width="0.7"/>
+  <path d="M40,0 A40,40 0 0,0 0,40" fill="none" stroke="#62c999" stroke-width="0.4"/>
+  <line x1="0" y1="0" x2="75" y2="0" stroke="#0e7a4e" stroke-width="0.5"/>
+  <line x1="0" y1="0" x2="0" y2="75" stroke="#0e7a4e" stroke-width="0.5"/>
+  <line x1="0" y1="0" x2="53" y2="53" stroke="#0e7a4e" stroke-width="0.4" opacity="0.6"/>
+  <circle cx="14" cy="14" r="11" fill="#0B5D3B" stroke="#62c999" stroke-width="0.8"/>
+  <circle cx="14" cy="14" r="7"  fill="#062e1d" stroke="#62c999" stroke-width="0.6"/>
+  <circle cx="14" cy="14" r="3.5" fill="#0e7a4e"/>
+  <g transform="translate(14,14)">
+    <ellipse rx="3" ry="8" fill="#0e7a4e" opacity="0.7"/>
+    <ellipse rx="3" ry="8" fill="#0e7a4e" opacity="0.7" transform="rotate(45)"/>
+    <ellipse rx="3" ry="8" fill="#0e7a4e" opacity="0.7" transform="rotate(90)"/>
+    <ellipse rx="3" ry="8" fill="#0e7a4e" opacity="0.7" transform="rotate(135)"/>
+  </g>
+  <path d="M75,0 C65,0 58,5 55,14 C52,23 56,30 62,30 C68,30 70,25 66,22 C63,20 60,22 62,26"
+        fill="none" stroke="#62c999" stroke-width="0.8"/>
+  <path d="M0,75 C0,65 5,58 14,55 C23,52 30,56 30,62 C30,68 25,70 22,66 C20,63 22,60 26,62"
+        fill="none" stroke="#62c999" stroke-width="0.8"/>
+  <path d="M38,2 L40,5 L38,8 L36,5 Z" fill="#62c999" opacity="0.8"/>
+  <path d="M2,38 L5,40 L2,43 L-1,40 Z" fill="#62c999" opacity="0.8" transform="translate(1,0)"/>
+</g>
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     SIDE DECORATIVE ELEMENTS — TOP SIDE (centered flourish)
+     ═══════════════════════════════════════════════════════════════════════ -->
+<g id="sideTopCenter" transform="translate(397,38)">
+  <!-- Central medallion -->
+  <circle cx="0" cy="0" r="20" fill="#062e1d" stroke="#0e7a4e" stroke-width="1.5"/>
+  <circle cx="0" cy="0" r="15" fill="#0B5D3B" stroke="#62c999" stroke-width="0.8"/>
+  <circle cx="0" cy="0" r="10" fill="#0e7a4e" stroke="#4db87a" stroke-width="0.6"/>
+  <circle cx="0" cy="0" r="5"  fill="#62c999"/>
+  <!-- 12-point star burst -->
+  <g stroke="#4db87a" stroke-width="1.2" fill="none">
+    <line x1="-18" y1="0" x2="-10" y2="0" transform="rotate(0)"/>
+    <line x1="-18" y1="0" x2="-10" y2="0" transform="rotate(30)"/>
+    <line x1="-18" y1="0" x2="-10" y2="0" transform="rotate(60)"/>
+    <line x1="-18" y1="0" x2="-10" y2="0" transform="rotate(90)"/>
+    <line x1="-18" y1="0" x2="-10" y2="0" transform="rotate(120)"/>
+    <line x1="-18" y1="0" x2="-10" y2="0" transform="rotate(150)"/>
+    <line x1="-18" y1="0" x2="-10" y2="0" transform="rotate(180)"/>
+    <line x1="-18" y1="0" x2="-10" y2="0" transform="rotate(210)"/>
+    <line x1="-18" y1="0" x2="-10" y2="0" transform="rotate(240)"/>
+    <line x1="-18" y1="0" x2="-10" y2="0" transform="rotate(270)"/>
+    <line x1="-18" y1="0" x2="-10" y2="0" transform="rotate(300)"/>
+    <line x1="-18" y1="0" x2="-10" y2="0" transform="rotate(330)"/>
+  </g>
+  <!-- Side scrolls extending left and right -->
+  <path d="M24,0 C40,-8 60,-6 72,2 C68,6 60,6 54,2 C48,-2 42,-4 36,0"
+        fill="none" stroke="#4db87a" stroke-width="1.2"/>
+  <path d="M-24,0 C-40,-8 -60,-6 -72,2 C-68,6 -60,6 -54,2 C-48,-2 -42,-4 -36,0"
+        fill="none" stroke="#4db87a" stroke-width="1.2"/>
+  <!-- Small leaves -->
+  <ellipse cx="50" cy="-3" rx="8" ry="3" fill="#0e7a4e" opacity="0.7" transform="rotate(20 50 -3)"/>
+  <ellipse cx="-50" cy="-3" rx="8" ry="3" fill="#0e7a4e" opacity="0.7" transform="rotate(-20 -50 -3)"/>
+  <ellipse cx="66" cy="2" rx="6" ry="2.5" fill="#4db87a" opacity="0.6" transform="rotate(30 66 2)"/>
+  <ellipse cx="-66" cy="2" rx="6" ry="2.5" fill="#4db87a" opacity="0.6" transform="rotate(-30 -66 2)"/>
+</g>
+
+<!-- BOTTOM SIDE (mirrored vertically) -->
+<g id="sideBottomCenter" transform="translate(397,1085) scale(1,-1)">
+  <circle cx="0" cy="0" r="20" fill="#062e1d" stroke="#0e7a4e" stroke-width="1.5"/>
+  <circle cx="0" cy="0" r="15" fill="#0B5D3B" stroke="#62c999" stroke-width="0.8"/>
+  <circle cx="0" cy="0" r="10" fill="#0e7a4e" stroke="#4db87a" stroke-width="0.6"/>
+  <circle cx="0" cy="0" r="5"  fill="#62c999"/>
+  <g stroke="#4db87a" stroke-width="1.2" fill="none">
+    <line x1="-18" y1="0" x2="-10" y2="0" transform="rotate(0)"/>
+    <line x1="-18" y1="0" x2="-10" y2="0" transform="rotate(30)"/>
+    <line x1="-18" y1="0" x2="-10" y2="0" transform="rotate(60)"/>
+    <line x1="-18" y1="0" x2="-10" y2="0" transform="rotate(90)"/>
+    <line x1="-18" y1="0" x2="-10" y2="0" transform="rotate(120)"/>
+    <line x1="-18" y1="0" x2="-10" y2="0" transform="rotate(150)"/>
+    <line x1="-18" y1="0" x2="-10" y2="0" transform="rotate(180)"/>
+    <line x1="-18" y1="0" x2="-10" y2="0" transform="rotate(210)"/>
+    <line x1="-18" y1="0" x2="-10" y2="0" transform="rotate(240)"/>
+    <line x1="-18" y1="0" x2="-10" y2="0" transform="rotate(270)"/>
+    <line x1="-18" y1="0" x2="-10" y2="0" transform="rotate(300)"/>
+    <line x1="-18" y1="0" x2="-10" y2="0" transform="rotate(330)"/>
+  </g>
+  <path d="M24,0 C40,-8 60,-6 72,2 C68,6 60,6 54,2 C48,-2 42,-4 36,0"
+        fill="none" stroke="#4db87a" stroke-width="1.2"/>
+  <path d="M-24,0 C-40,-8 -60,-6 -72,2 C-68,6 -60,6 -54,2 C-48,-2 -42,-4 -36,0"
+        fill="none" stroke="#4db87a" stroke-width="1.2"/>
+  <ellipse cx="50" cy="-3" rx="8" ry="3" fill="#0e7a4e" opacity="0.7" transform="rotate(20 50 -3)"/>
+  <ellipse cx="-50" cy="-3" rx="8" ry="3" fill="#0e7a4e" opacity="0.7" transform="rotate(-20 -50 -3)"/>
+  <ellipse cx="66" cy="2" rx="6" ry="2.5" fill="#4db87a" opacity="0.6" transform="rotate(30 66 2)"/>
+  <ellipse cx="-66" cy="2" rx="6" ry="2.5" fill="#4db87a" opacity="0.6" transform="rotate(-30 -66 2)"/>
+</g>
+
+<!-- LEFT SIDE (rotated for vertical) -->
+<g id="sideLeftCenter" transform="translate(38,561.5) rotate(-90)">
+  <circle cx="0" cy="0" r="16" fill="#062e1d" stroke="#0e7a4e" stroke-width="1.2"/>
+  <circle cx="0" cy="0" r="12" fill="#0B5D3B" stroke="#62c999" stroke-width="0.6"/>
+  <circle cx="0" cy="0" r="8"  fill="#0e7a4e" stroke="#4db87a" stroke-width="0.5"/>
+  <circle cx="0" cy="0" r="4"  fill="#62c999"/>
+  <!-- Vertical leaf chain -->
+  <ellipse cx="0" cy="20" rx="4" ry="10" fill="#0e7a4e" opacity="0.7"/>
+  <ellipse cx="0" cy="-20" rx="4" ry="10" fill="#0e7a4e" opacity="0.7"/>
+  <ellipse cx="0" cy="36" rx="3" ry="8" fill="#4db87a" opacity="0.6"/>
+  <ellipse cx="0" cy="-36" rx="3" ry="8" fill="#4db87a" opacity="0.6"/>
+</g>
+
+<!-- RIGHT SIDE -->
+<g id="sideRightCenter" transform="translate(756,561.5) rotate(90)">
+  <circle cx="0" cy="0" r="16" fill="#062e1d" stroke="#0e7a4e" stroke-width="1.2"/>
+  <circle cx="0" cy="0" r="12" fill="#0B5D3B" stroke="#62c999" stroke-width="0.6"/>
+  <circle cx="0" cy="0" r="8"  fill="#0e7a4e" stroke="#4db87a" stroke-width="0.5"/>
+  <circle cx="0" cy="0" r="4"  fill="#62c999"/>
+  <ellipse cx="0" cy="20" rx="4" ry="10" fill="#0e7a4e" opacity="0.7"/>
+  <ellipse cx="0" cy="-20" rx="4" ry="10" fill="#0e7a4e" opacity="0.7"/>
+  <ellipse cx="0" cy="36" rx="3" ry="8" fill="#4db87a" opacity="0.6"/>
+  <ellipse cx="0" cy="-36" rx="3" ry="8" fill="#4db87a" opacity="0.6"/>
+</g>
+
+</svg>

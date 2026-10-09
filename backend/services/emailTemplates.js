@@ -547,3 +547,96 @@ module.exports = {
     `, 'You received this because you are subscribed to NOREN newsletters');
   },
 };
+
+  // ─────────────────────────────────────────────────────────────
+  // POS INTEGRATION: Digital Invoice Receipt
+  // ─────────────────────────────────────────────────────────────
+  posInvoiceReceipt: (customerName, invoiceNumber, invoiceDate, total, items, qrUrl, invoiceUrl) => {
+    const itemsHtml = items.map(item => `
+      <tr>
+        <td style="color:#5a5750;padding:8px 0;border-bottom:1px solid #f5f0e8">${item.name || item.productName || 'Item'}</td>
+        <td style="color:#5a5750;padding:8px 12px;text-align:center;border-bottom:1px solid #f5f0e8">${item.qty || item.quantity || 1}</td>
+        <td style="color:#1a1a18;font-weight:500;padding:8px 0;text-align:right;border-bottom:1px solid #f5f0e8">₹${(item.price || item.unitPrice || 0).toFixed(2)}</td>
+      </tr>
+    `).join('');
+
+    return wrap(`
+      ${badge('Digital Invoice Receipt')}
+      ${h2(`Thank You, ${customerName}!`)}
+      ${para('Your invoice has been generated successfully. View and download your digital invoice anytime using the link below.')}
+      ${btn('View Digital Invoice', invoiceUrl)}
+      <p style="color:#9e9a94;font-size:12px;margin-bottom:24px">Or scan the QR code on your printed receipt</p>
+      ${infoBox([
+        ['Invoice Number', `<strong>${invoiceNumber}</strong>`],
+        ['Date', invoiceDate],
+        ['Total Amount', `<strong style="color:#c9a96e;font-size:16px">₹${parseFloat(total || 0).toFixed(2)}</strong>`]
+      ])}
+      <div style="margin-bottom:24px">
+        <p style="font-size:13px;font-weight:600;color:#1a1a18;margin:0 0 12px">Items Purchased:</p>
+        <table style="width:100%;font-size:13px;border-collapse:collapse">
+          <thead>
+            <tr>
+              <th style="color:#9e9a94;padding:8px 0;text-align:left;border-bottom:2px solid #e6e0d8">Item</th>
+              <th style="color:#9e9a94;padding:8px 12px;text-align:center;border-bottom:2px solid #e6e0d8">Qty</th>
+              <th style="color:#9e9a94;padding:8px 0;text-align:right;border-bottom:2px solid #e6e0d8">Price</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${itemsHtml}
+          </tbody>
+        </table>
+      </div>
+      ${divider()}
+      <p style="color:#b8a898;font-size:12px;margin:0">Your digital invoice is accessible 24/7. No login required — just click the link above or scan the QR code.</p>
+    `);
+  },
+
+  // ─────────────────────────────────────────────────────────────
+  // POS INTEGRATION: Payment Confirmation with Invoice Link
+  // ─────────────────────────────────────────────────────────────
+  posPaymentConfirmation: (customerName, invoiceNumber, paymentMode, amount, invoiceUrl) => wrap(`
+    ${badge('Payment Confirmed')}
+    ${h2(`Payment Received!`)}
+    ${para(`Hi ${customerName}, we've received your payment successfully. Your invoice is ready to view.`)}
+    ${infoBox([
+      ['Invoice Number', `<strong>${invoiceNumber}</strong>`],
+      ['Payment Method', paymentMode],
+      ['Amount Paid', `<strong style="color:#28a745;font-size:16px">₹${parseFloat(amount || 0).toFixed(2)}</strong>`]
+    ])}
+    ${btn('View Invoice & Receipt', invoiceUrl)}
+    ${divider()}
+    <p style="color:#b8a898;font-size:12px;margin:0">Need help? Contact us at <a href="mailto:supportnoren1@gmail.com" style="color:#c9a96e">supportnoren1@gmail.com</a></p>
+  `),
+
+  // ─────────────────────────────────────────────────────────────
+  // POS INTEGRATION: Invoice Summary for Admin/Manager
+  // ─────────────────────────────────────────────────────────────
+  posDailySalesSummary: (date, totalInvoices, totalRevenue, topItems, invoiceListUrl) => {
+    const topItemsHtml = topItems.slice(0, 5).map((item, idx) => `
+      <tr>
+        <td style="color:#5a5750;padding:8px 0">${idx + 1}. ${item.name}</td>
+        <td style="color:#1a1a18;font-weight:500;padding:8px 0;text-align:right">${item.quantity} units</td>
+      </tr>
+    `).join('');
+
+    return wrap(`
+      ${badge('Daily Sales Summary')}
+      ${h2(`Sales Report: ${date}`)}
+      ${para('Here\'s your daily sales summary from all POS devices:')}
+      ${infoBox([
+        ['Total Invoices', `<strong>${totalInvoices}</strong>`],
+        ['Total Revenue', `<strong style="color:#28a745;font-size:18px">₹${parseFloat(totalRevenue || 0).toFixed(2)}</strong>`],
+        ['Average Bill Value', `₹${(totalRevenue / totalInvoices).toFixed(2)}`]
+      ])}
+      <div style="margin-bottom:24px">
+        <p style="font-size:13px;font-weight:600;color:#1a1a18;margin:0 0 12px">Top Selling Items:</p>
+        <table style="width:100%;font-size:13px;border-collapse:collapse">
+          ${topItemsHtml}
+        </table>
+      </div>
+      ${btn('View All Invoices', invoiceListUrl)}
+      ${divider()}
+      <p style="color:#b8a898;font-size:12px;margin:0">This is an automated summary. View detailed analytics in your admin dashboard.</p>
+    `);
+  },
+};

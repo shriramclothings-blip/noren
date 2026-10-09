@@ -41,6 +41,10 @@ const LegalNotice       = lazy(() => import('./pages/legal/MorePolicies').then(m
 const ReturnPolicy      = lazy(() => import('./pages/legal/MorePolicies').then(m => ({ default: m.ReturnPolicy })));
 const AdminDashboard     = lazy(() => import('./pages/admin/AdminDashboard'));
 const InfluencerDashboard = lazy(() => import('./pages/influencer/InfluencerDashboard'));
+const MyBilling          = lazy(() => import('./pages/billing/MyBilling'));
+const ScanQR             = lazy(() => import('./pages/billing/ScanQR'));
+const DigitalInvoice     = lazy(() => import('./pages/billing/DigitalInvoice'));
+const BillingHelp        = lazy(() => import('./pages/billing/BillingHelp'));
 
 function Loader() {
   return (
@@ -116,6 +120,10 @@ export default function App() {
                   <Route path="/cookies" element={<CookiesPolicy />} />
                   <Route path="/disclaimer" element={<DisclaimerPolicy />} />
                   <Route path="/legal" element={<LegalNotice />} />
+                  <Route path="/my-billing" element={<MyBilling />} />
+                  <Route path="/my-billing/scan" element={<ScanQR />} />
+                  <Route path="/my-billing/invoice/:token" element={<DigitalInvoice />} />
+                  <Route path="/my-billing/help" element={<BillingHelp />} />
                 </Routes>
                 <ChatBot />
               </Layout>

@@ -1,0 +1,45 @@
+{
+  "name": "vendexa-license-generator",
+  "version": "1.0.0",
+  "description": "VENDEXA RetailOS — Private License Generator Tool (Internal Use Only)",
+  "private": true,
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win --x64",
+    "build:dir": "electron-builder --win --x64 --dir"
+  },
+  "devDependencies": {
+    "electron": "^41.0.3",
+    "electron-builder": "^26.8.1"
+  },
+  "build": {
+    "appId": "com.dineshglobalenterprises.licensegenerator",
+    "productName": "VENDEXA License Generator",
+    "copyright": "Copyright © 2024 Dinesh Global Enterprises Pvt Ltd",
+    "extends": null,
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "renderer/**/*",
+      "assets/**/*"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "portable": {
+      "artifactName": "VENDEXA-LicenseGenerator-${version}.exe"
+    },
+    "publish": null
+  }
+}

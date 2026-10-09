@@ -1,0 +1,149 @@
+{
+  "devices": [],
+  "syncRecords": [
+    {
+      "id": "1782475533990-82695b602c132",
+      "receivedAt": "2026-06-26T12:05:33.990Z",
+      "queueUuid": "feb2abbe-ff80-428f-beb6-f5f4864e31a1",
+      "transactionUuid": "c3893460-f0b8-4f42-aa9d-cf1cd78d2f43",
+      "entityType": "products",
+      "entityId": 198,
+      "actionType": "create",
+      "payload": {
+        "name": "TEST1",
+        "brand": "",
+        "category": "",
+        "description": "",
+        "unit": "PCS",
+        "imageUrl": "",
+        "variants": [],
+        "sku": "TEST1",
+        "barcode": "",
+        "salePrice": 0,
+        "costPrice": 0,
+        "stock": 0,
+        "minStock": 5,
+        "price": 0,
+        "sizeType": "custom",
+        "sizes": {
+          "One Size": {
+            "size": "One Size",
+            "stock": 0,
+            "soldQuantity": 0,
+            "purchaseQuantity": 0,
+            "remainingQuantity": 0,
+            "lastSoldDate": null,
+            "demandLevel": "Low",
+            "restockSuggestion": 2,
+            "profit": 0,
+            "sku": "TEST1-ONESIZE",
+            "barcode": "TEST1O"
+          }
+        },
+        "purchaseQuantity": 0,
+        "soldQuantity": 0,
+        "totalSold": 0,
+        "profit": 0,
+        "lastSoldDate": null,
+        "demandLevel": "Low",
+        "restockSuggestion": 5,
+        "isActive": true,
+        "referenceImage": "",
+        "categoryIcon": "",
+        "id": 198
+      },
+      "businessId": "RAM1",
+      "deviceId": "dev_100053dd33f24b81",
+      "syncHash": "0000000000000000000000000000000000000000000000000000000060917e69",
+      "timestamp": "2026-06-26T12:05:33.618Z"
+    },
+    {
+      "id": "1782475534033-d17073c361dec8",
+      "receivedAt": "2026-06-26T12:05:34.033Z",
+      "queueUuid": "4bfab1c7-11cc-40f7-b033-bfbbb81aa460",
+      "transactionUuid": "270a4d7d-1694-4a8a-9c81-ebeba90eab4f",
+      "entityType": "products",
+      "entityId": 197,
+      "actionType": "delete",
+      "payload": {
+        "id": 197
+      },
+      "businessId": "RAM123",
+      "deviceId": "dev_20efd8bc4e874a7c",
+      "syncHash": "0000000000000000000000000000000000000000000000000000000084880149",
+      "timestamp": "2026-06-26T12:05:34.033Z"
+    },
+    {
+      "id": "1782475534042-ea056f7238dcd",
+      "receivedAt": "2026-06-26T12:05:34.042Z",
+      "queueUuid": "9dff38d1-b27e-4b0b-8031-f3d8a51e0726",
+      "transactionUuid": "a9f5902d-7416-414e-80f5-39cde74891ea",
+      "entityType": "products",
+      "entityId": 198,
+      "actionType": "delete",
+      "payload": {
+        "id": 198
+      },
+      "businessId": "RAM123",
+      "deviceId": "dev_20efd8bc4e874a7c",
+      "syncHash": "000000000000000000000000000000000000000000000000000000009d007fcb",
+      "timestamp": "2026-06-26T12:05:34.042Z"
+    },
+    {
+      "id": "1782475534049-f921e184a9c168",
+      "receivedAt": "2026-06-26T12:05:34.049Z",
+      "queueUuid": "4c893ff9-4d35-4b76-9c01-0b267dce8868",
+      "transactionUuid": "2ea542ed-fb1e-44d6-a63a-bcdacb9be009",
+      "entityType": "products",
+      "entityId": 199,
+      "actionType": "create",
+      "payload": {
+        "name": "TEST",
+        "brand": "",
+        "category": "",
+        "description": "",
+        "unit": "PCS",
+        "imageUrl": "",
+        "variants": [],
+        "sku": "TEST",
+        "barcode": "",
+        "salePrice": 0,
+        "costPrice": 0,
+        "stock": 0,
+        "minStock": 5,
+        "price": 0,
+        "sizeType": "custom",
+        "sizes": {
+          "One Size": {
+            "size": "One Size",
+            "stock": 0,
+            "soldQuantity": 0,
+            "purchaseQuantity": 0,
+            "remainingQuantity": 0,
+            "lastSoldDate": null,
+            "demandLevel": "Low",
+            "restockSuggestion": 2,
+            "profit": 0,
+            "sku": "TEST-ONESIZE",
+            "barcode": "TESTO"
+          }
+        },
+        "purchaseQuantity": 0,
+        "soldQuantity": 0,
+        "totalSold": 0,
+        "profit": 0,
+        "lastSoldDate": null,
+        "demandLevel": "Low",
+        "restockSuggestion": 5,
+        "isActive": true,
+        "referenceImage": "",
+        "categoryIcon": "",
+        "id": 199
+      },
+      "businessId": "RAM123",
+      "deviceId": "dev_20efd8bc4e874a7c",
+      "syncHash": "0000000000000000000000000000000000000000000000000000000070e24523",
+      "timestamp": "2026-06-26T12:05:34.050Z"
+    }
+  ]
+}

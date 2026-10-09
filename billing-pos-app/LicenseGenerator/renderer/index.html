@@ -1,0 +1,1108 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline';" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VENDEXA License & Tax Invoice Suite (Offline Industrial Edition)</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="app">
+    <!-- Sidebar -->
+    <aside id="sidebar">
+      <div class="sidebar-logo" style="gap:10px;display:flex;align-items:center;">
+        <button id="sidebar-toggle-btn" class="btn-icon" style="border:none;padding:4px;background:transparent;cursor:pointer;color:var(--text2);margin-right:2px;" onclick="toggleSidebar()" title="Toggle Sidebar">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+        <img src="../IMG_8810.PNG" style="height:32px;object-fit:contain;background:#fff;padding:2px 4px;border-radius:6px;" alt="Dinesh Global Logo" />
+        <div class="sidebar-logo-text-group">
+          <div class="logo-title">VENDEXA</div>
+          <div class="logo-sub">License &amp; Invoice OS</div>
+        </div>
+      </div>
+      <nav>
+        <button class="nav-btn active" data-tab="generate" onclick="switchTab('generate')">
+          <span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></span>
+          <span>Generate License</span>
+        </button>
+        <button class="nav-btn" data-tab="invoices" onclick="switchTab('invoices')">
+          <span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></span>
+          <span>Invoice &amp; Receipts</span>
+          <span class="nav-badge" style="position:absolute;right:8px;background:#6366f1;color:#fff;font-size:8px;font-weight:700;padding:1px 5px;border-radius:10px;">TAX</span>
+        </button>
+        <button class="nav-btn" data-tab="customers" onclick="switchTab('customers')">
+          <span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
+          <span>Customer CRM</span>
+        </button>
+        <button class="nav-btn" data-tab="renewals" onclick="switchTab('renewals')">
+          <span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span>
+          <span>Renewal Alerts</span>
+          <span class="nav-badge" style="position:absolute;right:8px;background:#f59e0b;color:#fff;font-size:8px;font-weight:700;padding:1px 5px;border-radius:10px;">AUTO</span>
+        </button>
+        <button class="nav-btn" data-tab="verify" onclick="switchTab('verify')">
+          <span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg></span>
+          <span>Verify &amp; Authenticate</span>
+        </button>
+        <button class="nav-btn" data-tab="hardware" onclick="switchTab('hardware')">
+          <span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg></span>
+          <span>Hardware Analyzer</span>
+        </button>
+        <button class="nav-btn" data-tab="vault" onclick="switchTab('vault')">
+          <span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
+          <span>AES-256 Master Vault</span>
+          <span class="nav-badge" style="position:absolute;right:8px;background:#ec4899;color:#fff;font-size:8px;font-weight:700;padding:1px 5px;border-radius:10px;">HIGH-TECH</span>
+        </button>
+        <button class="nav-btn" data-tab="matrix" onclick="switchTab('matrix')">
+          <span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg></span>
+          <span>3D Canvas Visualizer</span>
+        </button>
+        <button class="nav-btn" data-tab="batch" onclick="switchTab('batch')">
+          <span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><line x1="16" y1="3" x2="16" y2="7"/><line x1="8" y1="3" x2="8" y2="7"/></svg></span>
+          <span>Batch Generator</span>
+        </button>
+        <button class="nav-btn" data-tab="revocation" onclick="switchTab('revocation')">
+          <span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg></span>
+          <span>Revocation &amp; Blacklist</span>
+        </button>
+        <button class="nav-btn" data-tab="stats" onclick="switchTab('stats')">
+          <span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></span>
+          <span>Analytics &amp; LTV</span>
+        </button>
+        <button class="nav-btn" data-tab="audit" onclick="switchTab('audit')">
+          <span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></span>
+          <span>Audit Log</span>
+        </button>
+        <button class="nav-btn" data-tab="pricing" onclick="switchTab('pricing')">
+          <span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span>
+          <span>Pricing Catalog</span>
+        </button>
+        <button class="nav-btn" data-tab="settings" onclick="switchTab('settings')">
+          <span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
+          <span>Suite Settings</span>
+          <span class="nav-badge" style="position:absolute;right:8px;background:#10b981;color:#fff;font-size:8px;font-weight:700;padding:1px 5px;border-radius:10px;">CONFIG</span>
+        </button>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="sidebar-footer-text">100% Offline Production Tool</div>
+        <div class="sidebar-footer-company">Dinesh Global Enterprises Pvt Ltd</div>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main id="main">
+      <!-- Top Header Controls -->
+      <div class="header-top-bar">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <img src="../IMG_8810.PNG" style="height:32px;object-fit:contain;background:#fff;padding:2px 8px;border-radius:6px;" alt="Dinesh Global Enterprises Logo" />
+          <span style="font-weight:800;font-size:15px;color:var(--text);letter-spacing:-0.2px;">VENDEXA RetailOS™ — License &amp; Tax Invoice Suite</span>
+          <span style="font-size:9.5px;background:var(--primary);color:#fff;font-weight:800;padding:3px 8px;border-radius:4px;letter-spacing:0.5px;">100% OFFLINE INDUSTRIAL</span>
+        </div>
+        <div class="top-bar-controls">
+          <button class="btn-icon-toggle" onclick="toggleTheme()" id="theme-toggle-btn" title="Switch Light/Dark Theme">
+            <span id="theme-icon">🌙</span> <span id="theme-label">Dark Mode</span>
+          </button>
+          <button class="btn-icon-toggle" onclick="toggleSound()" id="sound-toggle-btn" title="Mute/Unmute Audio">
+            <span id="sound-icon">🔊</span> <span id="sound-label">Audio On</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- ── TAB 1: GENERATE LICENSE ───────────────────────────────────── -->
+      <div id="tab-generate" class="tab-content active">
+        <div class="page-header">
+          <h1>Industrial License Generator</h1>
+          <p>Cryptographic HMAC-SHA256 signature generator with hardware binding locks, floating seat limits, and signed offline token files.</p>
+        </div>
+        <div class="two-col">
+          <!-- Left: Form -->
+          <div class="card form-card">
+            <h2 class="card-title">Customer &amp; Device Configuration</h2>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Customer Name <span class="req">*</span></label>
+                <input type="text" id="f-customerName" placeholder="e.g. Ramesh Kumar" />
+              </div>
+              <div class="form-group">
+                <label>Business / Store Name</label>
+                <input type="text" id="f-businessName" placeholder="e.g. Ramesh General Store" />
+              </div>
+              <div class="form-group">
+                <label>Phone Number <span class="req">*</span></label>
+                <input type="tel" id="f-phone" placeholder="+91-XXXXXXXXXX" />
+              </div>
+              <div class="form-group">
+                <label>Email Address</label>
+                <input type="email" id="f-email" placeholder="customer@email.com" />
+              </div>
+              <div class="form-group">
+                <label>City / Location</label>
+                <input type="text" id="f-city" placeholder="e.g. Mumbai" />
+              </div>
+              <div class="form-group">
+                <label>Edition <span class="req">*</span></label>
+                <select id="f-edition" onchange="autoFillSaleAmount()">
+                  <option value="STD">Standard Edition</option>
+                  <option value="PRO" selected>Professional Edition</option>
+                  <option value="ENT">Enterprise Edition</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>License Expiry <span class="req">*</span></label>
+                <select id="f-licenseType" onchange="updateExpiryField()">
+                  <option value="LIFETIME" selected>Lifetime (Perpetual)</option>
+                  <option value="ANNUAL">Annual (1 Year Snap)</option>
+                  <option value="CUSTOM">Custom Expiry Date</option>
+                </select>
+              </div>
+              <div class="form-group" id="custom-expiry-group" style="display:none;">
+                <label>Custom Expiry Date <span class="req">*</span></label>
+                <input type="date" id="f-expiryDate" />
+              </div>
+              <div class="form-group">
+                <label>Floating Terminal Seats</label>
+                <select id="f-floatingSeats">
+                  <option value="1" selected>1 Terminal (Single Counter)</option>
+                  <option value="2">2 Terminals</option>
+                  <option value="5">5 Terminals (Multi-counter)</option>
+                  <option value="10">10 Terminals</option>
+                  <option value="25">25 Terminals (Enterprise Chain)</option>
+                  <option value="50">50 Terminals (Unlimited OEM)</option>
+                </select>
+              </div>
+              <div class="form-group full-width">
+                <label>Hardware Device ID Fingerprint <span class="req">*</span></label>
+                <input type="text" id="f-deviceId" placeholder="XXXX-XXXX-XXXX-XXXX" class="mono-input" style="text-transform:uppercase;" />
+                <span class="field-hint">Hardware lock fingerprint copied from client's Settings &rarr; License screen</span>
+              </div>
+              <div class="form-group full-width">
+                <label>Enabled Modules &amp; Feature Flags</label>
+                <div class="feature-flags-grid">
+                  <label class="feature-checkbox-card"><input type="checkbox" id="feat-pos" checked /> Billing POS</label>
+                  <label class="feature-checkbox-card"><input type="checkbox" id="feat-inv" checked /> Inventory</label>
+                  <label class="feature-checkbox-card"><input type="checkbox" id="feat-barcode" checked /> Barcode Engine</label>
+                  <label class="feature-checkbox-card"><input type="checkbox" id="feat-multistore" checked /> Multi-Store</label>
+                  <label class="feature-checkbox-card"><input type="checkbox" id="feat-api" checked /> REST API</label>
+                  <label class="feature-checkbox-card"><input type="checkbox" id="feat-rpt" checked /> Advanced Analytics</label>
+                </div>
+              </div>
+              <div class="form-group full-width">
+                <label>Sale Amount (&#8377;)</label>
+                <input type="number" id="f-saleAmount" placeholder="e.g. 9999" min="0" />
+              </div>
+              <div class="form-group full-width">
+                <label>Notes / Operational Remarks</label>
+                <textarea id="f-notes" rows="2" placeholder="Notes about payment method, custom terms, or client request..."></textarea>
+              </div>
+            </div>
+            <button class="btn-primary" onclick="generateLicense()">
+              <span class="btn-icon-left"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></span>
+              Generate Cryptographic License Key
+            </button>
+          </div>
+
+          <!-- Right: Output & 3D Holographic Card Preview -->
+          <div>
+            <!-- 3D Holographic Card Preview -->
+            <div class="perspective-container">
+              <div class="holo-card-3d" id="holo-card-3d">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">
+                  <div>
+                    <div style="font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:rgba(255,255,255,0.7);">OFFLINE AUTHENTICATION CERTIFICATE</div>
+                    <div style="font-size:18px;font-weight:800;letter-spacing:0.5px;margin-top:2px;">VENDEXA RetailOS™</div>
+                  </div>
+                  <div class="holo-seal-badge">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                    GENUINE SEAL
+                  </div>
+                </div>
+                <div style="margin-bottom:16px;">
+                  <div style="font-size:10px;text-transform:uppercase;color:rgba(255,255,255,0.6);letter-spacing:1px;">LICENSE KEY</div>
+                  <div style="font-family:monospace;font-size:18px;font-weight:800;letter-spacing:2px;color:#38bdf8;margin-top:4px;" id="card-key-display">XXXX-XXXX-XXXX-XXXX</div>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:11px;border-top:1px solid rgba(255,255,255,0.15);padding-top:12px;">
+                  <div><span style="color:rgba(255,255,255,0.6);">CLIENT:</span> <strong id="card-client-display" style="display:block;margin-top:2px;">—</strong></div>
+                  <div><span style="color:rgba(255,255,255,0.6);">EDITION:</span> <strong id="card-edition-display" style="display:block;margin-top:2px;color:#a78bfa;">PRO EDITION</strong></div>
+                  <div><span style="color:rgba(255,255,255,0.6);">VALIDITY:</span> <strong id="card-expiry-display" style="display:block;margin-top:2px;color:#34d399;">LIFETIME</strong></div>
+                  <div><span style="color:rgba(255,255,255,0.6);">TERMINALS:</span> <strong id="card-seats-display" style="display:block;margin-top:2px;color:#fbbf24;">1 SEAT</strong></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Result Actions -->
+            <div class="card result-card" id="result-card" style="display:none;">
+              <div class="result-header">
+                <div class="result-icon result-icon-svg">
+                  <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                </div>
+                <div>
+                  <h3>License Key Generated!</h3>
+                  <p id="result-customer-name">—</p>
+                </div>
+              </div>
+              <div class="result-key-section">
+                <label class="result-label">HMAC LICENSE KEY</label>
+                <div class="result-key-box">
+                  <span id="result-key" class="result-key-text">—</span>
+                  <button class="copy-btn" onclick="copyKey()" id="copy-key-btn" title="Copy key">
+                    <span class="btn-icon-left"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></span>
+                    Copy Key
+                  </button>
+                </div>
+              </div>
+              <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
+                <button class="btn-primary" style="flex:1;" onclick="downloadSignedLicFile()">
+                  ↓ Export Signed .LIC Token
+                </button>
+                <button class="btn-whatsapp" onclick="sendWhatsApp()" id="whatsapp-btn">
+                  WhatsApp Key
+                </button>
+              </div>
+              <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
+                <button class="btn-save" style="flex:1;" onclick="saveToRecords()" id="save-btn">Save to CRM</button>
+                <button class="btn-outline" onclick="printReceipt()">Print Cert</button>
+                <button class="btn-outline" onclick="downloadCertificate()">Download PDF</button>
+              </div>
+            </div>
+
+            <div class="card quick-tips" id="tips-card">
+              <h3>Industrial Activation Protocol</h3>
+              <ol style="font-size:12px;line-height:1.6;color:var(--text2);padding-left:18px;">
+                <li>Client opens VENDEXA RetailOS &rarr; <strong>Settings &rarr; License</strong>.</li>
+                <li>Client provides their <strong>Hardware Device ID Fingerprint</strong>.</li>
+                <li>Generate HMAC Key or signed <code>.lic</code> file token above.</li>
+                <li>Send key via WhatsApp / Email or deliver the <code>.lic</code> token file.</li>
+                <li>Client pastes key or imports <code>.lic</code> token &rarr; <strong>Activated instantly 100% offline!</strong></li>
+              </ol>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── TAB 2: DEDICATED INVOICE & RECEIPT GENERATOR ─────────────── -->
+      <div id="tab-invoices" class="tab-content">
+        <div class="page-header-row">
+          <div>
+            <h1>Dedicated Industrial Tax Invoice &amp; Receipt Builder</h1>
+            <p>Generate professional tax invoices, calculate GST (CGST/SGST/IGST), apply promo coupons, convert totals to words, and export printable A4 PDFs or Thermal Receipts.</p>
+          </div>
+          <div class="header-actions">
+            <button class="btn-primary" onclick="saveInvoiceRecord()">
+              💾 Save Invoice Record
+            </button>
+            <button class="btn-outline" onclick="printInvoiceA4()">
+              🖨 Print Executive A4 PDF
+            </button>
+            <button class="btn-outline" onclick="printInvoiceThermal()">
+              🧾 Print Thermal POS Receipt
+            </button>
+          </div>
+        </div>
+
+        <div class="two-col" style="grid-template-columns: 1fr 420px;">
+          <!-- Left: Invoice Form & Items Table -->
+          <div class="card">
+            <h2 class="card-title">Tax Invoice Configuration</h2>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Invoice Number <span class="req">*</span></label>
+                <input type="text" id="inv-number" readonly class="mono-input" style="font-weight:700;color:var(--primary);" />
+              </div>
+              <div class="form-group">
+                <label>Invoice Date</label>
+                <input type="date" id="inv-date" />
+              </div>
+              <div class="form-group">
+                <label>Customer Name <span class="req">*</span></label>
+                <input type="text" id="inv-customer-name" placeholder="e.g. Ramesh Kumar" />
+              </div>
+              <div class="form-group">
+                <label>Business / Shop Name</label>
+                <input type="text" id="inv-business-name" placeholder="e.g. Ramesh Enterprises" />
+              </div>
+              <div class="form-group">
+                <label>Client GSTIN No.</label>
+                <input type="text" id="inv-gstin" placeholder="27AAAAA0000A1Z5" style="text-transform:uppercase;" />
+              </div>
+              <div class="form-group">
+                <label>Currency &amp; Region</label>
+                <select id="inv-currency" onchange="updateInvoiceCalculations()">
+                  <option value="INR" selected>₹ INR (India GST)</option>
+                  <option value="USD">$ USD (US Dollars)</option>
+                  <option value="EUR">€ EUR (Eurozone)</option>
+                  <option value="GBP">£ GBP (British Pound)</option>
+                  <option value="AED">AED (UAE Dirham)</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Promo Coupon Code</label>
+                <select id="inv-coupon" onchange="updateInvoiceCalculations()">
+                  <option value="NONE" selected>No Discount Coupon</option>
+                  <option value="WELCOME10">WELCOME10 (10% Flat Off)</option>
+                  <option value="PARTNER20">PARTNER20 (20% Partner Off)</option>
+                  <option value="FLAT1000">FLAT1000 (₹1,000 Off)</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>PO / Reference No.</label>
+                <input type="text" id="inv-po-reference" placeholder="e.g. PO-2026-8810" />
+              </div>
+              <div class="form-group">
+                <label>Payment Due Date</label>
+                <input type="date" id="inv-due-date" />
+              </div>
+              <div class="form-group">
+                <label>Customer Phone / WhatsApp</label>
+                <input type="tel" id="inv-phone" placeholder="+91-9876543210" />
+              </div>
+              <div class="form-group">
+                <label>Terms &amp; Conditions Preset</label>
+                <select id="inv-terms-preset">
+                  <option value="STD" selected>Standard Software Licensing Terms</option>
+                  <option value="HW">Hardware &amp; Dongle Replacement Policy</option>
+                  <option value="AMC">Annual Maintenance (AMC) SLA Agreement</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Payment Method Mode <span class="req">*</span></label>
+                <select id="inv-payment-mode" onchange="toggleSplitPaymentMode(this.value)">
+                  <option value="UPI" selected>UPI QR Code / Online App Payment</option>
+                  <option value="Cash">Cash Payment</option>
+                  <option value="Card">Card Payment (POS Terminal)</option>
+                  <option value="NetBanking">Net Banking / NEFT / RTGS</option>
+                  <option value="Cheque">Cheque / Demand Draft (DD)</option>
+                  <option value="Credit">Credit / Pay Later (BNPL)</option>
+                  <option value="Split">Split Payment (Cash + UPI / Card)</option>
+                </select>
+              </div>
+              
+              <!-- Split Payment Row (Hidden by default) -->
+              <div class="form-group full-width" id="inv-split-container" style="display:none;background:var(--bg3);padding:10px;border-radius:6px;border:1px dashed var(--primary);">
+                <label style="color:var(--primary);font-weight:700;">Split Payment Amounts</label>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                  <div>
+                    <span style="font-size:11px;color:var(--text2);">Mode 1 (Cash &#8377;):</span>
+                    <input type="number" id="inv-split-amt1" placeholder="Cash Amount" oninput="calculateSplitPayment()" />
+                  </div>
+                  <div>
+                    <span style="font-size:11px;color:var(--text2);">Mode 2 (UPI/Card &#8377;):</span>
+                    <input type="number" id="inv-split-amt2" placeholder="UPI / Card Amount" oninput="calculateSplitPayment()" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Line Items Table -->
+            <div style="margin-top:20px;border-top:1px solid var(--border);padding-top:16px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                <h3 style="font-size:14px;font-weight:700;color:var(--text);">Itemized Line Items</h3>
+                <button class="btn-secondary" style="font-size:12px;padding:4px 12px;" onclick="addInvoiceLineItem()">+ Add Line Item</button>
+              </div>
+              <table class="invoice-items-table">
+                <thead>
+                  <tr>
+                    <th>Item Description</th>
+                    <th>SAC/HSN</th>
+                    <th>Qty</th>
+                    <th>Unit Price</th>
+                    <th>Disc</th>
+                    <th>Tax Rate</th>
+                    <th style="text-align:right;">Line Net</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody id="inv-items-tbody">
+                  <!-- Rendered dynamically -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Right: Summary, Math & UPI QR -->
+          <div>
+            <div class="invoice-summary-card">
+              <h3 style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:14px;">Tax Summary &amp; Industrial Math</h3>
+              <div class="invoice-summary-row"><span>Gross Subtotal:</span><strong id="inv-subtotal">&#8377;0.00</strong></div>
+              <div class="invoice-summary-row"><span>Coupon Discount:</span><strong id="inv-coupon-disc" style="color:var(--green);">-&#8377;0.00</strong></div>
+              <div class="invoice-summary-row"><span>Taxable GST Amount:</span><strong id="inv-tax">&#8377;0.00</strong></div>
+              <div class="invoice-summary-row grand-total"><span>Total Payable:</span><strong id="inv-total">&#8377;0</strong></div>
+              
+              <!-- Amount in Words -->
+              <div class="amount-words-box">
+                <div style="font-size:10px;text-transform:uppercase;color:var(--text3);margin-bottom:2px;">AMOUNT IN WORDS</div>
+                <div id="inv-amount-words">Zero Rupees Only</div>
+              </div>
+
+              <!-- Live Scannable UPI QR Code -->
+              <div class="qr-preview-box" style="margin-top:16px;">
+                <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:6px;">LIVE SCANNABLE UPI QR CODE</div>
+                <div style="padding:12px;background:#fff;border-radius:8px;color:#000;text-align:center;">
+                  <div id="inv-qr-code-box" style="display:flex;justify-content:center;align-items:center;min-height:110px;margin-bottom:6px;"></div>
+                  <div style="font-size:11px;font-weight:800;color:#059669;font-family:monospace;" id="inv-qr-vpa-display">7984626447@upi</div>
+                  <div style="font-size:9.5px;color:#64748b;margin-top:2px;">Scan with GPay, PhonePe, Paytm, or BHIM</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Saved Invoices Table -->
+            <div class="card" style="margin-top:16px;">
+              <h3 class="card-title">Saved Tax Invoices</h3>
+              <div class="table-wrap" style="max-height:220px;overflow-y:auto;">
+                <table>
+                  <thead>
+                    <tr><th>#</th><th>Inv No.</th><th>Client</th><th>Total</th><th>Action</th></tr>
+                  </thead>
+                  <tbody id="invoices-history-tbody">
+                    <tr><td colspan="5" class="empty-row">No saved invoices yet.</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── TAB 3: CUSTOMER CRM ──────────────────────────────────────── -->
+      <div id="tab-customers" class="tab-content">
+        <div class="page-header-row">
+          <div>
+            <h1>Customer CRM &amp; Telemetry Directory</h1>
+            <p>Complete record directory with customer lifetime value (LTV), active key status, and phone/WhatsApp actions. <span id="total-count" class="badge">0 records</span></p>
+          </div>
+          <div class="header-actions">
+            <div class="search-wrap">
+              <input type="text" id="search-input" placeholder="Search customer, phone, device ID..." oninput="filterRecords()" class="search-input" />
+            </div>
+            <button class="btn-outline" onclick="exportCsv()">Export CSV</button>
+            <button class="btn-outline" onclick="exportJson()">Backup JSON</button>
+            <button class="btn-outline" onclick="importJson()">Import Backup</button>
+          </div>
+        </div>
+        <div id="expiry-alert-banner" class="expiry-alert-banner" style="display:none;"></div>
+        <div class="card">
+          <div class="table-wrap">
+            <table id="licenses-table">
+              <thead>
+                <tr>
+                  <th>#</th><th>Customer Name</th><th>Business</th><th>Phone</th>
+                  <th>City</th><th>Device ID</th><th>Edition</th>
+                  <th>Expiry</th><th>Status</th><th>Issued Date</th><th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="licenses-tbody">
+                <tr><td colspan="11" class="empty-row">No customer records yet. Generate your first license!</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── TAB 4: RENEWAL ALERTS & RECURRING ENGINE ─────────────────── -->
+      <div id="tab-renewals" class="tab-content">
+        <div class="page-header">
+          <h1>License Renewal &amp; Expiry Alert Center</h1>
+          <p>Track licenses expiring within 7, 15, or 30 days. Auto-generate renewal notice letters and extension keys.</p>
+        </div>
+        <div class="card">
+          <h2 class="card-title">Expiring Licenses Overview</h2>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>#</th><th>Customer</th><th>Edition</th><th>Expiry Date</th><th>Days Left</th><th>Quick Action</th></tr>
+              </thead>
+              <tbody id="renewals-tbody">
+                <tr><td colspan="6" class="empty-row">No licenses expiring in the next 30 days. All client licenses are active!</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── TAB 5: VERIFY & AUTHENTICATE ─────────────────────────────── -->
+      <div id="tab-verify" class="tab-content">
+        <div class="page-header-row">
+          <div>
+            <h1>Certificate Authenticator &amp; Cryptographic Inspector</h1>
+            <p>Verify offline `.lic` signature files or HMAC key authenticity with tamper detection.</p>
+          </div>
+          <div class="header-actions">
+            <button onclick="exportVerifyLog()" class="btn-secondary" style="font-size:12px;">Export Log CSV</button>
+            <button onclick="refreshVerifyStats()" class="btn-secondary" style="font-size:12px;">Refresh Registry</button>
+          </div>
+        </div>
+
+        <!-- Live Verifier Panel -->
+        <div class="card" style="border:2px solid var(--green);">
+          <div style="display:flex;gap:12px;align-items:center;margin-bottom:14px;">
+            <div style="width:36px;height:36px;border-radius:50%;background:var(--green);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;">✓</div>
+            <div>
+              <div style="font-weight:700;font-size:15px;color:var(--text);">Cryptographic License Authenticator</div>
+              <div style="font-size:12px;color:var(--text2);">Paste License Key, Device ID, or open `.lic` token file to verify tamper status</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:10px;">
+            <input id="verify-input" type="text" class="mono-input" placeholder="Paste XXXX-XXXX-XXXX-XXXX key or Device ID..." onkeydown="if(event.key==='Enter') runVerification()" />
+            <select id="verify-mode" style="width:160px;">
+              <option value="key">License Key</option>
+              <option value="device">Device ID</option>
+              <option value="cert">Certificate ID</option>
+              <option value="customer">Customer Name</option>
+            </select>
+            <button onclick="runVerification()" class="btn-primary" style="width:auto;padding:0 24px;">Verify Key</button>
+            <button onclick="clearVerification()" class="btn-secondary">Clear</button>
+          </div>
+          <div id="verify-result" style="margin-top:16px;display:none;"></div>
+        </div>
+
+        <div class="grid-4" id="verify-stats-row" style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:16px;">
+          <div class="card" style="text-align:center;"><div style="font-size:24px;font-weight:800;color:var(--primary);" id="vs-total">0</div><div style="font-size:11px;color:var(--text2);">Total Issued</div></div>
+          <div class="card" style="text-align:center;"><div style="font-size:24px;font-weight:800;color:var(--green);" id="vs-active">0</div><div style="font-size:11px;color:var(--text2);">Active Keys</div></div>
+          <div class="card" style="text-align:center;"><div style="font-size:24px;font-weight:800;color:var(--amber);" id="vs-expiring">0</div><div style="font-size:11px;color:var(--text2);">Expiring Soon</div></div>
+          <div class="card" style="text-align:center;"><div style="font-size:24px;font-weight:800;color:var(--red);" id="vs-expired">0</div><div style="font-size:11px;color:var(--text2);">Expired / Revoked</div></div>
+        </div>
+      </div>
+
+      <!-- ── TAB 6: HARDWARE CATALOG & INVENTORY SYSTEM ─────────────────── -->
+      <div id="tab-hardware" class="tab-content">
+        <div class="page-header-row">
+          <div>
+            <h1>Hardware Catalog &amp; Device Inventory System</h1>
+            <p>Register, track, and price POS hardware devices (Thermal Printers, Barcode Scanners, POS Terminals, Cash Drawers). Easily insert products directly into tax invoices.</p>
+          </div>
+          <div class="header-actions">
+            <button class="btn-primary" onclick="showAddHardwareForm()">
+              + Register New Hardware Device
+            </button>
+          </div>
+        </div>
+
+        <!-- Hardware Registration Form (Collapsible/Card) -->
+        <div class="card" id="hw-form-card" style="margin-bottom:16px;">
+          <h2 class="card-title">📦 Register New Hardware Device into Inventory</h2>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Device / Product Title <span class="req">*</span></label>
+              <input type="text" id="hw-title" placeholder="e.g. POS Thermal Receipt Printer 80mm" />
+            </div>
+            <div class="form-group">
+              <label>Hardware Category</label>
+              <select id="hw-category">
+                <option value="Thermal Printer" selected>Thermal Receipt Printer (80mm/58mm)</option>
+                <option value="Barcode Scanner">Barcode / QR Code Scanner</option>
+                <option value="POS Terminal">All-in-One Touch POS Terminal</option>
+                <option value="Cash Drawer">Electronic Cash Drawer</option>
+                <option value="Weighing Scale">Electronic Weighing Scale</option>
+                <option value="Customer Display">VFD / LCD Customer Display</option>
+                <option value="USB Security Dongle">USB Hardware Lock Dongle</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Model / Serial Number</label>
+              <input type="text" id="hw-model" placeholder="e.g. POS-80-BT-9901" />
+            </div>
+            <div class="form-group">
+              <label>SAC / HSN Code</label>
+              <input type="text" id="hw-sac" value="8443" />
+            </div>
+            <div class="form-group">
+              <label>Selling Price (&#8377;) <span class="req">*</span></label>
+              <input type="number" id="hw-price" placeholder="e.g. 4500" min="0" />
+            </div>
+            <div class="form-group">
+              <label>In-Stock Quantity <span class="req">*</span></label>
+              <input type="number" id="hw-stock" placeholder="e.g. 25" min="0" value="10" />
+            </div>
+            <div class="form-group">
+              <label>Warranty Coverage</label>
+              <select id="hw-warranty">
+                <option value="1 Year" selected>1 Year Manufacturer Warranty</option>
+                <option value="2 Years">2 Years Extended Warranty</option>
+                <option value="3 Years">3 Years Enterprise Warranty</option>
+                <option value="6 Months">6 Months Limited Warranty</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>GST Tax Rate (%)</label>
+              <select id="hw-tax">
+                <option value="18" selected>18% Standard GST</option>
+                <option value="12">12% GST</option>
+                <option value="28">28% High GST</option>
+                <option value="0">0% Exempt</option>
+              </select>
+            </div>
+          </div>
+          <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:14px;">
+            <button class="btn-primary" style="width:auto;padding:9px 24px;" onclick="saveHardwareDevice()">💾 Save Hardware Device</button>
+          </div>
+        </div>
+
+        <!-- Hardware Inventory Catalog Table -->
+        <div class="card">
+          <h2 class="card-title">🏬 Active Hardware Inventory Catalog</h2>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Hardware Product</th>
+                  <th>Category</th>
+                  <th>Model / Serial</th>
+                  <th>SAC/HSN</th>
+                  <th style="text-align:right;">Unit Price</th>
+                  <th style="text-align:center;">Stock</th>
+                  <th>Warranty</th>
+                  <th style="text-align:center;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="hw-inventory-tbody">
+                <!-- Rendered dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Fingerprint Inspector Card -->
+        <div class="card" style="margin-top:16px;">
+          <h2 class="card-title">🔍 Device Hardware Fingerprint &amp; Lock Inspector</h2>
+          <div class="form-group full-width">
+            <label>Device ID Fingerprint String</label>
+            <input type="text" id="hw-input" class="mono-input" placeholder="e.g. 4B8F-9C12-3D7E-8A5F" oninput="analyzeHardwareId(this.value)" />
+          </div>
+          <div id="hw-analysis-result" style="margin-top:16px;"></div>
+        </div>
+      </div>
+
+      <!-- ── TAB 7: AES-256 MASTER VAULT ──────────────────────────────── -->
+      <div id="tab-vault" class="tab-content">
+        <div class="page-header">
+          <h1>AES-256 Encrypted Master Vault</h1>
+          <p>Encrypt and lock all database records using AES-256-GCM cipher with master passphrase protection.</p>
+        </div>
+        <div class="two-col">
+          <div class="card">
+            <h2 class="card-title">🔒 Export AES-256 Encrypted Vault</h2>
+            <div class="form-group full-width">
+              <label>Set Master Passphrase <span class="req">*</span></label>
+              <input type="password" id="vault-export-pass" placeholder="Enter strong master passphrase..." />
+            </div>
+            <button class="btn-primary" style="margin-top:14px;" onclick="exportEncryptedVault()">
+              🔐 Encrypt &amp; Export Master Vault (.vault)
+            </button>
+          </div>
+          <div class="card">
+            <h2 class="card-title">🔓 Import &amp; Unlock Master Vault</h2>
+            <div class="form-group full-width">
+              <label>Enter Master Passphrase <span class="req">*</span></label>
+              <input type="password" id="vault-import-pass" placeholder="Enter passphrase to decrypt..." />
+            </div>
+            <button class="btn-secondary" style="margin-top:14px;" onclick="importEncryptedVault()">
+              🔑 Open &amp; Decrypt Master Vault
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── TAB 8: 3D CANVAS VISUALIZER ──────────────────────────────── -->
+      <div id="tab-matrix" class="tab-content">
+        <div class="page-header">
+          <h1>Interactive 3D Canvas Visualizer</h1>
+          <p>Real-time Canvas 2D / WebGL rendering of glowing 3D security matrices and key certificates.</p>
+        </div>
+        <div class="card" style="text-align:center;">
+          <canvas id="matrix-canvas" width="800" height="300" style="background:#05070f;border-radius:12px;border:1px solid var(--border);width:100%;max-width:800px;"></canvas>
+          <div style="margin-top:14px;display:flex;justify-content:center;gap:12px;">
+            <button class="btn-secondary" onclick="renderMatrixCanvas()">✨ Render Security Hologram</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── TAB 9: BATCH GENERATOR ───────────────────────────────────── -->
+      <div id="tab-batch" class="tab-content">
+        <div class="page-header">
+          <h1>Batch License Key Generator</h1>
+          <p>Generate bulk license keys for distributor chains, OEM bundling, or multi-branch clients.</p>
+        </div>
+        <div class="card">
+          <h2 class="card-title">Bulk Key Generation Parameters</h2>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Distributor / Client Name</label>
+              <input type="text" id="batch-client" placeholder="e.g. Metro Retail Partner Chain" />
+            </div>
+            <div class="form-group">
+              <label>Edition Profile</label>
+              <select id="batch-edition"><option value="STD">Standard</option><option value="PRO" selected>Professional</option><option value="ENT">Enterprise</option></select>
+            </div>
+            <div class="form-group">
+              <label>Quantity to Generate</label>
+              <select id="batch-count"><option value="5">5 Keys</option><option value="10" selected>10 Keys</option><option value="25">25 Keys</option><option value="50">50 Keys</option></select>
+            </div>
+            <div class="form-group">
+              <label>License Expiry</label>
+              <select id="batch-type"><option value="LIFETIME" selected>Lifetime</option><option value="ANNUAL">Annual (1 Year)</option></select>
+            </div>
+          </div>
+          <button class="btn-primary" style="margin-top:14px;" onclick="generateBatchKeys()">
+            ⚡ Generate Batch Licenses Now
+          </button>
+        </div>
+      </div>
+
+      <!-- ── TAB 10: REVOCATION & BLACKLIST MANAGER ───────────────────── -->
+      <div id="tab-revocation" class="tab-content">
+        <div class="page-header">
+          <h1>License Revocation &amp; Blacklist Manager</h1>
+          <p>Instantly revoke compromised keys or blacklist device hardware fingerprints to block unauthorized offline activations.</p>
+        </div>
+        <div class="card">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>#</th><th>License Key</th><th>Device ID</th><th>Customer</th><th>Revocation Reason</th><th>Actions</th></tr>
+              </thead>
+              <tbody id="revocations-tbody">
+                <tr><td colspan="6" class="empty-row">No licenses currently revoked or blacklisted.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── TAB 11: ANALYTICS & LTV STATISTICS ──────────────────────── -->
+      <div id="tab-stats" class="tab-content">
+        <div class="page-header">
+          <h1>Analytics &amp; Financial Telemetry</h1>
+          <p>Revenue statistics, active license metrics, edition breakdowns, and geographical distribution.</p>
+        </div>
+        <div class="stats-grid">
+          <div class="stat-card"><div class="stat-value" id="stat-total">0</div><div class="stat-label">Total Issued</div></div>
+          <div class="stat-card green"><div class="stat-value" id="stat-active">0</div><div class="stat-label">Active</div></div>
+          <div class="stat-card amber"><div class="stat-value" id="stat-expired">0</div><div class="stat-label">Expired</div></div>
+          <div class="stat-card blue"><div class="stat-value" id="stat-lifetime">0</div><div class="stat-label">Lifetime</div></div>
+          <div class="stat-card purple"><div class="stat-value" id="stat-pro">0</div><div class="stat-label">PRO Edition</div></div>
+          <div class="stat-card indigo"><div class="stat-value" id="stat-ent">0</div><div class="stat-label">Enterprise</div></div>
+          <div class="stat-card green"><div class="stat-value" id="stat-revenue">&#8377;0</div><div class="stat-label">Total Revenue</div></div>
+        </div>
+      </div>
+
+      <!-- ── TAB 12: AUDIT LOG ────────────────────────────────────────── -->
+      <div id="tab-audit" class="tab-content">
+        <div class="page-header-row">
+          <div>
+            <h1>Security Audit Log</h1>
+            <p>Timestamped security event log. <span id="audit-count" class="badge">0 entries</span></p>
+          </div>
+          <div class="header-actions">
+            <button class="btn-outline" onclick="exportAuditCsv()">Export Audit CSV</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="table-wrap">
+            <table id="audit-table">
+              <thead><tr><th>#</th><th>Action</th><th>Detail</th><th>Date &amp; Time</th></tr></thead>
+              <tbody id="audit-tbody"><tr><td colspan="4" class="empty-row">No audit entries yet.</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── TAB 13: PRICING CATALOG ──────────────────────────────────── -->
+      <div id="tab-pricing" class="tab-content">
+        <div class="page-header">
+          <h1>Product Pricing Catalog</h1>
+          <p>Configure edition base pricing for auto-filling sale amounts on licenses and tax invoices.</p>
+        </div>
+        <div class="card">
+          <table class="pricing-table">
+            <thead>
+              <tr><th>Edition Profile</th><th>Lifetime (₹)</th><th>Annual (₹)</th><th>Custom (₹)</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Standard Edition</td>
+                <td><input type="number" id="price-STD-LIFETIME" class="price-input" placeholder="4999" /></td>
+                <td><input type="number" id="price-STD-ANNUAL"   class="price-input" placeholder="1999" /></td>
+                <td><input type="number" id="price-STD-CUSTOM"   class="price-input" placeholder="0" /></td>
+              </tr>
+              <tr>
+                <td>Professional Edition</td>
+                <td><input type="number" id="price-PRO-LIFETIME" class="price-input" placeholder="9999" /></td>
+                <td><input type="number" id="price-PRO-ANNUAL"   class="price-input" placeholder="3999" /></td>
+                <td><input type="number" id="price-PRO-CUSTOM"   class="price-input" placeholder="0" /></td>
+              </tr>
+              <tr>
+                <td>Enterprise Edition</td>
+                <td><input type="number" id="price-ENT-LIFETIME" class="price-input" placeholder="19999" /></td>
+                <td><input type="number" id="price-ENT-ANNUAL"   class="price-input" placeholder="7999" /></td>
+                <td><input type="number" id="price-ENT-CUSTOM"   class="price-input" placeholder="0" /></td>
+              </tr>
+            </tbody>
+          </table>
+          <button class="btn-primary" style="margin-top:16px;width:auto;padding:10px 24px;" onclick="savePricing()">Save Pricing Matrix</button>
+        </div>
+      </div>
+
+      <!-- ── TAB 14: FULLY LOADED SUITE SETTINGS & INVOICE TEMPLATES ──── -->
+      <div id="tab-settings" class="tab-content">
+        <div class="page-header-row">
+          <div>
+            <h1>Suite Settings &amp; Invoice Template Customizer</h1>
+            <p>Configure company identity, GST tax rules, secret key salts, and select from 10 professional invoice layout templates with the Bunny Customizer Engine.</p>
+          </div>
+          <div class="header-actions">
+            <button class="btn-primary" onclick="saveSuiteSettings()">💾 Save All Settings &amp; Templates</button>
+          </div>
+        </div>
+
+        <div class="two-col">
+          <!-- Left: Identity & Tax Settings -->
+          <div class="card">
+            <h2 class="card-title">🏢 Company &amp; Legal Identity</h2>
+            <div class="form-grid">
+              <div class="form-group full-width">
+                <label>Company Legal Name</label>
+                <input type="text" id="set-company-name" value="Dinesh Global Enterprises Pvt Ltd" />
+              </div>
+              <div class="form-group">
+                <label>Brand Product Title</label>
+                <input type="text" id="set-brand-title" value="VENDEXA RetailOS™" />
+              </div>
+              <div class="form-group">
+                <label>Company GSTIN No.</label>
+                <input type="text" id="set-gstin" value="27AAAAA0000A1Z5" style="text-transform:uppercase;" />
+              </div>
+              <div class="form-group">
+                <label>Support Phone / WhatsApp</label>
+                <input type="tel" id="set-phone" value="+91-7984626447" />
+              </div>
+              <div class="form-group">
+                <label>Support Email Address</label>
+                <input type="email" id="set-email" value="support@dineshglobal.com" />
+              </div>
+              <div class="form-group full-width">
+                <label>Payment UPI VPA ID</label>
+                <input type="text" id="set-upi-vpa" value="7984626447@upi" />
+              </div>
+            </div>
+
+            <h2 class="card-title" style="margin-top:20px;">⚙️ Tax &amp; Financial Calculations</h2>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Default GST Tax Rate (%)</label>
+                <input type="number" id="set-default-tax" value="18" min="0" max="28" />
+              </div>
+              <div class="form-group">
+                <label>Default SAC / HSN Code</label>
+                <input type="text" id="set-default-hsn" value="997331" />
+              </div>
+              <div class="form-group">
+                <label>Invoice Number Prefix</label>
+                <input type="text" id="set-inv-prefix" value="INV-" />
+              </div>
+              <div class="form-group">
+                <label>Default Currency</label>
+                <select id="set-currency">
+                  <option value="INR" selected>₹ INR (India)</option>
+                  <option value="USD">$ USD (US)</option>
+                  <option value="EUR">€ EUR (Euro)</option>
+                  <option value="GBP">£ GBP (UK)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right: 10 Invoice Layout Templates & Bunny Customizer Engine -->
+          <div>
+            <div class="card">
+              <h2 class="card-title">🧾 10 Invoice Printing Layout Templates</h2>
+              <div class="form-group full-width">
+                <label>Select Active Printing Template Preset</label>
+                <select id="set-inv-template" onchange="previewInvoiceTemplate(this.value)">
+                  <option value="tpl-emerald" selected>1. Executive Emerald A4 (Classic Corporate Legal)</option>
+                  <option value="tpl-dark">2. Modern Glassmorphism Dark (Tech Aesthetic)</option>
+                  <option value="tpl-monochrome">3. Minimalist Clean Monochrome (Black &amp; White Lineart)</option>
+                  <option value="tpl-thermal-80">4. Thermal POS Receipt 80mm (80mm Roll Printer)</option>
+                  <option value="tpl-thermal-58">5. Thermal POS Receipt 58mm (Mini 58mm Bluetooth Printer)</option>
+                  <option value="tpl-gold">6. Corporate Gold Luxury (VIP Enterprise Billing)</option>
+                  <option value="tpl-barcode">7. Retail Express Barcode Invoice (Scannable Barcode Header)</option>
+                  <option value="tpl-proforma">8. Pro-Forma Proposal &amp; Estimate (Formal Quotation)</option>
+                  <option value="tpl-compact-a5">9. Eco-Friendly Half-Page A5 (Compact Quick Billing)</option>
+                  <option value="tpl-gst-detailed">10. GST Tax Detailed Breakout (Full CGST/SGST/IGST Matrix)</option>
+                </select>
+              </div>
+
+              <h2 class="card-title" style="margin-top:16px;">🐰 Bunny Customize Template Builder</h2>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label>Primary Theme Accent Color</label>
+                  <input type="color" id="set-inv-accent-color" value="#0B5D3B" style="height:38px;padding:2px;cursor:pointer;" />
+                </div>
+                <div class="form-group">
+                  <label>Background Watermark Text</label>
+                  <input type="text" id="set-inv-watermark" value="ORIGINAL FOR RECIPIENT" />
+                </div>
+                <div class="form-group">
+                  <label>Header Motto Tagline</label>
+                  <input type="text" id="set-inv-tagline" value="Official Licensed Software &amp; IT Solutions" />
+                </div>
+                <div class="form-group">
+                  <label>Authority Signatory Designation</label>
+                  <input type="text" id="set-inv-signatory-title" value="Authorized Signatory" />
+                </div>
+                <div class="form-group full-width">
+                  <label>Print Layout Controls</label>
+                  <div class="feature-flags-grid">
+                    <label class="feature-checkbox-card"><input type="checkbox" id="set-inv-show-qr" checked /> Show UPI QR Code</label>
+                    <label class="feature-checkbox-card"><input type="checkbox" id="set-inv-show-hsn" checked /> Show SAC/HSN Column</label>
+                    <label class="feature-checkbox-card"><input type="checkbox" id="set-inv-show-logo" checked /> Show Company Logo</label>
+                    <label class="feature-checkbox-card"><input type="checkbox" id="set-inv-show-sign" checked /> Show Authority Signature</label>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <h2 class="card-title">👁 Live License Certificate &amp; Tax Invoice Review</h2>
+              <p style="font-size:12px;color:var(--text2);margin-bottom:14px;">Real-time review previews of your generated certificate and active invoice printing layout.</p>
+              
+              <div style="margin-bottom:16px;">
+                <label style="font-size:11px;font-weight:700;color:var(--primary);text-transform:uppercase;letter-spacing:0.8px;display:block;margin-bottom:6px;">1. Live License Certificate Preview</label>
+                <div id="settings-lic-preview" style="border:1px solid var(--border);border-radius:8px;padding:12px;background:var(--bg);max-height:180px;overflow-y:auto;font-size:11px;">
+                  <!-- Dynamically rendered -->
+                </div>
+              </div>
+
+              <div>
+                <label style="font-size:11px;font-weight:700;color:var(--primary);text-transform:uppercase;letter-spacing:0.8px;display:block;margin-bottom:6px;">2. Live Tax Invoice Printing Layout Preview</label>
+                <div id="settings-inv-preview" style="border:1px solid var(--border);border-radius:8px;padding:12px;background:var(--bg);max-height:220px;overflow-y:auto;font-size:11px;">
+                  <!-- Dynamically rendered -->
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <h2 class="card-title">🎨 UI &amp; Audio Feedback Preferences</h2>
+              <div class="form-grid">
+                <div class="form-group full-width">
+                  <label>Interface Theme Mode</label>
+                  <select id="set-theme-mode" onchange="toggleTheme()">
+                    <option value="dark" selected>🌙 Dark Glassmorphism</option>
+                    <option value="light">☀️ Executive Light</option>
+                  </select>
+                </div>
+                <div class="form-group full-width">
+                  <label>Master Audio Sound Synthesizer</label>
+                  <select id="set-audio-mode" onchange="toggleSound()">
+                    <option value="enabled" selected>🔊 Enabled (Audio Chimes Active)</option>
+                    <option value="muted">🔇 Muted</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div class="card" style="border:1.5px solid var(--red);">
+              <h2 class="card-title" style="color:var(--red);">⚠️ Security &amp; Database Maintenance</h2>
+              <p style="font-size:12px;color:var(--text2);margin-bottom:14px;">Irreversible administrative maintenance actions.</p>
+              <div style="display:flex;flex-direction:column;gap:10px;">
+                <button class="btn-secondary" onclick="purgeAuditLogs()">🧹 Purge Audit Trail Logs</button>
+                <button class="btn-warning" onclick="resetAllDatabaseRecords()">🚨 Reset All License Records</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- Modals -->
+  <div id="view-modal" class="modal-overlay" style="display:none;" onclick="closeModal(event)">
+    <div class="modal-box" onclick="event.stopPropagation()">
+      <div class="modal-header"><h3>License Record Details</h3><button onclick="closeViewModal()" class="modal-close">✕</button></div>
+      <div id="modal-content" class="modal-content"></div>
+    </div>
+  </div>
+
+  <!-- Edit Customer License Modal -->
+  <div id="edit-modal" class="modal-overlay" style="display:none;" onclick="if(event.target===this) document.getElementById('edit-modal').style.display='none'">
+    <div class="modal-box edit-modal-box" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3>✏️ Edit Customer License Details</h3>
+        <button onclick="document.getElementById('edit-modal').style.display='none'" class="modal-close">✕</button>
+      </div>
+      <div class="modal-content">
+        <input type="hidden" id="edit-id" />
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Customer Name <span class="req">*</span></label>
+            <input type="text" id="edit-customerName" />
+          </div>
+          <div class="form-group">
+            <label>Business / Shop Name</label>
+            <input type="text" id="edit-businessName" />
+          </div>
+          <div class="form-group">
+            <label>Phone Number <span class="req">*</span></label>
+            <input type="tel" id="edit-phone" />
+          </div>
+          <div class="form-group">
+            <label>Email Address</label>
+            <input type="email" id="edit-email" />
+          </div>
+          <div class="form-group">
+            <label>City / Location</label>
+            <input type="text" id="edit-city" />
+          </div>
+          <div class="form-group">
+            <label>License Status</label>
+            <select id="edit-status">
+              <option value="Active">Active</option>
+              <option value="Expired">Expired</option>
+              <option value="Revoked">Revoked</option>
+            </select>
+          </div>
+          <div class="form-group full-width">
+            <label>Notes / Operational Remarks</label>
+            <textarea id="edit-notes" rows="2"></textarea>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer" style="display:flex;justify-content:flex-end;gap:10px;margin-top:14px;">
+        <button onclick="document.getElementById('edit-modal').style.display='none'" class="btn-secondary">Cancel</button>
+        <button onclick="saveEditRecord()" class="btn-primary" style="width:auto;padding:8px 20px;">Save Changes</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Duplicate Device Warning Modal -->
+  <div id="dup-modal" class="modal-overlay" style="display:none;">
+    <div class="modal-box" style="max-width:480px;">
+      <div class="modal-header">
+        <h3 style="color:var(--amber);">⚠️ Duplicate Device ID Detected</h3>
+        <button onclick="document.getElementById('dup-modal').style.display='none'" class="modal-close">✕</button>
+      </div>
+      <div class="modal-content" style="padding:16px 0;">
+        <p style="font-size:13px;color:var(--text2);margin-bottom:12px;">This hardware Device ID already has an active license registered in the CRM system:</p>
+        <div style="background:var(--bg);padding:12px;border-radius:8px;font-size:12px;margin-bottom:14px;">
+          <div><strong>Customer:</strong> <span id="dup-customer">—</span></div>
+          <div><strong>Edition:</strong> <span id="dup-edition">—</span></div>
+          <div><strong>Expiry:</strong> <span id="dup-expiry">—</span></div>
+          <div><strong>Issued:</strong> <span id="dup-date">—</span></div>
+          <div style="margin-top:6px;font-family:monospace;color:var(--primary);font-weight:700;">Key: <span id="dup-key">—</span></div>
+        </div>
+        <p style="font-size:12px;color:var(--text3);">Do you want to re-issue a new cryptographic license key anyway?</p>
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:14px;">
+        <button id="dup-btn-cancel" class="btn-secondary">Cancel</button>
+        <button id="dup-btn-proceed" class="btn-primary">Re-issue Key Anyway</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="icons.js"></script>
+  <script src="certificateTemplate.js"></script>
+  <script src="soundEngine.js"></script>
+  <script src="qrcodeEngine.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

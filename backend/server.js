@@ -164,6 +164,8 @@ app.use('/api/erp', require('./routes/erp'));
 app.use('/api/erp/communications', require('./routes/communications'));
 app.use('/api/erp/email', require('./routes/email'));
 app.use('/api/erp/pos', require('./routes/pos'));
+app.use('/api/erp/pos/integration', require('./routes/posIntegration'));
+app.use('/api/invoices', require('./routes/publicInvoice'));
 app.use('/api/erp/inventory', require('./routes/inventory'));
 app.use('/api/erp/customers', require('./routes/customers'));
 app.use('/api/erp/brands', require('./routes/brands'));
@@ -589,6 +591,13 @@ httpServer.listen(PORT, '0.0.0.0', () => {
       console.error('Failed to start database scheduler:', err.message);
     });
   }, 5000); // Wait 5 seconds for database connections to stabilize
+
+  // Start POS daily summary scheduler
+  setTimeout(() => {
+    const { scheduleDailySummary } = require('./jobs/posDailySummaryJob');
+    scheduleDailySummary();
+    console.log('📊 POS Daily Summary scheduler started');
+  }, 6000); // Wait 6 seconds
 });
 
   // ── Socket.IO real-time chat ──────────────────────────────────────────────
