@@ -598,7 +598,6 @@ httpServer.listen(PORT, '0.0.0.0', () => {
     scheduleDailySummary();
     console.log('📊 POS Daily Summary scheduler started');
   }, 6000); // Wait 6 seconds
-});
 
   // ── Socket.IO real-time chat ──────────────────────────────────────────────
   const io = new Server(httpServer, {
