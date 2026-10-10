@@ -217,8 +217,22 @@ async function getHistory() {
   }
 }
 
-// ── Initialize on module load ──────────────────────────────────────────────
-ensureTable().catch(e => console.error('❌ [LoginBlock] Init failed:', e.message));
+// ── Initialize on module load (with delay to allow server startup) ────────────
+let initialized = false;
+const initializeLoginBlock = async () => {
+  if (initialized) return;
+  try {
+    await ensureTable();
+    initialized = true;
+  } catch (e) {
+    console.error('❌ [LoginBlock] Init failed:', e.message);
+  }
+};
+
+// Delay initialization to after server starts
+setTimeout(() => {
+  initializeLoginBlock().catch(() => {});
+}, 5000); // Wait 5 seconds for database to be ready
 
 module.exports = {
   isBlocked,
