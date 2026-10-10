@@ -68,8 +68,14 @@ function shouldFailover(err) {
   // PostgreSQL wire protocol
   if (['57P03','08006','08001','08004','08P01','57014'].includes(code)) return true;
 
-  // Neon cloud-specific messages
-  if (/quota|compute time|upgrade your plan|suspended|exceeded|project is disabled|unavailable|starting up|not accepting connections/i.test(msg)) return true;
+  // Neon cloud-specific messages (including quota exceeded)
+  if (/quota|compute time|upgrade your plan|suspended|exceeded|project is disabled|unavailable|starting up|not accepting connections/i.test(msg)) {
+    // Log quota errors prominently
+    if (/quota|exceeded|upgrade your plan/i.test(msg)) {
+      console.error(`\n${'='.repeat(80)}\n❌ DATABASE QUOTA EXCEEDED\n${'='.repeat(80)}\nError: ${err.message}\n\nIMPORTANT: Your Neon PostgreSQL database has exceeded its quota.\n\nSOLUTIONS:\n1. Upgrade your Neon plan: https://neon.tech/pricing (starts at $19/month)\n2. Create a new free Neon project: https://console.neon.tech/\n3. Switch to Supabase (free tier): https://supabase.com/\n${'='.repeat(80)}\n`);
+    }
+    return true;
+  }
 
   // Generic connectivity words
   if (/connect(ion)?|timeout|timed out|econnrefused|network|socket/i.test(msg)) return true;

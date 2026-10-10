@@ -497,7 +497,13 @@ app.get('/og/product/:id', async (req, res) => {
   }
 });
 
-app.get('/api/health', (_, res) => res.json({ status: 'ok', brand: 'NOREN', timestamp: new Date() }));
+app.get('/api/health', (_, res) => res.json({ 
+  status: 'ok', 
+  brand: 'NOREN', 
+  timestamp: new Date(),
+  database: dbInitialized ? 'connected' : 'degraded',
+  server: 'running'
+}));
 app.get('/', (_, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 
 // ── Self keep-alive ping (prevents Render free tier from spinning down) ───────
@@ -554,16 +560,32 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 5000;
-// Start server regardless of DB init result — failover handles DB switching at query time
-initDB().catch(err => {
-  console.warn(`⚠️  initDB warning (non-fatal): ${err.message} — server will still start, failover active`);
-});
 
-// Auto-run email portal migration on startup
-const { autoMigrate } = require('./autoMigrate');
+// Start server regardless of DB init result — failover handles DB switching at query time
+let dbInitialized = false;
 initDB()
-  .then(() => autoMigrate())
-  .catch(err => console.warn('Migration skipped:', err.message));
+  .then(async () => {
+    console.log('✅ Database connection established');
+    dbInitialized = true;
+    // Auto-run email portal migration after DB is ready
+    const { autoMigrate } = require('./autoMigrate');
+    try {
+      await autoMigrate();
+      console.log('✅ Database migrations completed');
+    } catch (migErr) {
+      console.warn('⚠️  Migration skipped:', migErr.message);
+      if (migErr.message && migErr.message.includes('quota')) {
+        console.error('❌ DATABASE QUOTA EXCEEDED - Please upgrade your Neon plan or switch database');
+      }
+    }
+  })
+  .catch(err => {
+    console.warn(`⚠️  initDB warning (non-fatal): ${err.message} — server will still start, failover active`);
+    if (err.message && err.message.includes('quota')) {
+      console.error('❌ DATABASE QUOTA EXCEEDED - Please upgrade your Neon plan or switch database');
+    }
+    dbInitialized = false;
+  });
 
 // Verify email config on startup so misconfigurations are visible in logs
 const { testMailConfig } = require('./services/mailService');
@@ -581,22 +603,46 @@ httpServer.listen(PORT, '0.0.0.0', () => {
   
   // Start broadcast scheduler after server is ready
   setTimeout(() => {
-    broadcastScheduler.start();
+    try {
+      if (dbInitialized) {
+        broadcastScheduler.start();
+      } else {
+        console.warn('⚠️  Broadcast scheduler skipped - database not available');
+      }
+    } catch (err) {
+      console.error('Failed to start broadcast scheduler:', err.message);
+    }
   }, 3000); // Wait 3 seconds for server to fully start
 
   // Start database sync scheduler (automatic synchronization)
   setTimeout(() => {
-    const dbScheduler = getDatabaseScheduler();
-    dbScheduler.start().catch(err => {
-      console.error('Failed to start database scheduler:', err.message);
-    });
+    try {
+      if (dbInitialized) {
+        const dbScheduler = getDatabaseScheduler();
+        dbScheduler.start().catch(err => {
+          console.error('Failed to start database scheduler:', err.message);
+        });
+      } else {
+        console.warn('⚠️  Database scheduler skipped - database not available');
+      }
+    } catch (err) {
+      console.error('Failed to initialize database scheduler:', err.message);
+    }
   }, 5000); // Wait 5 seconds for database connections to stabilize
 
   // Start POS daily summary scheduler
   setTimeout(() => {
-    const { scheduleDailySummary } = require('./jobs/posDailySummaryJob');
-    scheduleDailySummary();
-    console.log('📊 POS Daily Summary scheduler started');
+    try {
+      if (dbInitialized) {
+        const { scheduleDailySummary } = require('./jobs/posDailySummaryJob');
+        scheduleDailySummary();
+        console.log('📊 POS Daily Summary scheduler started');
+      } else {
+        console.warn('⚠️  POS scheduler skipped - database not available');
+      }
+    } catch (err) {
+      console.error('Failed to start POS scheduler:', err.message);
+    }
   }, 6000); // Wait 6 seconds
 
   // ── Socket.IO real-time chat ──────────────────────────────────────────────
