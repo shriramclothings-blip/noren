@@ -14,9 +14,15 @@ const RAW_URLS = [
   process.env.DATABASE_URL_3,
 ].filter(Boolean);
 
+// Don't exit immediately - let the server start and handle this gracefully
 if (RAW_URLS.length === 0) {
-  console.error('❌ No DATABASE_URL_1/2/3 found in .env — cannot start');
-  process.exit(1);
+  console.error('\n' + '='.repeat(80));
+  console.error('❌ CRITICAL: No DATABASE_URL_1/2/3 found in environment variables');
+  console.error('='.repeat(80));
+  console.error('The server will start but database operations will fail.');
+  console.error('Please set DATABASE_URL_1, DATABASE_URL_2, DATABASE_URL_3 in your environment.');
+  console.error('='.repeat(80) + '\n');
+  // Don't call process.exit(1) - allow server to start for health checks
 }
 
 // Clean a Neon URL — strip sslmode & channel_binding from query string,
@@ -44,7 +50,7 @@ function makePool(index) {
 // ─── State ─────────────────────────────────────────────────────────────────────
 let primaryIndex = 0;        // Primary DB for writes
 let activeReadIndex = 0;     // Current DB for reads (load balanced)
-let pools = RAW_URLS.map((_, i) => makePool(i));
+let pools = RAW_URLS.length > 0 ? RAW_URLS.map((_, i) => makePool(i)) : [];
 let queryCountOnBackup = 0;
 let lastRecoveryAttempt = 0;
 let lastSyncAttempt = 0;
@@ -54,7 +60,11 @@ const RECOVERY_MS       = 60 * 60 * 1000;  // try primary again after 1 hour
 const RECOVERY_QUERIES  = 100;              // or after 100 queries on backup
 const SYNC_INTERVAL_MS  = 5 * 60 * 1000;   // sync every 5 minutes
 
-RAW_URLS.forEach((_, i) => console.log(`✅ DB${i + 1} pool created`));
+if (RAW_URLS.length > 0) {
+  RAW_URLS.forEach((_, i) => console.log(`✅ DB${i + 1} pool created`));
+} else {
+  console.warn('⚠️  No database pools created - database operations will fail');
+}
 
 // ─── Is this error a reason to failover? ───────────────────────────────────────
 function shouldFailover(err) {
@@ -202,6 +212,11 @@ async function tryRecoverToPrimary() {
 
 // ─── Core query with full failover and sync awareness ──────────────────────────
 async function query(text, params) {
+  // Guard against no database pools
+  if (pools.length === 0) {
+    throw new Error('No database connections available - DATABASE_URL environment variables not set');
+  }
+
   await tryRecoverToPrimary();
   
   // Trigger background sync periodically
@@ -260,6 +275,11 @@ async function query(text, params) {
 
 // ─── connect() for transaction clients ─────────────────────────────────────────
 async function connect() {
+  // Guard against no database pools
+  if (pools.length === 0) {
+    throw new Error('No database connections available - DATABASE_URL environment variables not set');
+  }
+
   await tryRecoverToPrimary();
 
   for (let i = primaryIndex; i < pools.length; i++) {
@@ -306,6 +326,11 @@ const pool = {
 };
 
 const initDB = async () => {
+  // Guard against no database pools
+  if (pools.length === 0) {
+    throw new Error('Cannot initialize database - no DATABASE_URL environment variables configured');
+  }
+
   const client = await pool.connect();
   try {
     // Core tables
