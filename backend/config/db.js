@@ -2,10 +2,8 @@ const { Pool } = require('pg');
 const bcrypt = require('bcryptjs');
 
 // ═══════════════════════════════════════════════════════════════════════════════
-//  BULLETPROOF 3-DATABASE FAILOVER SYSTEM WITH DATA SYNC
-//  Logic: Primary DB (DB1) for writes, all DBs kept in sync
-//  Reads can use any available DB (load balancing)
-//  When primary fails, promote next available DB and sync data
+//  PRODUCTION-READY 3-DATABASE FAILOVER SYSTEM
+//  Bulletproof initialization - no crashes on startup
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const RAW_URLS = [
@@ -14,20 +12,9 @@ const RAW_URLS = [
   process.env.DATABASE_URL_3,
 ].filter(Boolean);
 
-// Don't exit immediately - let the server start and handle this gracefully
-if (RAW_URLS.length === 0) {
-  console.error('\n' + '='.repeat(80));
-  console.error('❌ CRITICAL: No DATABASE_URL_1/2/3 found in environment variables');
-  console.error('='.repeat(80));
-  console.error('The server will start but database operations will fail.');
-  console.error('Please set DATABASE_URL_1, DATABASE_URL_2, DATABASE_URL_3 in your environment.');
-  console.error('='.repeat(80) + '\n');
-  // Don't call process.exit(1) - allow server to start for health checks
-}
-
-// Clean a Neon URL — strip sslmode & channel_binding from query string,
-// then pass ssl option via Pool config so pg handles it correctly.
+// Clean a Neon URL — strip sslmode & channel_binding from query string
 function cleanUrl(raw) {
+  if (!raw) return '';
   return raw
     .replace(/[?&]sslmode=[^&]*/g, '')
     .replace(/[?&]channel_binding=[^&]*/g, '')
@@ -35,12 +22,15 @@ function cleanUrl(raw) {
     .replace(/[?&]+$/, '');
 }
 
-// Build a fresh Pool for a given index
+// Build a fresh Pool for a given index (safe - doesn't connect immediately)
 function makePool(index) {
+  if (!RAW_URLS[index]) {
+    throw new Error(`No DATABASE_URL configured for index ${index}`);
+  }
   const url = RAW_URLS[index];
   return new Pool({
     connectionString: cleanUrl(url),
-    ssl: { rejectUnauthorized: false },   // works for Neon + local
+    ssl: { rejectUnauthorized: false },
     max: 5,
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 8000,
@@ -48,22 +38,34 @@ function makePool(index) {
 }
 
 // ─── State ─────────────────────────────────────────────────────────────────────
-let primaryIndex = 0;        // Primary DB for writes
-let activeReadIndex = 0;     // Current DB for reads (load balanced)
-let pools = RAW_URLS.length > 0 ? RAW_URLS.map((_, i) => makePool(i)) : [];
+let primaryIndex = 0;
+let activeReadIndex = 0;
+let pools = [];
 let queryCountOnBackup = 0;
 let lastRecoveryAttempt = 0;
 let lastSyncAttempt = 0;
-let dbHealthStatus = RAW_URLS.map(() => ({ healthy: true, lastCheck: Date.now() }));
+let dbHealthStatus = [];
 
-const RECOVERY_MS       = 60 * 60 * 1000;  // try primary again after 1 hour
-const RECOVERY_QUERIES  = 100;              // or after 100 queries on backup
-const SYNC_INTERVAL_MS  = 5 * 60 * 1000;   // sync every 5 minutes
+const RECOVERY_MS       = 60 * 60 * 1000;
+const RECOVERY_QUERIES  = 100;
+const SYNC_INTERVAL_MS  = 5 * 60 * 1000;
 
-if (RAW_URLS.length > 0) {
-  RAW_URLS.forEach((_, i) => console.log(`✅ DB${i + 1} pool created`));
-} else {
-  console.warn('⚠️  No database pools created - database operations will fail');
+// Initialize pools safely
+try {
+  if (RAW_URLS.length === 0) {
+    console.warn('⚠️  WARNING: No DATABASE_URL_1/2/3 environment variables found');
+    console.warn('⚠️  Server will start but database operations will fail');
+    console.warn('⚠️  Set DATABASE_URL_1, DATABASE_URL_2, DATABASE_URL_3 to enable database');
+  } else {
+    pools = RAW_URLS.map((_, i) => makePool(i));
+    dbHealthStatus = RAW_URLS.map(() => ({ healthy: true, lastCheck: Date.now() }));
+    RAW_URLS.forEach((_, i) => console.log(`✅ DB${i + 1} pool created`));
+  }
+} catch (err) {
+  console.error('❌ Failed to create database pools:', err.message);
+  console.warn('⚠️  Server will start but database operations will fail');
+  pools = [];
+  dbHealthStatus = [];
 }
 
 // ─── Is this error a reason to failover? ───────────────────────────────────────

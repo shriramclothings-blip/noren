@@ -546,7 +546,6 @@ module.exports = {
       <p style="color:#b8a898;font-size:12px;margin:0">You received this because you are subscribed to NOREN updates. <a href="mailto:supportnoren1@gmail.com" style="color:#c9a96e;text-decoration:none">Unsubscribe</a></p>
     `, 'You received this because you are subscribed to NOREN newsletters');
   },
-};
 
   // ─────────────────────────────────────────────────────────────
   // POS INTEGRATION: Digital Invoice Receipt

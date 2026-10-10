@@ -12,12 +12,17 @@ const mon = require('./monitor');
 // ── Keep the process alive — log unhandled errors instead of crashing ────────
 process.on('uncaughtException', err => {
   console.error('⚠️  UncaughtException:', err.message);
+  console.error('Stack:', err.stack);
+  console.error('Full error:', err);
   mon.recordActivity({ type: 'crash', label: 'UncaughtException', detail: err.message, level: 'error' });
+  // Don't exit - keep server running
 });
 process.on('unhandledRejection', (reason) => {
   const msg = reason?.message || String(reason);
   console.error('⚠️  UnhandledRejection:', msg);
+  if (reason?.stack) console.error('Stack:', reason.stack);
   mon.recordActivity({ type: 'crash', label: 'UnhandledRejection', detail: msg, level: 'error' });
+  // Don't exit - keep server running
 });
 
 const app = express();

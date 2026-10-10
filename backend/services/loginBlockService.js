@@ -78,11 +78,14 @@ async function syncCache() {
 
 // ── Fast in-memory check (no DB query) ─────────────────────────────────────
 function isBlocked() {
+  // Don't wait for initialization on fast check - return false if not initialized
+  if (!initialized) return false;
   return cachedState.isBlocked;
 }
 
 // ── Get full status (includes DB user details) ─────────────────────────────
 async function getStatus() {
+  await ensureInitialized(); // Ensure initialized before using
   await syncCache(); // Refresh from DB
   
   if (!cachedState.isBlocked) {
@@ -117,6 +120,7 @@ async function getStatus() {
 
 // ── Block all logins ───────────────────────────────────────────────────────
 async function block(adminId, reason = 'Emergency block via Monitor Dashboard') {
+  await ensureInitialized(); // Ensure initialized before using
   try {
     await pool.query(`
       UPDATE system_login_block
@@ -153,6 +157,7 @@ async function block(adminId, reason = 'Emergency block via Monitor Dashboard') 
 
 // ── Resume logins ──────────────────────────────────────────────────────────
 async function resume(adminId, reason = 'Resumed via Monitor Dashboard') {
+  await ensureInitialized(); // Ensure initialized before using
   try {
     await pool.query(`
       UPDATE system_login_block
@@ -189,6 +194,7 @@ async function resume(adminId, reason = 'Resumed via Monitor Dashboard') {
 
 // ── Get block history (last 20 changes) ────────────────────────────────────
 async function getHistory() {
+  await ensureInitialized(); // Ensure initialized before using
   try {
     const res = await pool.query(`
       SELECT 
@@ -217,22 +223,35 @@ async function getHistory() {
   }
 }
 
-// ── Initialize on module load (with delay to allow server startup) ────────────
+// ── Lazy initialization (only when first accessed) ─────────────────────────────
 let initialized = false;
-const initializeLoginBlock = async () => {
+let initializing = false;
+
+const ensureInitialized = async () => {
   if (initialized) return;
+  if (initializing) {
+    // Wait for initialization to complete
+    await new Promise(resolve => {
+      const check = setInterval(() => {
+        if (initialized || !initializing) {
+          clearInterval(check);
+          resolve();
+        }
+      }, 100);
+    });
+    return;
+  }
+  
+  initializing = true;
   try {
     await ensureTable();
     initialized = true;
   } catch (e) {
     console.error('❌ [LoginBlock] Init failed:', e.message);
+  } finally {
+    initializing = false;
   }
 };
-
-// Delay initialization to after server starts
-setTimeout(() => {
-  initializeLoginBlock().catch(() => {});
-}, 5000); // Wait 5 seconds for database to be ready
 
 module.exports = {
   isBlocked,
