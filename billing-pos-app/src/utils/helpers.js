@@ -5,6 +5,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { QRCodeSVG } from 'qrcode.react';
 import bwipjs from 'bwip-js';
 import { normalizeBarcodeFormat } from './barcodeEngine';
+import onlineInvoiceQRService from '../services/onlineInvoiceQRService';
 import { sanitizePrintSettings } from './printSettingsStore';
 
 // Payment modes used across POS, partition modal, and reports
@@ -590,6 +591,38 @@ function applyQrTemplate(template, invoice) {
   return result || String(invoice?.invoiceNumber || '');
 }
 
+/**
+ * Generate online invoice QR code SVG markup
+ * Creates secure token and generates QR pointing to online invoice
+ */
+async function generateOnlineInvoiceQrSvgMarkup(invoice, sizePx = 120) {
+  try {
+    if (!invoice || !invoice.id) {
+      console.warn('Cannot generate online QR: missing invoice data');
+      return '';
+    }
+
+    const result = await onlineInvoiceQRService.generateInvoiceQR(invoice, {
+      printerType: 'thermal',
+      size: sizePx
+    });
+
+    if (result?.qrCode?.svg) {
+      return result.qrCode.svg;
+    }
+
+    // Fallback to regular QR if online service fails
+    const fallbackUrl = `${process.env.REACT_APP_WEBSITE_URL}/my-billing/invoice/${invoice.id}`;
+    return generateInvoiceQrSvgMarkup(fallbackUrl, sizePx);
+  } catch (error) {
+    console.error('Online QR generation failed:', error);
+    
+    // Fallback to local QR generation
+    const fallbackValue = applyQrTemplate('{invoiceNumber}', invoice);
+    return generateInvoiceQrSvgMarkup(fallbackValue, sizePx);
+  }
+}
+
 function generateInvoiceQrSvgMarkup(value, sizePx = 120) {
   try {
     const v = String(value || '').trim();
@@ -602,7 +635,8 @@ function generateInvoiceQrSvgMarkup(value, sizePx = 120) {
         includeMargin: false,
       })
     );
-  } catch {
+  } catch (error) {
+    console.error('QR code generation error:', error);
     return '';
   }
 }
@@ -774,11 +808,25 @@ export function generateInvoicePrintHTML(invoice, company, format = 'a4', option
 
   const qrEnabled = showQrCode && company?.invoiceQrEnabled === true;
   const qrValue = qrEnabled ? applyQrTemplate(company?.invoiceQrText || '{invoiceNumber}', invoice) : '';
-  const qrDesc = String(company?.invoiceQrDescription || '').trim();
+  const qrDesc = String(company?.invoiceQrDescription || 'Scan for online invoice').trim();
   const defaultQrSize = format === 'thermal' ? 60 : 70;
   const qrSizePxRaw = Number(company?.invoiceQrSizePx);
   const qrSizePx = Number.isFinite(qrSizePxRaw) ? Math.min(220, Math.max(40, qrSizePxRaw)) : defaultQrSize;
-  const qrSvg = qrEnabled ? generateInvoiceQrSvgMarkup(qrValue, qrSizePx) : '';
+  
+  // Generate online QR code asynchronously and use placeholder initially
+  let qrSvg = '';
+  const qrPromise = qrEnabled ? generateOnlineInvoiceQrSvgMarkup(invoice, qrSizePx) : Promise.resolve('');
+  
+  // For synchronous call, use fallback QR initially
+  if (qrEnabled) {
+    try {
+      // Try to generate a basic QR with the template value as fallback
+      qrSvg = generateInvoiceQrSvgMarkup(qrValue, qrSizePx);
+    } catch (error) {
+      console.warn('Fallback QR generation failed:', error);
+      qrSvg = '';
+    }
+  }
 
   const fullBarcodeEnabled = company?.invoiceFullBarcodeEnabled !== false;
   const fullBarcodePayload = fullBarcodeEnabled ? buildInvoiceFullBarcodePayload(invoice, company) : '';
@@ -934,6 +982,59 @@ export function generateInvoicePrintHTML(invoice, company, format = 'a4', option
 </html>`;
 }
 
+/**
+ * Enhanced version of generateInvoicePrintHTML with async online QR generation
+ * Generates invoice HTML with online QR codes pointing to website
+ */
+export async function generateInvoicePrintHTMLWithOnlineQR(invoice, company, format = 'a4', options = {}) {
+  // First generate the base HTML with fallback QR
+  const baseHTML = generateInvoicePrintHTML(invoice, company, format, options);
+  
+  // Try to generate online QR and replace in HTML
+  try {
+    const activePrintSettings = sanitizePrintSettings({
+      ...(company?.printSettings || {}),
+      ...(options?.printSettings || {})
+    });
+
+    const billPrintSettings = activePrintSettings.billPrint || {};
+    const layout = billPrintSettings.layout || {};
+    const showQrCode = layout.showQrCode !== undefined ? layout.showQrCode : company?.invoiceQrEnabled === true;
+    
+    if (showQrCode && company?.invoiceQrEnabled === true && invoice?.id) {
+      const defaultQrSize = format === 'thermal' ? 60 : 70;
+      const qrSizePxRaw = Number(company?.invoiceQrSizePx);
+      const qrSizePx = Number.isFinite(qrSizePxRaw) ? Math.min(220, Math.max(40, qrSizePxRaw)) : defaultQrSize;
+      const qrDesc = String(company?.invoiceQrDescription || 'Scan for online invoice').trim();
+
+      // Generate online QR code
+      const onlineQrSvg = await generateOnlineInvoiceQrSvgMarkup(invoice, qrSizePx);
+      
+      if (onlineQrSvg) {
+        // Replace the QR section in the HTML
+        const qrSectionRegex = /<div class="divider"><\/div><div class="qr">.*?<\/div>(?:<div class="qr-desc">.*?<\/div>)?/s;
+        const onlineQrSection = `<div class="divider"></div><div class="qr">${onlineQrSvg}</div>${qrDesc ? `<div class="qr-desc">${escapeHtml(qrDesc)}</div>` : ''}`;
+        
+        if (qrSectionRegex.test(baseHTML)) {
+          return baseHTML.replace(qrSectionRegex, onlineQrSection);
+        } else {
+          // Add QR section if it doesn't exist
+          const insertPoint = baseHTML.lastIndexOf('</body>');
+          if (insertPoint !== -1) {
+            return baseHTML.slice(0, insertPoint) + 
+                   `  ${onlineQrSection}\n` + 
+                   baseHTML.slice(insertPoint);
+          }
+        }
+      }
+    }
+  } catch (error) {
+    console.warn('Online QR generation failed, using fallback HTML:', error);
+  }
+  
+  return baseHTML;
+}
+
 function resolvePrintLogoSrc(logoSrc) {
   const src = String(logoSrc || '').trim();
   if (!src) return 'brand-logo.png';
@@ -955,7 +1056,7 @@ export const printInvoicePDF = async (invoice, company, format = 'a4', options =
   try {
     // Electron desktop: direct print via main process (no popups)
     if (typeof window !== 'undefined' && window.electronAPI?.printHTML) {
-      const html = generateInvoicePrintHTML(invoice, company, format, options);
+      const html = await generateInvoicePrintHTMLWithOnlineQR(invoice, company, format, options);
       const deviceName = options?.printSettings?.printers?.billPrinter || options?.printSettings?.printers?.defaultPrinter || company?.printerName || company?.defaultPrinterName || undefined;
       const isDialogPrint = options?.forceDialog === true || options?.mode === 'preview' || options?.printSettings?.billPrint?.behavior?.printPreview === true;
       const useSilent = !isDialogPrint && options?.printSettings?.billPrint?.behavior?.silentPrinting !== false;
@@ -980,7 +1081,7 @@ export const printInvoicePDF = async (invoice, company, format = 'a4', options =
     // Use the same HTML invoice template that Electron prints (instead of jsPDF),
     // so the brand logo always appears at the top on printouts.
     const logoSrc = resolvePrintLogoSrc(company?.logoSrc || 'brand-logo.png');
-    const invoiceHtml = generateInvoicePrintHTML(invoice, { ...(company || {}), logoSrc }, format, options);
+    const invoiceHtml = await generateInvoicePrintHTMLWithOnlineQR(invoice, { ...(company || {}), logoSrc }, format, options);
 
     const w = window.open('', '_blank');
     if (!w) return { success: false, error: 'Popup blocked: Please allow popups for printing' };
@@ -1006,7 +1107,7 @@ export const autoPrintInvoice = async (invoice, company, format = 'thermal', opt
   try {
     if (typeof window !== 'undefined' && window.electronAPI?.printHTML) {
       const logoSrc = resolvePrintLogoSrc(company?.logoSrc || 'brand-logo.png');
-      const html = generateInvoicePrintHTML(invoice, { ...(company || {}), logoSrc }, format, options);
+      const html = await generateInvoicePrintHTMLWithOnlineQR(invoice, { ...(company || {}), logoSrc }, format, options);
       const deviceName = options?.printSettings?.printers?.billPrinter || options?.printSettings?.printers?.defaultPrinter || company?.printerName || company?.defaultPrinterName || undefined;
       const useSilent = options?.printSettings?.billPrint?.behavior?.silentPrinting !== false;
       const copies = Number(options?.printSettings?.billPrint?.behavior?.multipleCopies) || 1;
@@ -1044,7 +1145,7 @@ export const remotePrintInvoice = async (invoice, company, format = 'thermal', o
 
     // Generate the print HTML (same as local print)
     const logoSrc = resolvePrintLogoSrc(company?.logoSrc || 'brand-logo.png');
-    const html = generateInvoicePrintHTML(invoice, { ...(company || {}), logoSrc }, format, options);
+    const html = await generateInvoicePrintHTMLWithOnlineQR(invoice, { ...(company || {}), logoSrc }, format, options);
     
     // Get print settings
     const deviceName = options?.printSettings?.printers?.billPrinter || options?.printSettings?.printers?.defaultPrinter || company?.printerName || company?.defaultPrinterName || undefined;
@@ -1070,10 +1171,10 @@ export const remotePrintInvoice = async (invoice, company, format = 'thermal', o
   }
 };
 
-export const downloadInvoicePDF = (invoice, company, format = 'a4', options = {}) => {
+export const downloadInvoicePDF = async (invoice, company, format = 'a4', options = {}) => {
   // Electron desktop: save a true PDF via Chromium (best ₹ support + best print fidelity)
   if (typeof window !== 'undefined' && window.electronAPI?.savePDF) {
-    const html = generateInvoicePrintHTML(invoice, { ...(company || {}), ...options }, 'a4', options);
+    const html = await generateInvoicePrintHTMLWithOnlineQR(invoice, { ...(company || {}), ...options }, 'a4', options);
     const defaultFilename = `invoice-${invoice?.invoiceNumber || 'INV'}-${new Date().toISOString().split('T')[0]}.pdf`;
     return window.electronAPI.savePDF({ html, defaultFilename });
   }

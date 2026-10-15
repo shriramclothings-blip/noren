@@ -1,0 +1,89 @@
+{
+  "version": 2,
+  "name": "vendexa-retailos-web",
+  "public": false,
+  "env": {
+    "REACT_APP_API_URL": "https://noren-iqk3.onrender.com/api",
+    "REACT_APP_WEBSITE_URL": "https://www.norenfastion.shop",
+    "REACT_APP_INVOICE_VIEW_URL": "https://www.norenfastion.shop/my-billing/invoice",
+    "REACT_APP_AI_ENABLED": "true",
+    "REACT_APP_EMAIL_ENABLED": "true",
+    "REACT_APP_AUTO_EMAIL_INVOICE": "true",
+    "REACT_APP_QR_TYPE": "online",
+    "REACT_APP_STORE_NAME": "NOREN",
+    "REACT_APP_STORE_BRAND": "Dinesh Global Enterprises Pvt. Ltd.",
+    "REACT_APP_STORE_EMAIL": "supportnoren1@gmail.com",
+    "REACT_APP_STORE_PHONE": "+91 7984626447",
+    "REACT_APP_STORE_ADDRESS": "SURAT, GUJARAT, 395001",
+    "GENERATE_SOURCEMAP": "false",
+    "SKIP_PREFLIGHT_CHECK": "true"
+  },
+  "buildCommand": "npm run build:prod",
+  "outputDirectory": "build",
+  "devCommand": "npm start",
+  "installCommand": "npm install",
+  "framework": "react",
+  "functions": {
+    "api/**": {
+      "memory": 1024,
+      "maxDuration": 60
+    }
+  },
+  "routes": [
+    {
+      "src": "/static/(.*)",
+      "dest": "/static/$1",
+      "headers": {
+        "cache-control": "public, max-age=31536000, immutable"
+      }
+    },
+    {
+      "src": "/favicon.ico",
+      "dest": "/favicon.ico",
+      "headers": {
+        "cache-control": "public, max-age=3600"
+      }
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html",
+      "status": 200
+    }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "SAMEORIGIN"
+        },
+        {
+          "key": "X-XSS-Protection",
+          "value": "1; mode=block"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "camera=(self), microphone=(self), geolocation=(self)"
+        }
+      ]
+    },
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, no-store, must-revalidate"
+        }
+      ]
+    }
+  ]
+}

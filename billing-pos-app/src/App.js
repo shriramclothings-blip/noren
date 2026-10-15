@@ -19,7 +19,8 @@ import Expenses from './pages/Expenses';
 import Reports from './pages/Reports';
 import AdvancedCharts from './pages/AdvancedCharts';
 import ReportsAI from './pages/ReportsAI';
-import Settings from './pages/Settings';
+// import Settings from './pages/Settings';
+import SettingsEnhanced from './pages/SettingsEnhanced';
 import CustomerDisplay from './pages/CustomerDisplay';
 import StockManagement from './pages/StockManagement';
 import SmartPurchase from './pages/SmartPurchase';
@@ -36,7 +37,7 @@ import AuditLogs from './pages/AuditLogs';
 import Warehouse from './pages/Warehouse';
 import BatchTracking from './pages/BatchTracking';
 import WhatsAppWebViewModal from './components/WhatsAppWebViewModal';
-import LicenseGate from './components/LicenseGate';
+// LicenseGate removed for web deployment
 import LoyaltyEngine from './pages/LoyaltyEngine';
 import ExpiryTracker from './pages/ExpiryTracker';
 import CustomerInsights from './pages/CustomerInsights';
@@ -44,6 +45,7 @@ import SalesHeatmap from './pages/SalesHeatmap';
 import FinancialReports from './pages/FinancialReports';
 import ABCAnalysis from './pages/ABCAnalysis';
 import WebsiteIntegration from './pages/WebsiteIntegration';
+import AIInventoryDashboard from './components/AIInventoryDashboard';
 import { DEFAULT_FEATURE_TOGGLES, isRouteEnabled, mergeFeatureToggles } from './utils/featureSettings';
 import { hasPageAccess, getDefaultPageForRole } from './utils/rolePermissions';
 
@@ -59,7 +61,7 @@ const PAGES = {
   expenses: Expenses,
   reports: Reports,
   advancedCharts: AdvancedCharts,
-  settings: Settings,
+  settings: SettingsEnhanced, // Use enhanced settings
   'customer-display': CustomerDisplay,
   stockManagement: StockManagement,
   smartPurchase: SmartPurchase,
@@ -83,6 +85,7 @@ const PAGES = {
   financialReports: FinancialReports,
   abcAnalysis: ABCAnalysis,
   websiteIntegration: WebsiteIntegration,
+  aiInventory: AIInventoryDashboard,
 };
 
 // Keyboard shortcuts: Alt+1..9 for navigation
@@ -95,7 +98,7 @@ function AppInner() {
   featureTogglesRef.current = featureToggles;
 
   const [page, setPage] = useState(() => {
-    if (typeof window !== 'undefined') {
+    if (window.location.hash) {
       const hash = window.location.hash.replace('#', '');
       return hash || 'dashboard';
     }
@@ -157,14 +160,10 @@ function AppInner() {
       setFeatureToggles(mergeFeatureToggles(event?.detail));
     };
     window.addEventListener('feature-settings-changed', onFeatureSettingsChanged);
-    if (window.electronAPI) {
-      window.electronAPI.onNavigate((p) => setPage(p));
-    }
     return () => {
       window.removeEventListener('keydown', handler);
       window.removeEventListener('hashchange', onHashChange);
       window.removeEventListener('feature-settings-changed', onFeatureSettingsChanged);
-      if (window.electronAPI) window.electronAPI.removeNavigateListener();
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -210,10 +209,8 @@ export default function App() {
     <ErrorBoundary>
       <AppProvider>
         <NetworkSyncProvider>
-          <LicenseGate>
-            <AppInner />
-            <WhatsAppWebViewModal />
-          </LicenseGate>
+          <AppInner />
+          <WhatsAppWebViewModal />
           <Toaster
             position="top-right"
             toastOptions={{

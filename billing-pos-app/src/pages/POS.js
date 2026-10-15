@@ -26,11 +26,15 @@ import { reserveProfessionalInvoiceNumber, saveHeldBill, getAllHeldBills, remove
 import { normalizeBarcodeValue, extractSizeCodeFromBarcode, extractBaseBarcode, mapSizeCodeToLabel } from '../utils/barcodeEngine';
 import { useNetworkSync } from '../context/NetworkSyncContext';
 import { playCheckoutSound, playUpiSuccessSound } from '../utils/soundManager';
+import { CloudSyncStatus } from '../components/CloudSyncStatus';
+import { useCloudSync } from '../hooks/useCloudSync';
+import { InventoryAlertBadge } from '../components/InventoryAlertBadge';
 
 
 export default function POS() {
   const { products, invoices, customers, addInvoice, company, currentUser, getVariantByCode, printSettings, invoiceTextStyles } = useApp();
   const { deviceRole, isConnected, requestRemotePrint } = useNetworkSync();
+  const { initializeSync } = useCloudSync();
   const [cart, setCart] = useState([]);
   const [search, setSearch] = useState('');
   const [selectedCustomer, setSelectedCustomer] = useState(null);
@@ -172,6 +176,19 @@ export default function POS() {
   const removeFromCart = (lineKey) => setCart(prev => prev.filter(i => i.lineKey !== lineKey));
 
   const { subtotal, discountAmt, taxAmt, total, taxBreakdown } = calcInvoiceTotals(cart, discount, taxRate);
+
+  // Auto-initialize cloud sync when POS loads
+  useEffect(() => {
+    const initCloudSync = async () => {
+      try {
+        await initializeSync();
+      } catch (error) {
+        console.warn('Cloud sync initialization failed in POS:', error);
+      }
+    };
+    
+    initCloudSync();
+  }, [initializeSync]);
 
   useEffect(() => {
     let active = true;
@@ -522,6 +539,44 @@ export default function POS() {
       }
 
       const id = await addInvoice(invoiceData);
+      
+      // AI Analysis: Analyze invoice in background (don't block checkout)
+      try {
+        const aiAnalysisService = (await import('../services/aiInvoiceAnalysisService')).default;
+        aiAnalysisService.analyzeInvoice(invoiceData).then(analysis => {
+          // Store analysis result with invoice
+          const analysisData = {
+            invoiceId: id,
+            invoiceNumber: invoiceData.invoiceNumber,
+            analysis,
+            timestamp: new Date().toISOString()
+          };
+          localStorage.setItem(`ai_analysis_${id}`, JSON.stringify(analysisData));
+          
+          // Check for high-risk fraud
+          if (analysis.fraudRisk?.score > 0.7) {
+            toast(`⚠️ High fraud risk detected in invoice #${invoiceData.invoiceNumber}`, {
+              duration: 8000,
+              style: { backgroundColor: '#fef2f2', color: '#dc2626' }
+            });
+          }
+          
+          // Show AI insights notification
+          if (analysis.insights?.length > 0) {
+            setTimeout(() => {
+              toast(`🤖 AI Insight: ${analysis.insights[0]}`, {
+                duration: 5000,
+                style: { backgroundColor: '#f0f9ff', color: '#1e40af' }
+              });
+            }, 2000);
+          }
+        }).catch(err => {
+          console.error('AI analysis failed:', err);
+        });
+      } catch (err) {
+        console.error('AI service import failed:', err);
+      }
+
       setShowSuccess({ ...invoiceData, id });
       broadcastCustomerDisplay('paid', { paymentStatus: 'paid' });
       setCart([]);
@@ -869,6 +924,13 @@ export default function POS() {
 
   return (
     <div className="h-screen overflow-hidden">
+      {/* Cloud Sync Status Bar */}
+      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-2">
+        <div className="flex items-center justify-between">
+          <CloudSyncStatus compact={true} showControls={false} />
+          <InventoryAlertBadge />
+        </div>
+      </div>
       <ResizableThreePane
         storageKey="pos:layout:3pane:v1"
         defaultLeft={460}

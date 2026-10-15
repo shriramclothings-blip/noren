@@ -1,0 +1,56 @@
+{
+  "saleId": "TEST_INV_1791566464730",
+  "invoiceNumber": "INV-1791566464730",
+  "date": "2026-10-09T17:21:04.730Z",
+  "store": "Mumbai Test Store - Main Counter",
+  "customer": {
+    "name": "Rahul Sharma",
+    "email": "rahul.test@example.com",
+    "phone": "+91 9876543210",
+    "address": "Test Address, Mumbai, Maharashtra 400001"
+  },
+  "items": [
+    {
+      "name": "Cotton Shirt - Navy Blue",
+      "sku": "SHIRT-NVY-M",
+      "size": "M",
+      "quantity": 2,
+      "price": 1200,
+      "discount": 0,
+      "tax": 5,
+      "total": 2520
+    },
+    {
+      "name": "Denim Jeans - Black",
+      "sku": "JEANS-BLK-32",
+      "size": "32",
+      "quantity": 1,
+      "price": 1500,
+      "discount": 10,
+      "tax": 5,
+      "total": 1417.5
+    },
+    {
+      "name": "Leather Belt - Brown",
+      "sku": "BELT-BRN-L",
+      "size": "L",
+      "quantity": 1,
+      "price": 500,
+      "discount": 0,
+      "tax": 5,
+      "total": 525
+    }
+  ],
+  "subtotal": 3200,
+  "discount": 150,
+  "taxAmount": 212.5,
+  "total": 3262.5,
+  "paid": 3262.5,
+  "paymentMethod": "Cash",
+  "paymentStatus": "Paid",
+  "notes": "Test invoice for POS integration - Generated on 9/10/2026, 10:51:04 pm",
+  "qrToken": "INV_1mxvumF5xQ7-DpI9yISqwD7ahV3DkcdO83LX8e-zDLU",
+  "qrUrl": "https://www.norenfastion.shop/my-billing/invoice/INV_1mxvumF5xQ7-DpI9yISqwD7ahV3DkcdO83LX8e-zDLU",
+  "generatedAt": "2026-10-09T17:21:04.821Z",
+  "testMode": true
+}

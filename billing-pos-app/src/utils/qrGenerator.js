@@ -278,7 +278,7 @@ export async function generateBrandedQRCode(data, logoDataURL, options = {}) {
   });
 }
 
-export default {
+const qrGeneratorAPI = {
   generateQRCodeDataURL,
   generateQRCodeToCanvas,
   generateThermalQRCode,
@@ -290,3 +290,5 @@ export default {
   calculateQRSize,
   generateBrandedQRCode
 };
+
+export default qrGeneratorAPI;

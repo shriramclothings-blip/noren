@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState, useMemo, Suspense } from 'react';
 import { useApp } from '../context/AppContext';
 import { Users, Crown, Star, Clock, TrendingDown, Gift, Search, Edit2, Check, X } from 'lucide-react';
 import { formatCurrency } from '../utils/helpers';
@@ -153,6 +153,7 @@ export default function CustomerInsights({ setPage }) {
       {/* Tabs */}
       <div className="flex gap-2 flex-wrap">
         {[
+          { key: 'ai-insights', label: 'AI Insights' },
           { key: 'rfm', label: 'RFM Scoring' },
           { key: 'segmentation', label: 'Segmentation' },
           { key: 'cohort', label: 'Cohort Analysis' },
@@ -164,6 +165,23 @@ export default function CustomerInsights({ setPage }) {
           </button>
         ))}
       </div>
+
+      {/* AI Insights Tab */}
+      {tab === 'ai-insights' && (
+        <Suspense fallback={
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center justify-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+              <span className="ml-3 text-gray-600">Loading AI Customer Insights...</span>
+            </div>
+          </div>
+        }>
+          {React.createElement(
+            React.lazy(() => import('../components/AICustomerInsightsDashboard')),
+            { customers, invoices }
+          )}
+        </Suspense>
+      )}
 
       {/* RFM Tab */}
       {tab === 'rfm' && (

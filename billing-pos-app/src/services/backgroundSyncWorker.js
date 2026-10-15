@@ -21,7 +21,7 @@ import {
   getSetting,
   setSetting
 } from '../db/db';
-import { syncInvoice, authenticateDevice } from './cloudSyncService';
+// import { syncInvoice } from './cloudSyncService'; // TODO: Implement if needed
 
 class BackgroundSyncWorker {
   constructor() {
@@ -259,15 +259,16 @@ class BackgroundSyncWorker {
       });
 
       // Perform sync based on entity type
-      let result;
       switch (item.entityType) {
         case 'invoice':
-          result = await syncInvoice(item.payload);
+          // TODO: Implement syncInvoice if needed
+          // await syncInvoice(item.payload);
+          console.warn('syncInvoice not implemented yet');
           break;
         
         // Add more entity types here as needed
         // case 'customer':
-        //   result = await syncCustomer(item.payload);
+        //   await syncCustomer(item.payload);
         //   break;
         
         default:

@@ -32,6 +32,7 @@ const NAV = [
   { key: 'stockManagement',label: 'Stock Management',       icon: Layers, group: null },
   // ── Intelligence ──
   { key: 'storeHealth',    label: 'Store Health',           icon: Heart, group: 'Intelligence', _skip: true },
+  { key: 'aiInventory',    label: 'AI Inventory Predictions', icon: Brain, group: 'Intelligence' },
   { key: 'smartPurchase',  label: 'Smart Purchase',         icon: Brain, group: 'Intelligence' },
   { key: 'trendingItems',  label: 'Trending & Hot Items',   icon: Flame, group: null },
   { key: 'discountEngine', label: 'Discount Engine',        icon: Tag, group: null },

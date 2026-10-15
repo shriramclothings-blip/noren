@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, Suspense } from 'react';
 import { useApp } from '../context/AppContext';
 import { formatCurrency, formatDate, exportCSV } from '../utils/helpers';
 import { XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
@@ -191,7 +191,7 @@ export default function Reports() {
     return Object.entries(map).map(([name, value]) => ({ name, value }));
   }, [filteredInvoices]);
 
-  const TABS = ['sales', 'profit', 'gst', 'inventory', 'customers'];
+  const TABS = ['sales', 'ai-insights', 'profit', 'gst', 'inventory', 'customers'];
 
   return (
     <div className="p-6 space-y-4 animate-fade-in">
@@ -324,6 +324,25 @@ export default function Reports() {
               ) : <p className="text-gray-400 text-sm text-center mt-12">No data</p>}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* AI Insights Tab */}
+      {tab === 'ai-insights' && (
+        <div className="space-y-4">
+          <Suspense fallback={
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <div className="flex items-center justify-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+                <span className="ml-3 text-gray-600">Loading AI Insights...</span>
+              </div>
+            </div>
+          }>
+            {React.createElement(
+              React.lazy(() => import('../components/AIInsightsDashboard')),
+              { invoices: filteredInvoices }
+            )}
+          </Suspense>
         </div>
       )}
 

@@ -594,6 +594,9 @@ export const setSetting = async (key, value) => {
   return db.put('settings', { key, value });
 };
 
+// Alias for compatibility
+export const saveSetting = setSetting;
+
 // Backup: export all data as JSON
 export const exportBackup = async () => {
   const stores = [
