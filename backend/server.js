@@ -66,6 +66,11 @@ const fs = require('fs');
 const multer = require('multer');
 app.use(express.json({ limit: '1024mb' }));
 app.use(express.urlencoded({ limit: '1024mb', extended: true }));
+// ── WhatsApp Setup Page (public access) ──────────────────────────────────────
+app.get('/whatsapp-setup.html', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'whatsapp-setup.html'));
+});
+
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')), async (req, res) => {
   // If local disk file was wiped by container redeployment, restore from PostgreSQL src_social_media_blobs
   const filename = path.basename(req.path);

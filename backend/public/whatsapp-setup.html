@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp Setup - NOREN Fashion</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 600px;
+            width: 100%;
+            padding: 40px;
+        }
+
+        .logo {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .logo h1 {
+            font-size: 32px;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+
+        .logo p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .step {
+            display: none;
+        }
+
+        .step.active {
+            display: block;
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .step-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 20px;
+            border-radius: 10px;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .step-number {
+            background: white;
+            color: #667eea;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        .step-title {
+            flex: 1;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .input-group input,
+        .input-group select {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        .input-group input:focus,
+        .input-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+            margin-top: 10px;
+        }
+
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+
+        .qr-container {
+            text-align: center;
+            padding: 30px;
+            background: #f9f9f9;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+
+        #qr-code {
+            max-width: 300px;
+            height: 300px;
+            margin: 0 auto;
+            border: 3px solid #667eea;
+            border-radius: 10px;
+            display: none;
+        }
+
+        .status {
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            font-weight: 500;
+            text-align: center;
+        }
+
+        .status.info {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+
+        .status.success {
+            background: #e8f5e9;
+            color: #388e3c;
+        }
+
+        .status.error {
+            background: #ffebee;
+            color: #d32f2f;
+        }
+
+        .status.warning {
+            background: #fff3e0;
+            color: #f57c00;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .success-icon {
+            font-size: 64px;
+            color: #4caf50;
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .info-box {
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+            margin: 15px 0;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .phone-display {
+            background: #667eea;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            text-align: center;
+            font-size: 18px;
+            font-weight: 600;
+            margin: 15px 0;
+        }
+
+        .feature-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .feature-list li {
+            padding: 10px 0;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .feature-list li:last-child {
+            border-bottom: none;
+        }
+
+        .feature-list li::before {
+            content: "✅";
+            font-size: 18px;
+        }
+
+        .test-section {
+            margin-top: 30px;
+            padding-top: 30px;
+            border-top: 2px solid #f0f0f0;
+        }
+
+        .test-section h3 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">
+            <h1>📱 WhatsApp Setup</h1>
+            <p>NOREN Fashion - Easy Setup in 3 Steps</p>
+        </div>
+
+        <!-- Step 1: Login -->
+        <div id="step1" class="step active">
+            <div class="step-header">
+                <span class="step-number">1</span>
+                <span class="step-title">Admin Login</span>
+            </div>
+
+            <div class="input-group">
+                <label for="email">Admin Email</label>
+                <input type="email" id="email" placeholder="admin@norenfashion.in" value="admin@norenfashion.in">
+            </div>
+
+            <div class="input-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" placeholder="Enter your password" value="Noren@Admin2024">
+            </div>
+
+            <button class="btn" onclick="login()">Login & Continue</button>
+
+            <div id="loginStatus"></div>
+        </div>
+
+        <!-- Step 2: Connect WhatsApp -->
+        <div id="step2" class="step">
+            <div class="step-header">
+                <span class="step-number">2</span>
+                <span class="step-title">Connect WhatsApp</span>
+            </div>
+
+            <div class="info-box">
+                📱 We'll generate a QR code. Scan it with your WhatsApp to connect.
+            </div>
+
+            <button class="btn" onclick="connectWhatsApp()">Generate QR Code</button>
+
+            <div class="qr-container">
+                <div id="qrSpinner" class="spinner" style="display:none;"></div>
+                <img id="qr-code" alt="WhatsApp QR Code">
+                <div id="qrInstructions" style="display:none; margin-top:15px; color:#666;">
+                    <p><strong>How to scan:</strong></p>
+                    <ol style="text-align:left; margin:10px 0 0 30px;">
+                        <li>Open WhatsApp on your phone</li>
+                        <li>Go to Settings → Linked Devices</li>
+                        <li>Tap "Link a Device"</li>
+                        <li>Scan this QR code</li>
+                    </ol>
+                </div>
+            </div>
+
+            <div id="connectionStatus"></div>
+        </div>
+
+        <!-- Step 3: Success -->
+        <div id="step3" class="step">
+            <div class="step-header">
+                <span class="step-number">3</span>
+                <span class="step-title">All Set! 🎉</span>
+            </div>
+
+            <div class="success-icon">✅</div>
+
+            <div class="status success">
+                WhatsApp successfully connected!
+            </div>
+
+            <div class="phone-display" id="connectedPhone">
+                Loading phone number...
+            </div>
+
+            <div class="info-box">
+                <strong>What's working now:</strong>
+            </div>
+
+            <ul class="feature-list">
+                <li>Automatic order confirmations</li>
+                <li>Order shipping notifications</li>
+                <li>Delivery confirmations</li>
+                <li>Login security alerts</li>
+                <li>Promotional campaigns</li>
+            </ul>
+
+            <div class="test-section">
+                <h3>🧪 Test Your WhatsApp</h3>
+                
+                <div class="input-group">
+                    <label for="testPhone">Your Phone Number (with country code)</label>
+                    <input type="tel" id="testPhone" placeholder="+919876543210">
+                </div>
+
+                <button class="btn" onclick="sendTestMessage()">Send Test Message</button>
+                
+                <div id="testStatus"></div>
+            </div>
+
+            <button class="btn btn-secondary" onclick="window.location.href='/'">
+                Go to Admin Dashboard
+            </button>
+        </div>
+    </div>
+
+    <script>
+        let authToken = '';
+        let checkInterval;
+
+        // Auto-detect API URL
+        const API_URL = window.location.origin;
+
+        async function login() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const statusDiv = document.getElementById('loginStatus');
+
+            if (!email || !password) {
+                showStatus(statusDiv, 'error', '❌ Please enter email and password');
+                return;
+            }
+
+            showStatus(statusDiv, 'info', '🔄 Logging in...');
+
+            try {
+                const response = await fetch(`${API_URL}/api/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.token) {
+                    authToken = data.token;
+                    showStatus(statusDiv, 'success', '✅ Login successful!');
+                    
+                    setTimeout(() => {
+                        document.getElementById('step1').classList.remove('active');
+                        document.getElementById('step2').classList.add('active');
+                    }, 1000);
+                } else {
+                    showStatus(statusDiv, 'error', '❌ Invalid credentials');
+                }
+            } catch (error) {
+                showStatus(statusDiv, 'error', '❌ Login failed: ' + error.message);
+            }
+        }
+
+        async function connectWhatsApp() {
+            const statusDiv = document.getElementById('connectionStatus');
+            const qrImg = document.getElementById('qr-code');
+            const qrSpinner = document.getElementById('qrSpinner');
+            const qrInstructions = document.getElementById('qrInstructions');
+
+            showStatus(statusDiv, 'info', '🔄 Creating WhatsApp instance...');
+            qrSpinner.style.display = 'block';
+
+            try {
+                // Create instance
+                const createResponse = await fetch(`${API_URL}/api/whatsapp/instances/create`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ instanceName: 'default' })
+                });
+
+                const createData = await createResponse.json();
+
+                if (!createResponse.ok && !createData.message?.includes('already exists')) {
+                    throw new Error(createData.message || 'Failed to create instance');
+                }
+
+                showStatus(statusDiv, 'info', '📱 Generating QR code...');
+
+                // Poll for QR code
+                checkInterval = setInterval(checkStatus, 3000);
+                checkStatus(); // Check immediately
+
+            } catch (error) {
+                qrSpinner.style.display = 'none';
+                showStatus(statusDiv, 'error', '❌ Error: ' + error.message);
+            }
+        }
+
+        async function checkStatus() {
+            const statusDiv = document.getElementById('connectionStatus');
+            const qrImg = document.getElementById('qr-code');
+            const qrSpinner = document.getElementById('qrSpinner');
+            const qrInstructions = document.getElementById('qrInstructions');
+
+            try {
+                const response = await fetch(`${API_URL}/api/whatsapp/instances/default/status`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+
+                const data = await response.json();
+
+                if (data.success && data.instance) {
+                    const instance = data.instance;
+
+                    if (instance.qrCode && instance.status !== 'connected') {
+                        // Show QR code
+                        qrSpinner.style.display = 'none';
+                        qrImg.src = instance.qrCode;
+                        qrImg.style.display = 'block';
+                        qrInstructions.style.display = 'block';
+                        showStatus(statusDiv, 'warning', '📱 Scan the QR code with WhatsApp');
+                    }
+
+                    if (instance.status === 'connected') {
+                        // Connected!
+                        clearInterval(checkInterval);
+                        qrSpinner.style.display = 'none';
+                        qrImg.style.display = 'none';
+                        showStatus(statusDiv, 'success', '✅ WhatsApp connected successfully!');
+                        
+                        setTimeout(() => {
+                            document.getElementById('step2').classList.remove('active');
+                            document.getElementById('step3').classList.add('active');
+                            document.getElementById('connectedPhone').textContent = 
+                                instance.phoneNumber || 'Connected!';
+                        }, 1500);
+                    }
+                }
+            } catch (error) {
+                console.error('Status check error:', error);
+            }
+        }
+
+        async function sendTestMessage() {
+            const phone = document.getElementById('testPhone').value;
+            const statusDiv = document.getElementById('testStatus');
+
+            if (!phone) {
+                showStatus(statusDiv, 'error', '❌ Please enter your phone number');
+                return;
+            }
+
+            showStatus(statusDiv, 'info', '📤 Sending test message...');
+
+            try {
+                const response = await fetch(`${API_URL}/api/whatsapp/send`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        phone: phone,
+                        message: '🎉 Hello from NOREN Fashion!\n\nYour WhatsApp integration is working perfectly! ✅\n\nYou will now receive:\n✅ Order confirmations\n✅ Shipping updates\n✅ Delivery notifications\n✅ Login alerts\n\nThank you for using NOREN Fashion! 🛍️',
+                        instanceName: 'default'
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    showStatus(statusDiv, 'success', '✅ Test message sent! Check your WhatsApp.');
+                } else {
+                    showStatus(statusDiv, 'error', '❌ Failed: ' + (data.message || 'Unknown error'));
+                }
+            } catch (error) {
+                showStatus(statusDiv, 'error', '❌ Error: ' + error.message);
+            }
+        }
+
+        function showStatus(element, type, message) {
+            element.className = 'status ' + type;
+            element.textContent = message;
+            element.style.display = 'block';
+        }
+
+        // Handle Enter key
+        document.getElementById('password').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') login();
+        });
+
+        document.getElementById('testPhone').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') sendTestMessage();
+        });
+    </script>
+</body>
+</html>
