@@ -18,6 +18,7 @@ export const ERP_NAV_GROUPS = [
       { key: 'dashboard', label: 'Dashboard', icon: 'LayoutDashboard', componentKey: 'dashboard', permissions: ['erp.view_dashboard'], description: 'Unified enterprise dashboard with tenant-aware KPIs and live activity.' },
       { key: 'erp', label: 'Retail ERP', icon: 'Cpu', componentKey: 'erp', permissions: ['erp.view_dashboard'], description: 'ERP command center for business, store, and tenant context.' },
       { key: 'pos', label: 'POS Billing', icon: 'ScanLine', componentKey: 'pos', permissions: ['erp.manage_pos', 'erp.manage_orders', 'erp.manage_finance'], description: 'Fast billing workspace for barcode, split payments, hold bills, and invoicing.' },
+      { key: 'pos-devices', label: 'POS Devices', icon: 'Cpu', componentKey: 'pos-devices', permissions: ['erp.manage_pos', 'erp.manage_settings'], description: 'Manage and monitor all registered POS terminals with real-time status.' },
       { key: 'inventory', label: 'Inventory', icon: 'Boxes', componentKey: 'inventory', permissions: ['erp.manage_inventory'], description: 'Stock, batch, serial, movement history, and reorder control.' },
       { key: 'products', label: 'Products', icon: 'Package', componentKey: 'products', permissions: ['erp.manage_inventory'], description: 'Product catalog, pricing, variants, and merchandising controls.' },
       { key: 'categories', label: 'Categories', icon: 'FolderOpen', componentKey: 'categories', permissions: ['erp.manage_inventory'], description: 'Category hierarchy and product grouping controls.' },

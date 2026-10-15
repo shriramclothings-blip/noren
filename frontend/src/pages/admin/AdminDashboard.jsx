@@ -75,6 +75,7 @@ const AdminSellerProducts      = lazy(() => import('./erp/seller/AdminSellerProd
 const AdminSellerPayouts       = lazy(() => import('./erp/seller/AdminSellerPayouts'));
 const AdminSellerAudit         = lazy(() => import('./erp/seller/AdminSellerAudit'));
 const AdminSocialWorkspace     = lazy(() => import('./social/AdminSocialWorkspace'));
+const AdminPOSDevices          = lazy(() => import('./erp/AdminPOSDevices'));
 import { ADMIN_ROUTE_ALIASES, ERP_MODULE_MAP, getVisibleNavGroups, canAccessModule } from './erpConfig';
 
 const iconMap = {
@@ -132,6 +133,7 @@ function renderSection(section, user, navigate) {
     case 'erp':               return <AdminErp />;
     case 'pos':               return <AdminPos />;
     case 'pos-management':    return <POSManagement />;
+    case 'pos-devices':       return <AdminPOSDevices />;
     case 'inventory':         return <AdminInventory />;
     case 'warehouse':         return <AdminWarehouse />;
     case 'brands':            return <AdminBrands />;
