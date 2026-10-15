@@ -144,14 +144,75 @@ class DeviceRegistrationService {
   }
 
   /**
+   * Auto-login to get JWT token for device registration
+   */
+  async getAuthToken() {
+    // Check if JWT token is already stored
+    const existingToken = apiService.getAuthToken();
+    if (existingToken) {
+      return existingToken;
+    }
+
+    // Check for stored POS credentials
+    const storedEmail = localStorage.getItem('pos_admin_email');
+    const storedPassword = localStorage.getItem('pos_admin_password');
+
+    if (storedEmail && storedPassword) {
+      try {
+        console.log('[Device Registration] Auto-login with stored credentials');
+        const response = await apiService.post('/auth/login', {
+          email: storedEmail,
+          password: storedPassword,
+        });
+
+        if (response && response.token) {
+          apiService.setAuthToken(response.token);
+          return response.token;
+        }
+      } catch (error) {
+        console.error('[Device Registration] Auto-login failed:', error.message);
+      }
+    }
+
+    // Use default admin credentials from .env
+    const defaultEmail = process.env.REACT_APP_ADMIN_EMAIL || 'admin@norenfashion.in';
+    const defaultPassword = process.env.REACT_APP_ADMIN_PASSWORD || 'Noren@Admin2024';
+
+    try {
+      console.log('[Device Registration] Authenticating with default credentials');
+      const response = await apiService.post('/auth/login', {
+        email: defaultEmail,
+        password: defaultPassword,
+      });
+
+      if (response && response.token) {
+        localStorage.setItem('pos_admin_email', defaultEmail);
+        localStorage.setItem('pos_admin_password', defaultPassword);
+        apiService.setAuthToken(response.token);
+        return response.token;
+      }
+    } catch (error) {
+      console.error('[Device Registration] Authentication failed:', error.message);
+      throw new Error('Failed to authenticate. Check admin credentials in .env');
+    }
+
+    throw new Error('Could not obtain authentication token');
+  }
+
+  /**
    * Register device with backend
-   * Note: Requires JWT authentication (user must be logged in first)
+   * Note: JWT token is obtained automatically if not provided
    */
   async registerDevice(jwtToken) {
     try {
       // If already registered, authenticate instead
       if (this.isDeviceRegistered()) {
         return await this.authenticateDevice();
+      }
+
+      // Get JWT token if not provided
+      if (!jwtToken) {
+        jwtToken = await this.getAuthToken();
       }
 
       const fingerprint = this.generateDeviceFingerprint();
