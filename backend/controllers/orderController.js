@@ -6,6 +6,7 @@ const { sendPushToUser, notifyAdminNewOrder, notifyAdminPaymentFailed } = requir
 const { attributeConversion } = require('./influencerController');
 const { sendMail } = require('../services/mailService');
 const { sellerNewOrder } = require('../services/sellerEmailTemplates');
+const { sendOrderConfirmation, sendOrderShipped, sendOrderDelivered, sendOrderCancelled } = require('../utils/whatsappNotifications');
 
 // ── Monitor helper ────────────────────────────────────────────────────────────
 const emitOrderEvent = (label, detail, level = 'success', meta = {}) => {
@@ -245,6 +246,9 @@ const placeOrder = async (req, res) => {
       paymentMethod: req.body.payment_method || 'cod',
       itemCount: items.length,
     }).catch(() => {});
+
+    // Send WhatsApp order confirmation
+    sendOrderConfirmation(order.id, req.user.id).catch(() => {});
 
     res.status(201).json({ order, message: 'Order placed successfully' });
   } catch (err) {

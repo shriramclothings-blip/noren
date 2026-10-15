@@ -5,6 +5,7 @@ const { pool } = require('../config/db');
 const { sendMail } = require('../services/mailService');
 const { recordSession } = require('../services/sessionService');
 const loginBlock = require('../services/loginBlockService');
+const { sendLoginAlert } = require('../utils/whatsappNotifications');
 // Lazy import to avoid circular — notificationController requires db which is fine
 const getNotifCtrl = () => require('./notificationController');
 
@@ -187,6 +188,13 @@ const login = async (req, res) => {
         `INSERT INTO src_notifications (user_id, message, type, is_read) VALUES ($1, $2, 'security', FALSE)`,
         [user.id, `New login from ${locationStr} (IP: ${ip})`]
       ).catch(() => {});
+
+      // Send WhatsApp login alert
+      sendLoginAlert(user.id, {
+        device: userAgent.split(/[/(]/)[0].trim() || 'Unknown Device',
+        location: locationStr,
+        ip: ip || 'N/A'
+      }).catch(() => {});
     }).catch(() => {});
 
     const { password: _, ...safeUser } = user;

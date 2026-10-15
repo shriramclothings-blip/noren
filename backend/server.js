@@ -210,6 +210,9 @@ app.use('/api/support', require('./routes/support'));
 // ── Email Portal API ──────────────────────────────────────────────────────────
 app.use('/api/email', require('./routes/emailPortal'));
 
+// ── WhatsApp Integration API ──────────────────────────────────────────────────
+app.use('/api/whatsapp', require('./routes/whatsapp'));
+
 // ── Real-time Monitor API + Dashboard ────────────────────────────────────────
 app.use('/api/monitor', require('./routes/monitor'));
 app.get('/monitor', (_, res) => res.sendFile(path.join(__dirname, 'public', 'monitor.html')));
