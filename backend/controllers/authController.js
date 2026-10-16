@@ -618,3 +618,192 @@ exports.verifyWhatsAppOTPAndReset = async (req, res) => {
         res.status(500).json({ message: 'Failed to verify OTP', error: error.message });
     }
 };
+
+
+/**
+ * ═══════════════════════════════════════════════════════════
+ * PHONE NUMBER LOGIN/SIGNUP WITH WHATSAPP OTP
+ * ═══════════════════════════════════════════════════════════
+ */
+
+/**
+ * Step 1: Send OTP to phone number for login/signup
+ * POST /api/auth/phone-send-otp
+ */
+exports.phoneSendOTP = async (req, res) => {
+    try {
+        let { phone } = req.body;
+
+        if (!phone) {
+            return res.status(400).json({ message: 'Phone number is required' });
+        }
+
+        // Auto-add +91 for Indian numbers if not present
+        if (!phone.startsWith('+')) {
+            phone = '+91' + phone;
+        }
+
+        // Validate phone format
+        const cleanPhone = phone.replace(/\D/g, '');
+        if (cleanPhone.length < 10 || cleanPhone.length > 13) {
+            return res.status(400).json({ message: 'Invalid phone number format' });
+        }
+
+        // Check if user exists
+        const userCheck = await pool.query(
+            'SELECT id, name, email FROM src_users WHERE phone = $1',
+            [phone]
+        );
+
+        const purpose = userCheck.rows.length > 0 ? 'login' : 'registration';
+
+        // Send OTP via WhatsApp
+        const result = await sendWhatsAppOTP(phone, purpose);
+
+        if (result.success) {
+            res.json({
+                success: true,
+                message: 'OTP sent to your WhatsApp',
+                phone: phone,
+                isNewUser: purpose === 'registration'
+            });
+        } else {
+            res.status(500).json({
+                success: false,
+                message: result.message || 'Failed to send OTP'
+            });
+        }
+
+    } catch (error) {
+        console.error('Error sending phone OTP:', error);
+        res.status(500).json({ 
+            message: 'Failed to send OTP', 
+            error: error.message 
+        });
+    }
+};
+
+/**
+ * Step 2: Verify OTP and Login/Register
+ * POST /api/auth/phone-verify-otp
+ */
+exports.phoneVerifyOTP = async (req, res) => {
+    try {
+        let { phone, otp, name } = req.body;
+
+        if (!phone || !otp) {
+            return res.status(400).json({ message: 'Phone and OTP are required' });
+        }
+
+        // Auto-add +91
+        if (!phone.startsWith('+')) {
+            phone = '+91' + phone;
+        }
+
+        // Check if user exists
+        const userCheck = await pool.query(
+            'SELECT id, name, email, phone, role, avatar_url FROM src_users WHERE phone = $1',
+            [phone]
+        );
+
+        const isNewUser = userCheck.rows.length === 0;
+        const purpose = isNewUser ? 'registration' : 'login';
+
+        // Verify OTP
+        const otpResult = await verifyWhatsAppOTP(phone, otp, purpose);
+
+        if (!otpResult.success) {
+            return res.status(400).json({ message: otpResult.message });
+        }
+
+        let user;
+
+        if (isNewUser) {
+            // Create new user
+            if (!name || name.trim().length === 0) {
+                return res.status(400).json({ 
+                    message: 'Name is required for registration' 
+                });
+            }
+
+            // Generate email from phone
+            const generatedEmail = `user${phone.replace(/\D/g, '')}@norenfashion.in`;
+
+            const insertResult = await pool.query(
+                `INSERT INTO src_users (name, email, phone, role, password)
+                 VALUES ($1, $2, $3, 'customer', 'whatsapp_login')
+                 RETURNING id, name, email, phone, role, avatar_url`,
+                [name.trim(), generatedEmail, phone]
+            );
+
+            user = insertResult.rows[0];
+            console.log(`✅ New user registered via WhatsApp: ${phone}`);
+
+            // Send welcome WhatsApp message
+            try {
+                const whatsappService = require('../services/whatsappService');
+                await whatsappService.sendMessage(
+                    phone,
+                    `🎉 *Welcome to NOREN Fashion!*
+
+Hello ${name}! 👋
+
+Thank you for joining NOREN Fashion family! 💫
+
+Your account is now active and you can:
+✅ Browse our exclusive collections
+✅ Add items to your wishlist
+✅ Get personalized recommendations
+✅ Enjoy member-only discounts
+
+Start shopping: https://norenfastion.shop
+
+Need help? We're here for you!
+📞 +91 7984626447
+
+*NOREN Fashion* - Where Style Meets Elegance ✨`,
+                    'default'
+                );
+            } catch (err) {
+                console.error('Failed to send welcome message:', err);
+            }
+
+        } else {
+            user = userCheck.rows[0];
+            console.log(`✅ User logged in via WhatsApp: ${phone}`);
+        }
+
+        // Generate JWT token
+        const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, {
+            expiresIn: '30d'
+        });
+
+        // Update last login
+        await pool.query(
+            'UPDATE src_users SET updated_at = CURRENT_TIMESTAMP WHERE id = $1',
+            [user.id]
+        );
+
+        res.json({
+            success: true,
+            message: isNewUser ? 'Account created successfully!' : 'Login successful!',
+            token,
+            user: {
+                id: user.id,
+                name: user.name,
+                email: user.email,
+                phone: user.phone,
+                role: user.role,
+                avatar: user.avatar_url
+            },
+            isNewUser
+        });
+
+    } catch (error) {
+        console.error('Error verifying phone OTP:', error);
+        res.status(500).json({ 
+            message: 'Failed to verify OTP', 
+            error: error.message 
+        });
+    }
+};
