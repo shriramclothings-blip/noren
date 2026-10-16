@@ -5,8 +5,12 @@
  * @module utils/whatsappNotifications
  */
 
-const whatsappService = require('../services/whatsappService');
 const { pool } = require('../config/db');
+
+// Lazy-load whatsappService to avoid blocking server startup
+function getWhatsAppService() {
+    return require('../services/whatsappService');
+}
 
 /**
  * Check if WhatsApp notifications are enabled globally
@@ -96,6 +100,7 @@ async function sendOrderConfirmation(orderId, userId) {
         }
         
         // Send WhatsApp message
+        const whatsappService = getWhatsAppService();
         await whatsappService.sendTemplateMessage(
             'order_confirmed',
             phone,
@@ -147,6 +152,7 @@ async function sendOrderShipped(orderId, trackingId, courierName) {
         // Format delivery address
         const deliveryAddress = `${order.address}, ${order.city}, ${order.state} - ${order.pincode}`;
         
+        const whatsappService = getWhatsAppService();
         await whatsappService.sendTemplateMessage(
             'order_shipped',
             phone,
@@ -194,6 +200,7 @@ async function sendOrderDelivered(orderId) {
             year: 'numeric'
         });
         
+        const whatsappService = getWhatsAppService();
         await whatsappService.sendTemplateMessage(
             'order_delivered',
             phone,
@@ -232,6 +239,7 @@ async function sendOrderCancelled(orderId, reason = 'Requested by customer') {
         const phone = order.mobile;
         if (!phone) return;
         
+        const whatsappService = getWhatsAppService();
         await whatsappService.sendTemplateMessage(
             'order_cancelled',
             phone,
@@ -280,6 +288,7 @@ async function sendLoginAlert(userId, deviceInfo = {}) {
             hour12: true
         });
         
+        const whatsappService = getWhatsAppService();
         await whatsappService.sendTemplateMessage(
             'login_alert',
             phone,
@@ -322,6 +331,7 @@ async function sendPromotionalMessage(userId, campaignName, customVariables = {}
             ...customVariables
         };
         
+        const whatsappService = getWhatsAppService();
         await whatsappService.sendTemplateMessage(
             campaignName,
             phone,
@@ -363,6 +373,8 @@ async function sendBulkPromotional(templateName, targetAudience = {}, variables 
         
         let successCount = 0;
         let failedCount = 0;
+        
+        const whatsappService = getWhatsAppService();
         
         for (const user of usersResult.rows) {
             try {

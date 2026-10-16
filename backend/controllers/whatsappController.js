@@ -6,7 +6,11 @@
  */
 
 const { pool } = require('../config/db');
-const whatsappService = require('../services/whatsappService');
+
+// Lazy-load whatsappService to avoid blocking server startup
+function getWhatsAppService() {
+    return require('../services/whatsappService');
+}
 
 /**
  * Create new WhatsApp instance
@@ -23,6 +27,7 @@ exports.createInstance = async (req, res) => {
             });
         }
         
+        const whatsappService = getWhatsAppService();
         const result = await whatsappService.createInstance(instanceName);
         
         res.json(result);
@@ -44,6 +49,7 @@ exports.getInstanceStatus = async (req, res) => {
     try {
         const { instanceName } = req.params;
         
+        const whatsappService = getWhatsAppService();
         const result = await whatsappService.getInstanceStatus(instanceName);
         
         res.json(result);
@@ -92,6 +98,7 @@ exports.disconnectInstance = async (req, res) => {
     try {
         const { instanceName } = req.params;
         
+        const whatsappService = getWhatsAppService();
         const result = await whatsappService.disconnectInstance(instanceName);
         
         res.json(result);
@@ -120,6 +127,7 @@ exports.sendMessage = async (req, res) => {
             });
         }
         
+        const whatsappService = getWhatsAppService();
         const result = await whatsappService.sendMessage(instanceName, phone, message);
         
         res.json({
@@ -152,6 +160,7 @@ exports.sendTemplateMessage = async (req, res) => {
             });
         }
         
+        const whatsappService = getWhatsAppService();
         const result = await whatsappService.sendTemplateMessage(
             templateName,
             phone,
@@ -623,7 +632,7 @@ exports.resetInstance = async (req, res) => {
         const { instanceName } = req.params;
         
         // Clear from memory
-        const whatsappService = require('../services/whatsappService');
+        const whatsappService = getWhatsAppService();
         const instance = whatsappService.instances.get(instanceName);
         if (instance) {
             try {

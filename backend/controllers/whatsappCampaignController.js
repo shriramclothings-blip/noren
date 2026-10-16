@@ -7,7 +7,11 @@
 
 const { pool } = require('../config/db');
 const { sendBulkPromotional } = require('../utils/whatsappNotifications');
-const whatsappService = require('../services/whatsappService');
+
+// Lazy-load whatsappService to avoid blocking server startup
+function getWhatsAppService() {
+    return require('../services/whatsappService');
+}
 
 /**
  * Create new campaign
