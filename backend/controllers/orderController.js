@@ -247,8 +247,8 @@ const placeOrder = async (req, res) => {
       itemCount: items.length,
     }).catch(() => {});
 
-    // Send WhatsApp order confirmation
-    sendOrderConfirmation(order.id, req.user.id).catch(() => {});
+    // Send WhatsApp order confirmation (temporarily disabled - tables not migrated yet)
+    // sendOrderConfirmation(order.id, req.user.id).catch(() => {});
 
     res.status(201).json({ order, message: 'Order placed successfully' });
   } catch (err) {

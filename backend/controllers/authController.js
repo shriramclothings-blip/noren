@@ -189,12 +189,12 @@ const login = async (req, res) => {
         [user.id, `New login from ${locationStr} (IP: ${ip})`]
       ).catch(() => {});
 
-      // Send WhatsApp login alert
-      sendLoginAlert(user.id, {
-        device: userAgent.split(/[/(]/)[0].trim() || 'Unknown Device',
-        location: locationStr,
-        ip: ip || 'N/A'
-      }).catch(() => {});
+      // Send WhatsApp login alert (temporarily disabled - tables not migrated yet)
+      // sendLoginAlert(user.id, {
+      //   device: userAgent.split(/[/(]/)[0].trim() || 'Unknown Device',
+      //   location: locationStr,
+      //   ip: ip || 'N/A'
+      // }).catch(() => {});
     }).catch(() => {});
 
     const { password: _, ...safeUser } = user;
