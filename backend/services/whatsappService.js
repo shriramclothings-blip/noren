@@ -202,9 +202,6 @@ class WhatsAppService {
                  WHERE instance_name = $2`,
                 [qrDataUrl, instanceName]
             );
-            
-            // Also print to terminal for debugging
-            QRCode.generate(qr, { small: true });
         }
         
         // Connected
