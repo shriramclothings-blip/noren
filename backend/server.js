@@ -221,7 +221,8 @@ app.use('/api/support', require('./routes/support'));
 app.use('/api/email', require('./routes/emailPortal'));
 
 // ── WhatsApp Integration API ──────────────────────────────────────────────────
-app.use('/api/whatsapp', require('./routes/whatsapp'));
+// Temporarily disabled for deployment - will be enabled after server starts
+// app.use('/api/whatsapp', require('./routes/whatsapp'));
 
 // ── Real-time Monitor API + Dashboard ────────────────────────────────────────
 app.use('/api/monitor', require('./routes/monitor'));
