@@ -260,14 +260,14 @@ async function sendLoginAlert(userId, deviceInfo = {}) {
         if (!enabled) return;
         
         const userResult = await pool.query(
-            'SELECT name, mobile FROM src_users WHERE id = $1',
+            'SELECT name, phone FROM src_users WHERE id = $1',
             [userId]
         );
         
         if (userResult.rows.length === 0) return;
         const user = userResult.rows[0];
         
-        const phone = user.mobile;
+        const phone = user.phone;
         if (!phone) return;
         
         const now = new Date();
@@ -307,14 +307,14 @@ async function sendPromotionalMessage(userId, campaignName, customVariables = {}
         if (!enabled) return;
         
         const userResult = await pool.query(
-            'SELECT name, mobile FROM src_users WHERE id = $1',
+            'SELECT name, phone FROM src_users WHERE id = $1',
             [userId]
         );
         
         if (userResult.rows.length === 0) return;
         const user = userResult.rows[0];
         
-        const phone = user.mobile;
+        const phone = user.phone;
         if (!phone) return;
         
         const variables = {
