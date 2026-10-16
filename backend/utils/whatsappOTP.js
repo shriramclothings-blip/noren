@@ -4,7 +4,6 @@
  */
 
 const { pool } = require('../config/db');
-const whatsappService = require('../services/whatsappService');
 
 /**
  * Generate 6-digit OTP
@@ -20,6 +19,9 @@ function generateOTP() {
  */
 async function sendWhatsAppOTP(phone, purpose = 'password_reset') {
     try {
+        // Lazy load WhatsApp service (avoid blocking server startup)
+        const whatsappService = require('../services/whatsappService');
+        
         // Generate OTP
         const otp = generateOTP();
         const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
