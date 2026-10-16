@@ -17,17 +17,14 @@
 
 const makeWASocket = require('@whiskeysockets/baileys').default;
 const {
-    useMultiFileAuthState,
     DisconnectReason,
     fetchLatestBaileysVersion,
     makeInMemoryStore,
     delay
 } = require('@whiskeysockets/baileys');
 const pino = require('pino');
-const fs = require('fs').promises;
-const path = require('path');
-const QRCode = require('qrcode-terminal');
 const { pool } = require('../config/db');
+const { useDatabaseAuthState } = require('../utils/databaseAuthState');
 
 class WhatsAppService {
     constructor() {
@@ -36,38 +33,15 @@ class WhatsAppService {
         this.isProcessingQueue = false;
         this.rateLimitPerMinute = 20; // Baileys safe limit
         this.messagesSentThisMinute = 0;
-        this.authPath = path.join(__dirname, '..', 'whatsapp_sessions');
         
         // Initialize async - don't block constructor
         this.initializeAsync();
         
-        console.log('✅ WhatsApp Service initialized (async initialization in progress)');
+        console.log('✅ WhatsApp Service initialized (database-backed sessions)');
     }
     
     async initializeAsync() {
         try {
-            // Create sessions directory
-            await this.initializeSessionsDirectory();
-            
-            // Reset rate limit counter every minute
-            setInterval(() => {
-                this.messagesSentThisMinute = 0;
-            }, 60000);
-            
-            // Process queue every 3 seconds
-            setInterval(() => this.processQueue(), 3000);
-            
-            console.log('✅ WhatsApp Service fully initialized');
-        } catch (error) {
-            console.error('⚠️ WhatsApp Service initialization error (non-fatal):', error.message);
-        }
-    }
-    
-    async initializeAsync() {
-        try {
-            // Create sessions directory
-            await fs.mkdir(this.authPath, { recursive: true });
-            
             // Reset rate limit counter every minute
             setInterval(() => {
                 this.messagesSentThisMinute = 0;
@@ -77,7 +51,7 @@ class WhatsAppService {
             setInterval(() => this.processQueue(), 3000);
             
             this.initialized = true;
-            console.log('✅ WhatsApp Service fully initialized');
+            console.log('✅ WhatsApp Service fully initialized with database persistence');
         } catch (error) {
             console.error('⚠️ WhatsApp Service initialization error (non-fatal):', error.message);
         }
@@ -92,10 +66,7 @@ class WhatsAppService {
                 return { success: false, message: 'Instance already exists' };
             }
             
-            const sessionPath = path.join(this.authPath, instanceName);
-            await fs.mkdir(sessionPath, { recursive: true });
-            
-            // Get instance from database
+            // Get or create instance in database
             const dbInstance = await pool.query(
                 'SELECT * FROM wa_instances WHERE instance_name = $1',
                 [instanceName]
@@ -110,8 +81,11 @@ class WhatsAppService {
                 );
             }
             
-            const { state, saveCreds } = await useMultiFileAuthState(sessionPath);
+            // Use database-backed auth state
+            const { state, saveCreds } = await useDatabaseAuthState(instanceName);
             const { version } = await fetchLatestBaileysVersion();
+            
+            console.log(`🔧 Creating WhatsApp socket for ${instanceName} with database auth...`);
             
             // Create WhatsApp socket
             const sock = makeWASocket({
@@ -122,6 +96,9 @@ class WhatsAppService {
                 browser: ['NOREN Fashion', 'Chrome', '10.0'],
                 markOnlineOnConnect: true,
                 syncFullHistory: false,
+                defaultQueryTimeoutMs: undefined,
+                connectTimeoutMs: 60000,
+                keepAliveIntervalMs: 30000,
                 getMessage: async (key) => {
                     return { conversation: 'Message not available' };
                 }
@@ -135,6 +112,8 @@ class WhatsAppService {
                 phoneNumber: null,
                 connectedAt: null
             });
+            
+            console.log(`✅ WhatsApp socket created for ${instanceName}`);
             
             // Handle connection updates
             sock.ev.on('connection.update', async (update) => {
