@@ -7,96 +7,96 @@ const express = require('express');
 const router = express.Router();
 const whatsappController = require('../controllers/whatsappController');
 const whatsappCampaignController = require('../controllers/whatsappCampaignController');
-const { authenticateToken, requireAdmin } = require('../middleware/auth');
+const { auth, requireRole } = require('../middleware/auth');
 
 // ═══════════════════════════════════════════════════════════════
 // Instance Management Routes
 // ═══════════════════════════════════════════════════════════════
 
 // Create new WhatsApp instance
-router.post('/instances/create', authenticateToken, requireAdmin, whatsappController.createInstance);
+router.post('/instances/create', auth, requireRole('admin'), whatsappController.createInstance);
 
 // List all instances
-router.get('/instances', authenticateToken, requireAdmin, whatsappController.listInstances);
+router.get('/instances', auth, requireRole('admin'), whatsappController.listInstances);
 
 // Get instance status and QR code
-router.get('/instances/:instanceName/status', authenticateToken, requireAdmin, whatsappController.getInstanceStatus);
+router.get('/instances/:instanceName/status', auth, requireRole('admin'), whatsappController.getInstanceStatus);
 
 // Disconnect instance
-router.post('/instances/:instanceName/disconnect', authenticateToken, requireAdmin, whatsappController.disconnectInstance);
+router.post('/instances/:instanceName/disconnect', auth, requireRole('admin'), whatsappController.disconnectInstance);
 
 // ═══════════════════════════════════════════════════════════════
 // Messaging Routes
 // ═══════════════════════════════════════════════════════════════
 
 // Send manual message
-router.post('/send', authenticateToken, requireAdmin, whatsappController.sendMessage);
+router.post('/send', auth, requireRole('admin'), whatsappController.sendMessage);
 
 // Send template message
-router.post('/send-template', authenticateToken, requireAdmin, whatsappController.sendTemplateMessage);
+router.post('/send-template', auth, requireRole('admin'), whatsappController.sendTemplateMessage);
 
 // Get incoming messages
-router.get('/incoming', authenticateToken, requireAdmin, whatsappController.getIncomingMessages);
+router.get('/incoming', auth, requireRole('admin'), whatsappController.getIncomingMessages);
 
 // Mark incoming message as read
-router.put('/incoming/:id/read', authenticateToken, requireAdmin, whatsappController.markMessageRead);
+router.put('/incoming/:id/read', auth, requireRole('admin'), whatsappController.markMessageRead);
 
 // ═══════════════════════════════════════════════════════════════
 // Template Management Routes
 // ═══════════════════════════════════════════════════════════════
 
 // Get all templates
-router.get('/templates', authenticateToken, requireAdmin, whatsappController.getTemplates);
+router.get('/templates', auth, requireRole('admin'), whatsappController.getTemplates);
 
 // Create or update template
-router.post('/templates', authenticateToken, requireAdmin, whatsappController.saveTemplate);
+router.post('/templates', auth, requireRole('admin'), whatsappController.saveTemplate);
 
 // Delete template
-router.delete('/templates/:id', authenticateToken, requireAdmin, whatsappController.deleteTemplate);
+router.delete('/templates/:id', auth, requireRole('admin'), whatsappController.deleteTemplate);
 
 // ═══════════════════════════════════════════════════════════════
 // Settings & Configuration Routes
 // ═══════════════════════════════════════════════════════════════
 
 // Get all WhatsApp settings
-router.get('/settings', authenticateToken, requireAdmin, whatsappController.getSettings);
+router.get('/settings', auth, requireRole('admin'), whatsappController.getSettings);
 
 // Update specific setting
-router.put('/settings/:key', authenticateToken, requireAdmin, whatsappController.updateSetting);
+router.put('/settings/:key', auth, requireRole('admin'), whatsappController.updateSetting);
 
 // ═══════════════════════════════════════════════════════════════
 // Analytics & Logs Routes
 // ═══════════════════════════════════════════════════════════════
 
 // Get message logs
-router.get('/logs', authenticateToken, requireAdmin, whatsappController.getMessageLogs);
+router.get('/logs', auth, requireRole('admin'), whatsappController.getMessageLogs);
 
 // Get analytics dashboard data
-router.get('/analytics', authenticateToken, requireAdmin, whatsappController.getAnalytics);
+router.get('/analytics', auth, requireRole('admin'), whatsappController.getAnalytics);
 
 // ═══════════════════════════════════════════════════════════════
 // Campaign Management Routes
 // ═══════════════════════════════════════════════════════════════
 
 // Create new campaign
-router.post('/campaigns', authenticateToken, requireAdmin, whatsappCampaignController.createCampaign);
+router.post('/campaigns', auth, requireRole('admin'), whatsappCampaignController.createCampaign);
 
 // Get all campaigns
-router.get('/campaigns', authenticateToken, requireAdmin, whatsappCampaignController.getCampaigns);
+router.get('/campaigns', auth, requireRole('admin'), whatsappCampaignController.getCampaigns);
 
 // Get campaign by ID
-router.get('/campaigns/:id', authenticateToken, requireAdmin, whatsappCampaignController.getCampaignById);
+router.get('/campaigns/:id', auth, requireRole('admin'), whatsappCampaignController.getCampaignById);
 
 // Launch campaign
-router.post('/campaigns/:id/launch', authenticateToken, requireAdmin, whatsappCampaignController.launchCampaign);
+router.post('/campaigns/:id/launch', auth, requireRole('admin'), whatsappCampaignController.launchCampaign);
 
 // Pause campaign
-router.post('/campaigns/:id/pause', authenticateToken, requireAdmin, whatsappCampaignController.pauseCampaign);
+router.post('/campaigns/:id/pause', auth, requireRole('admin'), whatsappCampaignController.pauseCampaign);
 
 // Cancel campaign
-router.post('/campaigns/:id/cancel', authenticateToken, requireAdmin, whatsappCampaignController.cancelCampaign);
+router.post('/campaigns/:id/cancel', auth, requireRole('admin'), whatsappCampaignController.cancelCampaign);
 
 // Delete campaign
-router.delete('/campaigns/:id', authenticateToken, requireAdmin, whatsappCampaignController.deleteCampaign);
+router.delete('/campaigns/:id', auth, requireRole('admin'), whatsappCampaignController.deleteCampaign);
 
 module.exports = router;
