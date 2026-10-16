@@ -2,7 +2,7 @@ const router = require('express').Router();
 const { auth } = require('../middleware/auth');
 const { uploadAvatar } = require('../config/cloudinary');
 const { authRateLimit } = require('../middleware/rateLimiter');
-const { register, login, getMe, updateProfile, changePassword, forgotPassword, resetPassword, verifyOTP, googleLogin, logout } = require('../controllers/authController');
+const { register, login, getMe, updateProfile, changePassword, forgotPassword, resetPassword, verifyOTP, googleLogin, logout, sendWhatsAppResetOTP, verifyWhatsAppOTPAndReset } = require('../controllers/authController');
 
 router.post('/register',       authRateLimit, register);
 router.post('/login',          authRateLimit, login);
@@ -14,6 +14,10 @@ router.put('/password',        auth, changePassword);
 router.post('/forgot-password', authRateLimit, forgotPassword);
 router.post('/verify-otp',      authRateLimit, verifyOTP);
 router.post('/reset-password',  authRateLimit, resetPassword);
+
+// WhatsApp OTP routes
+router.post('/send-whatsapp-otp', authRateLimit, sendWhatsAppResetOTP);
+router.post('/verify-whatsapp-otp-reset', authRateLimit, verifyWhatsAppOTPAndReset);
 
 // ── Recovery key login (user enters admin-generated key to set new password) ──
 const { useRecoveryKey } = require('../controllers/adminRecoveryController');

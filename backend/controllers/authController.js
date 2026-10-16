@@ -520,3 +520,101 @@ const verifyOTP = async (req, res) => {
 };
 
 module.exports = { register, login, getMe, updateProfile, changePassword, forgotPassword, resetPassword, verifyOTP, sendOrderEmail, googleLogin, logout };
+
+
+// WhatsApp OTP endpoints
+const { sendWhatsAppOTP, verifyWhatsAppOTP } = require('../utils/whatsappOTP');
+
+/**
+ * Send OTP via WhatsApp for password reset
+ * POST /api/auth/send-whatsapp-otp
+ */
+exports.sendWhatsAppResetOTP = async (req, res) => {
+    try {
+        let { phone } = req.body;
+
+        if (!phone) {
+            return res.status(400).json({ message: 'Phone number is required' });
+        }
+
+        // Auto-add +91 for Indian numbers if not present
+        if (!phone.startsWith('+')) {
+            phone = '+91' + phone;
+        }
+
+        // Check if user exists with this phone
+        const userResult = await pool.query(
+            'SELECT id, email, name FROM src_users WHERE phone = $1',
+            [phone]
+        );
+
+        if (userResult.rows.length === 0) {
+            return res.status(404).json({ message: 'No account found with this phone number' });
+        }
+
+        // Send OTP
+        const result = await sendWhatsAppOTP(phone, 'password_reset');
+
+        if (result.success) {
+            res.json({
+                success: true,
+                message: 'OTP sent to your WhatsApp',
+                phone: phone
+            });
+        } else {
+            res.status(500).json({
+                success: false,
+                message: result.message || 'Failed to send OTP'
+            });
+        }
+
+    } catch (error) {
+        console.error('Error sending WhatsApp OTP:', error);
+        res.status(500).json({ message: 'Failed to send OTP', error: error.message });
+    }
+};
+
+/**
+ * Verify WhatsApp OTP and reset password
+ * POST /api/auth/verify-whatsapp-otp-reset
+ */
+exports.verifyWhatsAppOTPAndReset = async (req, res) => {
+    try {
+        let { phone, otp, newPassword } = req.body;
+
+        if (!phone || !otp || !newPassword) {
+            return res.status(400).json({ message: 'Phone, OTP, and new password are required' });
+        }
+
+        // Auto-add +91 for Indian numbers
+        if (!phone.startsWith('+')) {
+            phone = '+91' + phone;
+        }
+
+        // Verify OTP
+        const otpResult = await verifyWhatsAppOTP(phone, otp, 'password_reset');
+
+        if (!otpResult.success) {
+            return res.status(400).json({ message: otpResult.message });
+        }
+
+        // OTP verified - update password
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+        await pool.query(
+            'UPDATE src_users SET password = $1, updated_at = CURRENT_TIMESTAMP WHERE phone = $2',
+            [hashedPassword, phone]
+        );
+
+        console.log(`✅ Password reset via WhatsApp OTP for ${phone}`);
+
+        res.json({
+            success: true,
+            message: 'Password reset successfully'
+        });
+
+    } catch (error) {
+        console.error('Error verifying WhatsApp OTP:', error);
+        res.status(500).json({ message: 'Failed to verify OTP', error: error.message });
+    }
+};
