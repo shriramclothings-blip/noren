@@ -220,7 +220,7 @@ Expected delivery: {{deliveryDate}}
 Track: {{trackingUrl}}
 
 *NOREN Fashion* ✨',
-                ''["customerName", "orderNumber", "amount", "itemCount", "deliveryDate", "trackingUrl"]'',
+                '["customerName", "orderNumber", "amount", "itemCount", "deliveryDate", "trackingUrl"]'::jsonb,
                 true
             ),
             (
@@ -242,7 +242,7 @@ New login detected:
 Was this you?
 
 *NOREN Fashion Security*',
-                ''["userName", "deviceName", "location", "ipAddress", "loginTime"]'',
+                '["userName", "deviceName", "location", "ipAddress", "loginTime"]'::jsonb,
                 true
             )
             ON CONFLICT (template_name) DO NOTHING;
