@@ -6,12 +6,6 @@ const { Server } = require('socket.io');
 const jwt = require('jsonwebtoken');
 const { initDB, pool } = require('./config/db');
 
-// ── Auto-migrate WhatsApp tables on startup ──────────────────────────────────
-const { autoMigrateWhatsApp } = require('./auto-migrate-whatsapp');
-autoMigrateWhatsApp().catch(err => {
-    console.error('WhatsApp auto-migration failed (non-fatal):', err.message);
-});
-
 // ── Monitor — load before everything so all events are captured ──────────────
 const mon = require('./monitor');
 
