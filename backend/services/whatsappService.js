@@ -249,7 +249,29 @@ class WhatsAppService {
                 
                 instance.lastError = `Disconnected: ${errorMessage} (Code: ${statusCode || 'N/A'})`;
                 
-                if (shouldReconnect) {
+                // Status 401 (Unauthorized) or 428 means invalid/expired session - don't reconnect
+                if (statusCode === 401 || statusCode === 428 || !shouldReconnect) {
+                    console.log(`🚪 ${instanceName} session invalid or logged out - clearing session`);
+                    
+                    // Remove instance from memory
+                    this.instances.delete(instanceName);
+                    
+                    // Clear the invalid session from database
+                    await pool.query(
+                        `UPDATE wa_instances 
+                         SET status = 'disconnected', 
+                             disconnected_at = CURRENT_TIMESTAMP,
+                             qr_code = NULL,
+                             session_data = NULL,
+                             phone_number = NULL,
+                             updated_at = CURRENT_TIMESTAMP 
+                         WHERE instance_name = $1`,
+                        [instanceName]
+                    );
+                    
+                    console.log(`🧹 Session cleared for ${instanceName} - generate new QR to reconnect`);
+                } else {
+                    // Temporary error - try to reconnect
                     console.log(`🔄 Will reconnect ${instanceName} in 5 seconds...`);
                     instance.state = 'reconnecting';
                     
@@ -269,20 +291,6 @@ class WhatsAppService {
                             console.error(`❌ Reconnection failed for ${instanceName}:`, err);
                         });
                     }, 5000);
-                } else {
-                    console.log(`🚪 ${instanceName} logged out - not reconnecting`);
-                    // Logged out - remove instance
-                    this.instances.delete(instanceName);
-                    
-                    await pool.query(
-                        `UPDATE wa_instances 
-                         SET status = 'disconnected', 
-                             disconnected_at = CURRENT_TIMESTAMP,
-                             qr_code = NULL,
-                             updated_at = CURRENT_TIMESTAMP 
-                         WHERE instance_name = $1`,
-                        [instanceName]
-                    );
                 }
             }
         } catch (error) {

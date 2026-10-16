@@ -25,6 +25,9 @@ router.get('/instances/:instanceName/status', auth, requireRole('admin', 'super_
 // Disconnect instance
 router.post('/instances/:instanceName/disconnect', auth, requireRole('admin', 'super_admin'), whatsappController.disconnectInstance);
 
+// Reset instance (clear session)
+router.post('/instances/:instanceName/reset', auth, requireRole('admin', 'super_admin'), whatsappController.resetInstance);
+
 // ═══════════════════════════════════════════════════════════════
 // Messaging Routes
 // ═══════════════════════════════════════════════════════════════

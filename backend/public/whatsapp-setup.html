@@ -324,6 +324,10 @@
             </div>
 
             <button class="btn" onclick="connectWhatsApp()">Generate QR Code</button>
+            
+            <button class="btn btn-secondary" onclick="resetInstance()" style="margin-top:10px;">
+                🔄 Reset & Clear Session
+            </button>
 
             <div class="qr-container">
                 <div id="qrSpinner" class="spinner" style="display:none;"></div>
@@ -468,6 +472,44 @@
 
             } catch (error) {
                 qrSpinner.style.display = 'none';
+                showStatus(statusDiv, 'error', '❌ Error: ' + error.message);
+            }
+        }
+
+        async function resetInstance() {
+            const statusDiv = document.getElementById('connectionStatus');
+            const qrImg = document.getElementById('qr-code');
+            const qrInstructions = document.getElementById('qrInstructions');
+            
+            if (!confirm('This will clear the current WhatsApp session. Continue?')) {
+                return;
+            }
+
+            showStatus(statusDiv, 'info', '🧹 Clearing session...');
+            qrImg.style.display = 'none';
+            qrInstructions.style.display = 'none';
+
+            try {
+                const response = await fetch(`${API_URL}/api/whatsapp/instances/default/reset`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    showStatus(statusDiv, 'success', '✅ Session cleared! Click "Generate QR Code" to start fresh.');
+                    if (checkInterval) {
+                        clearInterval(checkInterval);
+                        checkInterval = null;
+                    }
+                } else {
+                    showStatus(statusDiv, 'error', '❌ Failed: ' + (data.message || 'Unknown error'));
+                }
+            } catch (error) {
                 showStatus(statusDiv, 'error', '❌ Error: ' + error.message);
             }
         }

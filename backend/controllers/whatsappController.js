@@ -613,3 +613,52 @@ exports.markMessageRead = async (req, res) => {
 };
 
 module.exports = exports;
+
+/**
+ * Reset/Clear WhatsApp instance session
+ * POST /api/whatsapp/instances/:instanceName/reset
+ */
+exports.resetInstance = async (req, res) => {
+    try {
+        const { instanceName } = req.params;
+        
+        // Clear from memory
+        const whatsappService = require('../services/whatsappService');
+        const instance = whatsappService.instances.get(instanceName);
+        if (instance) {
+            try {
+                await instance.socket.logout();
+            } catch (e) {
+                // Ignore logout errors
+            }
+            whatsappService.instances.delete(instanceName);
+        }
+        
+        // Clear from database
+        await pool.query(
+            `UPDATE wa_instances 
+             SET status = 'disconnected',
+                 session_data = NULL,
+                 qr_code = NULL,
+                 phone_number = NULL,
+                 disconnected_at = CURRENT_TIMESTAMP,
+                 updated_at = CURRENT_TIMESTAMP
+             WHERE instance_name = $1`,
+            [instanceName]
+        );
+        
+        console.log(`🧹 Instance ${instanceName} reset successfully`);
+        
+        res.json({
+            success: true,
+            message: 'Instance reset successfully. You can now generate a new QR code.'
+        });
+    } catch (error) {
+        console.error('Error resetting instance:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to reset instance',
+            error: error.message
+        });
+    }
+};

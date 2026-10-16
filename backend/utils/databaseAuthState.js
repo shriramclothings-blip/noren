@@ -52,7 +52,29 @@ async function useDatabaseAuthState(instanceName) {
                 const deserialized = deserializeData(sessionData);
                 creds = deserialized.creds || initAuthCreds();
                 keys = deserialized.keys || {};
-                console.log(`✅ Session loaded successfully for ${instanceName} (${Object.keys(keys).length} keys)`);
+                
+                const keyCount = Object.keys(keys).length;
+                console.log(`✅ Session loaded successfully for ${instanceName} (${keyCount} keys)`);
+                
+                // If session has 0 keys, it's corrupted - clear it
+                if (keyCount === 0 && deserialized.creds) {
+                    console.log(`⚠️  Session has 0 keys - likely corrupted, will generate fresh QR`);
+                    // Clear the corrupted session
+                    await pool.query(
+                        `UPDATE wa_instances 
+                         SET session_data = NULL, 
+                             status = 'disconnected',
+                             qr_code = NULL,
+                             phone_number = NULL,
+                             updated_at = CURRENT_TIMESTAMP 
+                         WHERE instance_name = $1`,
+                        [instanceName]
+                    );
+                    console.log(`🧹 Cleared corrupted session for ${instanceName}`);
+                    // Use fresh credentials
+                    creds = initAuthCreds();
+                    keys = {};
+                }
             } catch (parseError) {
                 console.error(`❌ Error parsing session data:`, parseError.message);
                 console.log(`🆕 Creating fresh credentials for ${instanceName}`);
