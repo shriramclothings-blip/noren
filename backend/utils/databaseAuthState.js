@@ -8,6 +8,25 @@ const { initAuthCreds, BufferJSON, proto } = require('@whiskeysockets/baileys');
 const { pool } = require('../config/db');
 
 /**
+ * Serialize data with Buffer support
+ */
+function serializeData(data) {
+    return JSON.parse(JSON.stringify(data, BufferJSON.replacer));
+}
+
+/**
+ * Deserialize data with Buffer support
+ */
+function deserializeData(data) {
+    if (typeof data === 'string') {
+        return JSON.parse(data, BufferJSON.reviver);
+    }
+    // If already object, convert to string then parse with reviver to handle Buffers
+    const jsonString = JSON.stringify(data);
+    return JSON.parse(jsonString, BufferJSON.reviver);
+}
+
+/**
  * Create database-backed auth state
  * @param {string} instanceName - WhatsApp instance name
  */
@@ -29,27 +48,25 @@ async function useDatabaseAuthState(instanceName) {
             
             const sessionData = result.rows[0].session_data;
             
-            // Parse with BufferJSON reviver if it's a string
-            if (typeof sessionData === 'string') {
-                const parsed = JSON.parse(sessionData, BufferJSON.reviver);
-                creds = parsed.creds || initAuthCreds();
-                keys = parsed.keys || {};
-            } else {
-                // Already parsed JSONB
-                creds = sessionData.creds || initAuthCreds();
-                keys = sessionData.keys || {};
+            try {
+                const deserialized = deserializeData(sessionData);
+                creds = deserialized.creds || initAuthCreds();
+                keys = deserialized.keys || {};
+                console.log(`✅ Session loaded successfully for ${instanceName} (${Object.keys(keys).length} keys)`);
+            } catch (parseError) {
+                console.error(`❌ Error parsing session data:`, parseError.message);
+                console.log(`🆕 Creating fresh credentials for ${instanceName}`);
+                creds = initAuthCreds();
+                keys = {};
             }
-            
-            console.log(`✅ Session loaded successfully for ${instanceName}`);
         } else {
             console.log(`🆕 No existing session, creating new credentials for ${instanceName}`);
-            // Initialize new credentials
             creds = initAuthCreds();
             keys = {};
         }
     } catch (error) {
         console.error(`❌ Error loading session for ${instanceName}:`, error.message);
-        // Fallback to new credentials
+        console.error('Stack:', error.stack);
         creds = initAuthCreds();
         keys = {};
     }
@@ -64,19 +81,20 @@ async function useDatabaseAuthState(instanceName) {
                 keys
             };
 
-            const jsonString = JSON.stringify(sessionData, BufferJSON.replacer);
+            // Serialize with Buffer support
+            const serialized = serializeData(sessionData);
             
             await pool.query(
                 `UPDATE wa_instances 
                  SET session_data = $1, updated_at = CURRENT_TIMESTAMP 
                  WHERE instance_name = $2`,
-                [jsonString, instanceName]
+                [serialized, instanceName]
             );
             
-            console.log(`💾 Session saved for ${instanceName}`);
+            console.log(`💾 Session saved for ${instanceName} (${Object.keys(keys).length} keys)`);
         } catch (error) {
             console.error(`❌ Error saving session for ${instanceName}:`, error.message);
-            throw error;
+            console.error('Stack:', error.stack);
         }
     };
 
@@ -103,21 +121,26 @@ async function useDatabaseAuthState(instanceName) {
                 },
                 set: (data) => {
                     try {
+                        let updated = false;
                         for (const category in data) {
                             for (const id in data[category]) {
                                 const value = data[category][id];
                                 const key = `${category}-${id}`;
                                 if (value) {
                                     keys[key] = value;
+                                    updated = true;
                                 } else {
                                     delete keys[key];
                                 }
                             }
                         }
-                        // Save asynchronously (don't block)
-                        saveCreds().catch(err => {
-                            console.error(`❌ Error in async saveCreds:`, err.message);
-                        });
+                        
+                        if (updated) {
+                            // Save asynchronously (don't block)
+                            saveCreds().catch(err => {
+                                console.error(`❌ Error in async saveCreds:`, err.message);
+                            });
+                        }
                     } catch (error) {
                         console.error(`❌ Error setting keys:`, error.message);
                     }
