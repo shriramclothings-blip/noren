@@ -221,16 +221,7 @@ app.use('/api/support', require('./routes/support'));
 app.use('/api/email', require('./routes/emailPortal'));
 
 // ── WhatsApp Integration API ──────────────────────────────────────────────────
-// Lazy load to prevent blocking server startup
-app.use('/api/whatsapp', (req, res, next) => {
-  try {
-    const whatsappRoutes = require('./routes/whatsapp');
-    whatsappRoutes(req, res, next);
-  } catch (error) {
-    console.error('WhatsApp route error:', error);
-    res.status(500).json({ success: false, message: 'WhatsApp service temporarily unavailable' });
-  }
-});
+app.use('/api/whatsapp', require('./routes/whatsapp'));
 
 // ── Real-time Monitor API + Dashboard ────────────────────────────────────────
 app.use('/api/monitor', require('./routes/monitor'));

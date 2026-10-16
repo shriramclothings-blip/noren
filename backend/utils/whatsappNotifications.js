@@ -6,7 +6,7 @@
  */
 
 const whatsappService = require('../services/whatsappService');
-const pool = require('../config/db');
+const { pool } = require('../config/db');
 
 /**
  * Check if WhatsApp notifications are enabled globally

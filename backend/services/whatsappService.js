@@ -27,7 +27,7 @@ const pino = require('pino');
 const fs = require('fs').promises;
 const path = require('path');
 const QRCode = require('qrcode-terminal');
-const pool = require('../config/db');
+const { pool } = require('../config/db');
 
 class WhatsAppService {
     constructor() {

@@ -12,6 +12,32 @@ const Lbl = ({ children }) => <label style={{ fontSize: 12, fontWeight: 600, col
 // Steps: 0 = email entry, 1 = OTP verification, 2 = complete registration
 const STEPS = ['Email', 'Verify', 'Details'];
 
+// Validation utilities
+const validateEmail = (email) => {
+  const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return regex.test(email);
+};
+
+const validatePassword = (password) => {
+  // At least 8 chars, 1 uppercase, 1 lowercase, 1 number
+  const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+  return regex.test(password);
+};
+
+const getPasswordStrength = (password) => {
+  if (password.length === 0) return 0;
+  if (password.length < 8) return 1;
+  if (!/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/\d/.test(password)) return 2;
+  if (!/[!@#$%^&*]/.test(password)) return 3;
+  return 4;
+};
+
+const validatePhone = (phone) => {
+  if (!phone) return true; // optional
+  const regex = /^[0-9+\s-]{10,}$/;
+  return regex.test(phone);
+};
+
 function StepBar({ step }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0, marginBottom: 28 }}>
@@ -106,6 +132,7 @@ export default function Register() {
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
   const [resendTimer, setResendTimer] = useState(0);
+  const [lastOtpTime, setLastOtpTime] = useState(0);
 
   // Countdown timer for resend
   useEffect(() => {
@@ -117,12 +144,26 @@ export default function Register() {
   // ── Step 0: Send OTP ────────────────────────────────────────────────────────
   const sendOTP = async (e) => {
     e?.preventDefault();
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
-      return toast.error('Enter a valid email address');
+    
+    // Validate email
+    if (!email.trim()) {
+      return toast.error('Email address is required');
+    }
+    if (!validateEmail(email)) {
+      return toast.error('Enter a valid email address (e.g., you@example.com)');
+    }
+    
+    // Prevent OTP spam - wait 30 seconds between requests
+    const now = Date.now();
+    if (now - lastOtpTime < 30000) {
+      return toast.error(`Please wait ${Math.ceil((30000 - (now - lastOtpTime)) / 1000)}s before requesting again`);
+    }
+    
     setLoading(true);
     try {
       await api.post('/seller/send-otp', { email: email.trim().toLowerCase() });
       toast.success('OTP sent! Check your email inbox.');
+      setLastOtpTime(now);
       setStep(1);
       setResendTimer(60);
       setOtp('');
@@ -149,11 +190,39 @@ export default function Register() {
   // ── Step 2: Complete Registration ───────────────────────────────────────────
   const register = async (e) => {
     e.preventDefault();
-    if (!form.name) return toast.error('Full name is required');
-    if (!form.password || form.password.length < 6) return toast.error('Password must be at least 6 characters');
+    
+    // Validate name
+    if (!form.name.trim()) {
+      return toast.error('Full name is required');
+    }
+    if (form.name.trim().length < 3) {
+      return toast.error('Name must be at least 3 characters');
+    }
+    
+    // Validate phone (if provided)
+    if (!validatePhone(form.phone)) {
+      return toast.error('Enter a valid phone number (e.g., +91 9876543210)');
+    }
+    
+    // Validate password strength
+    if (!form.password) {
+      return toast.error('Password is required');
+    }
+    if (form.password.length < 8) {
+      return toast.error('Password must be at least 8 characters');
+    }
+    if (!validatePassword(form.password)) {
+      return toast.error('Password must contain uppercase, lowercase, and numbers (e.g., MyPass123)');
+    }
+    
     setLoading(true);
     try {
-      const res = await api.post('/auth/register', { name: form.name, email: email.trim().toLowerCase(), password: form.password, phone: form.phone });
+      const res = await api.post('/auth/register', { 
+        name: form.name.trim(), 
+        email: email.trim().toLowerCase(), 
+        password: form.password, 
+        phone: form.phone.trim() || null 
+      });
       await login(res.data.token, res.data.user);
       toast.success('Account created! Complete your seller setup.');
       navigate('/onboarding');
@@ -317,11 +386,20 @@ export default function Register() {
                   {form.password.length > 0 && (
                     <div style={{ marginTop: 6, display: 'flex', gap: 4 }}>
                       {[...Array(4)].map((_, i) => (
-                        <div key={i} style={{ height: 3, flex: 1, borderRadius: 2, background: form.password.length >= (i + 1) * 2 ? (form.password.length < 6 ? '#f59e0b' : '#16a34a') : '#e2e8f0' }} />
+                        <div key={i} style={{ height: 3, flex: 1, borderRadius: 2, background: getPasswordStrength(form.password) > i ? (getPasswordStrength(form.password) <= 1 ? '#f59e0b' : getPasswordStrength(form.password) === 2 ? '#eab308' : getPasswordStrength(form.password) === 3 ? '#16a34a' : '#059669') : '#e2e8f0' }} />
                       ))}
-                      <span style={{ fontSize: 10, color: form.password.length < 6 ? '#f59e0b' : '#16a34a', fontWeight: 600, marginLeft: 4 }}>
-                        {form.password.length < 6 ? 'Weak' : form.password.length < 10 ? 'Good' : 'Strong'}
+                      <span style={{ fontSize: 10, color: getPasswordStrength(form.password) <= 1 ? '#f59e0b' : getPasswordStrength(form.password) === 2 ? '#eab308' : getPasswordStrength(form.password) === 3 ? '#16a34a' : '#059669', fontWeight: 600, marginLeft: 4 }}>
+                        {getPasswordStrength(form.password) === 0 ? 'N/A' : getPasswordStrength(form.password) === 1 ? 'Weak' : getPasswordStrength(form.password) === 2 ? 'Fair' : getPasswordStrength(form.password) === 3 ? 'Good' : 'Strong'}
                       </span>
+                    </div>
+                  )}
+                  {form.password.length > 0 && getPasswordStrength(form.password) < 4 && (
+                    <div style={{ marginTop: 8, fontSize: 11, color: '#94a3b8', lineHeight: 1.5 }}>
+                      ✓ Uppercase & lowercase letters
+                      <br />
+                      ✓ At least one number
+                      <br />
+                      {form.password.length < 8 && '✓ At least 8 characters'}
                     </div>
                   )}
                 </div>

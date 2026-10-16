@@ -378,9 +378,11 @@ export default function Products() {
       const res = await api.get('/seller/products?limit=200');
       // Accept both { data: [] } and { products: [] } shapes for safety
       const list = res.data?.data ?? res.data?.products ?? [];
-      setProducts(Array.isArray(list) ? list : []);
+      const validList = Array.isArray(list) ? list : [];
+      setProducts(validList);
     } catch (e) {
       const msg = e.response?.data?.message || e.message;
+      console.error('Products fetch error:', msg);
       toast.error(`Failed to load products: ${msg}`);
       setProducts([]);
     } finally {
@@ -397,6 +399,7 @@ export default function Products() {
       toast.success('Submitted for review!');
       fetchProducts();
     } catch (e) {
+      console.error('Submit error:', e.message, e.response?.data);
       toast.error(e.response?.data?.message || 'Failed to submit');
     }
   };

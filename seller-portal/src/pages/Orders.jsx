@@ -27,9 +27,14 @@ export default function Orders() {
     setLoading(true);
     try {
       const r = await api.get(`/seller/orders?page=${page}&limit=${LIMIT}`);
-      setOrders(r.data.orders || []);
-      setTotal(r.data.total || 0);
-    } catch { toast.error('Failed to load orders'); }
+      const ordersData = Array.isArray(r.data?.orders) ? r.data.orders : [];
+      const totalCount = typeof r.data?.total === 'number' ? r.data.total : 0;
+      setOrders(ordersData);
+      setTotal(totalCount);
+    } catch (err) {
+      console.error('Orders fetch error:', err.message, err.response?.data);
+      toast.error(err.response?.data?.message || 'Failed to load orders');
+    }
     finally { setLoading(false); }
   }, [page]);
 
@@ -60,17 +65,17 @@ export default function Orders() {
               const isOpen = expanded === o.id;
               return (
                 <div key={o.id} style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 12, overflow: 'hidden' }}>
-                  <div style={{ padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', cursor: 'pointer' }}
+                    <div style={{ padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', cursor: 'pointer' }}
                     onClick={() => setExpanded(isOpen ? null : o.id)}>
                     <div style={{ flex: 1, minWidth: 160 }}>
-                      <div style={{ fontWeight: 700, fontSize: 13, color: '#111827' }}>{o.order_id}</div>
+                      <div style={{ fontWeight: 700, fontSize: 13, color: '#111827' }}>{o.order_id || '—'}</div>
                       <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 2 }}>
-                        {o.full_name} · {new Date(o.order_date).toLocaleDateString('en-IN')}
+                        {o.full_name || '—'} · {o.order_date ? new Date(o.order_date).toLocaleDateString('en-IN') : '—'}
                       </div>
                     </div>
-                    <div style={{ fontWeight: 800, fontSize: 14, color: '#111827' }}>₹{Number(o.line_total).toLocaleString('en-IN')}</div>
-                    <div style={{ fontWeight: 600, fontSize: 13, color: '#374151' }}>×{o.quantity} {o.title}</div>
-                    <span style={{ padding: '3px 10px', borderRadius: 999, fontSize: 11, fontWeight: 700, background: sc.bg, color: sc.color }}>{o.status}</span>
+                    <div style={{ fontWeight: 800, fontSize: 14, color: '#111827' }}>₹{Number(o.line_total || 0).toLocaleString('en-IN')}</div>
+                    <div style={{ fontWeight: 600, fontSize: 13, color: '#374151' }}>×{o.quantity || 0} {o.title || 'Product'}</div>
+                    <span style={{ padding: '3px 10px', borderRadius: 999, fontSize: 11, fontWeight: 700, background: sc.bg, color: sc.color }}>{o.status || 'unknown'}</span>
                     <span style={{ fontSize: 18, color: '#9ca3af' }}>{isOpen ? '▲' : '▼'}</span>
                   </div>
 
@@ -79,13 +84,13 @@ export default function Orders() {
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))', gap: 10, fontSize: 13 }}>
                         {[
                           ['Size', o.size || '—'],
-                          ['Quantity', o.quantity],
-                          ['Unit Price', `₹${o.unit_price}`],
-                          ['Commission', `₹${Number(o.commission_amount||0).toFixed(2)} (${o.commission_rate}%)`],
-                          ['Your Payout', `₹${Number(o.seller_payout||0).toFixed(2)}`],
-                          ['Order Status', o.order_status],
-                          ['City', `${o.city}, ${o.state}`],
-                          ['Pincode', o.pincode],
+                          ['Quantity', o.quantity || 0],
+                          ['Unit Price', `₹${Number(o.unit_price || 0).toLocaleString('en-IN')}`],
+                          ['Commission', `₹${Number(o.commission_amount || 0).toFixed(2)} (${o.commission_rate || 0}%)`],
+                          ['Your Payout', `₹${Number(o.seller_payout || 0).toFixed(2)}`],
+                          ['Order Status', o.order_status || '—'],
+                          ['City', `${o.city || '—'}, ${o.state || '—'}`],
+                          ['Pincode', o.pincode || '—'],
                         ].map(([k, v]) => (
                           <div key={k} style={{ background: '#fff', borderRadius: 8, padding: '9px 12px', border: '1px solid #e5e7eb' }}>
                             <div style={{ fontSize: 10, color: '#9ca3af', fontWeight: 600, textTransform: 'uppercase', marginBottom: 3 }}>{k}</div>

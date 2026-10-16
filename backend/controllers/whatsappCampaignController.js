@@ -5,7 +5,7 @@
  * @module controllers/whatsappCampaignController
  */
 
-const pool = require('../config/db');
+const { pool } = require('../config/db');
 const { sendBulkPromotional } = require('../utils/whatsappNotifications');
 const whatsappService = require('../services/whatsappService');
 

@@ -7,9 +7,50 @@ import SellerLayout from '../components/SellerLayout';
 
 const btn = (bg = '#0f172a', color = '#fff', disabled = false) => ({ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '10px 22px', borderRadius: 9, border: 'none', background: bg, color, fontSize: 13, fontWeight: 700, cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.6 : 1 });
 
+// File validation utilities
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
+const ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.pdf'];
+
+const validateFile = (file) => {
+  if (!file) return { valid: false, error: 'No file selected' };
+  
+  // Check file size
+  if (file.size > MAX_FILE_SIZE) {
+    return { valid: false, error: `File too large. Max 5MB, got ${(file.size / 1024 / 1024).toFixed(1)}MB` };
+  }
+  
+  // Check file type by MIME type
+  if (!ALLOWED_TYPES.includes(file.type)) {
+    // Also check extension for cases where MIME type might not be set
+    const ext = '.' + file.name.split('.').pop()?.toLowerCase();
+    if (!ALLOWED_EXTENSIONS.includes(ext)) {
+      return { valid: false, error: `Invalid file type. Use JPG, PNG, WEBP, or PDF` };
+    }
+  }
+  
+  return { valid: true };
+};
+
 function DocUploadSlot({ label, fieldKey, files, setFiles, existingUrl }) {
   const ref = useRef(null);
   const file = files[fieldKey];
+  
+  const handleFileSelect = (e) => {
+    const selectedFile = e.target.files?.[0];
+    if (!selectedFile) return;
+    
+    const validation = validateFile(selectedFile);
+    if (!validation.valid) {
+      toast.error(validation.error);
+      e.target.value = '';
+      return;
+    }
+    
+    setFiles(p => ({ ...p, [fieldKey]: selectedFile }));
+    e.target.value = '';
+  };
+  
   return (
     <div style={{ border: '1.5px solid #e5e7eb', borderRadius: 12, padding: '16px 18px', background: '#fafafa' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
@@ -33,8 +74,8 @@ function DocUploadSlot({ label, fieldKey, files, setFiles, existingUrl }) {
         </button>
       )}
       <input ref={ref} type="file" accept=".jpg,.jpeg,.png,.pdf,.webp" style={{ display: 'none' }}
-        onChange={e => { if (e.target.files[0]) setFiles(p => ({ ...p, [fieldKey]: e.target.files[0] })); e.target.value = ''; }} />
-      <p style={{ margin: '6px 0 0', fontSize: 10, color: '#9ca3af' }}>JPG, PNG or PDF · Max 5MB</p>
+        onChange={handleFileSelect} />
+      <p style={{ margin: '6px 0 0', fontSize: 10, color: '#9ca3af' }}>JPG, PNG, WEBP, or PDF · Max 5MB</p>
     </div>
   );
 }
@@ -46,7 +87,22 @@ export default function KYC() {
 
   const submit = async () => {
     const hasAny = Object.values(files).some(Boolean);
-    if (!hasAny) return toast.error('Please upload at least one document');
+    if (!hasAny) {
+      toast.error('Please upload at least one document');
+      return;
+    }
+    
+    // Final validation of all files before submit
+    for (const [key, file] of Object.entries(files)) {
+      if (file) {
+        const validation = validateFile(file);
+        if (!validation.valid) {
+          toast.error(`${key}: ${validation.error}`);
+          return;
+        }
+      }
+    }
+    
     setSaving(true);
     try {
       const fd = new FormData();
@@ -55,7 +111,8 @@ export default function KYC() {
       toast.success('Documents submitted for review!');
       await refreshProfile();
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Submission failed');
+      console.error('KYC submission error:', err.message, err.response?.data);
+      toast.error(err.response?.data?.message || 'Submission failed. Please try again.');
     } finally { setSaving(false); }
   };
 
@@ -126,12 +183,12 @@ export default function KYC() {
               </div>
             </div>
 
-            <div>
-              <button onClick={submit} disabled={saving} style={btn('#0f172a', '#fff', saving)}>
-                <ShieldCheck size={14} />
-                {saving ? 'Submitting…' : 'Submit for Verification'}
-              </button>
-            </div>
+      <div>
+        <button onClick={submit} disabled={saving || Object.values(files).every(f => !f)} style={btn('#0f172a', '#fff', saving || Object.values(files).every(f => !f))}>
+          <ShieldCheck size={14} />
+          {saving ? 'Submitting…' : 'Submit for Verification'}
+        </button>
+      </div>
 
             <div style={{ background: '#f8fafc', borderRadius: 10, padding: '14px 18px', fontSize: 12, color: '#6b7280', border: '1px solid #e5e7eb' }}>
               <strong>Why do we need this?</strong> NOREN verifies all sellers to maintain a safe marketplace. Documents are stored securely and shared only with our compliance team.

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Upload, X, Plus, ArrowLeft, Send, Save } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -8,6 +8,28 @@ import SellerLayout from '../components/SellerLayout';
 const inp = { width: '100%', padding: '10px 13px', fontSize: 13, border: '1.5px solid #e2e8f0', borderRadius: 8, outline: 'none', fontFamily: 'inherit', color: '#0f172a', background: '#fff', boxSizing: 'border-box' };
 const Lbl = ({ children, required }) => <label style={{ fontSize: 12, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 5 }}>{children}{required && <span style={{ color: '#ef4444', marginLeft: 2 }}>*</span>}</label>;
 const SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'Free'];
+
+// Validation utilities
+const validatePrice = (price) => {
+  const p = parseFloat(price);
+  return !isNaN(p) && p > 0;
+};
+
+const validateDiscount = (discount, price) => {
+  const d = parseFloat(discount);
+  const p = parseFloat(price);
+  return !isNaN(d) && d >= 0 && d <= 90 && d < p; // discount must be less than price
+};
+
+const validateStock = (stock) => {
+  const s = parseInt(stock);
+  return !isNaN(s) && s >= 0;
+};
+
+const validateExtraPrice = (extra) => {
+  const e = parseFloat(extra);
+  return !isNaN(e) && e >= 0;
+};
 
 export default function ProductForm() {
   const navigate    = useNavigate();
@@ -27,8 +49,16 @@ export default function ProductForm() {
   const [existingImages, setExistingImages] = useState([]);  // from server when editing
   const [saving, setSaving]         = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [loadingProduct, setLoadingProduct] = useState(false);
 
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
+
+  // Cleanup object URLs on unmount
+  useEffect(() => {
+    return () => {
+      previews.forEach(url => URL.revokeObjectURL(url));
+    };
+  }, []);
 
   // Load categories
   useEffect(() => {
@@ -38,6 +68,7 @@ export default function ProductForm() {
   // Load existing product if editing
   useEffect(() => {
     if (!isEdit) return;
+    setLoadingProduct(true);
     api.get(`/seller/products/${id}`).then(r => {
       const prod = r.data;
       setForm({
@@ -62,7 +93,7 @@ export default function ProductForm() {
     }).catch(err => {
       toast.error(err.response?.data?.message || 'Failed to load product');
       navigate('/products');
-    });
+    }).finally(() => setLoadingProduct(false));
   }, [id, isEdit, navigate]);
 
   const onImageChange = (e) => {
@@ -89,10 +120,44 @@ export default function ProductForm() {
   const setVariant = (i, k, v) => setVariants(prev => prev.map((va, idx) => idx === i ? { ...va, [k]: v } : va));
 
   const buildFormData = () => {
-    if (!form.title) { toast.error('Product title is required'); return null; }
-    if (!form.price || isNaN(form.price)) { toast.error('Valid price is required'); return null; }
-    if (images.length === 0 && existingImages.length === 0) { toast.error('At least one image required'); return null; }
-    if (variants.length === 0) { toast.error('At least one size variant required'); return null; }
+    // Validate required fields
+    if (!form.title.trim()) {
+      toast.error('Product title is required');
+      return null;
+    }
+    if (form.title.trim().length < 5) {
+      toast.error('Product title must be at least 5 characters');
+      return null;
+    }
+    if (!form.price || !validatePrice(form.price)) {
+      toast.error('Price must be a number greater than 0 (e.g., 999)');
+      return null;
+    }
+    if (form.discount_percent && !validateDiscount(form.discount_percent, form.price)) {
+      toast.error('Discount must be 0-90% and less than the product price');
+      return null;
+    }
+    if (images.length === 0 && existingImages.length === 0) {
+      toast.error('At least one product image is required');
+      return null;
+    }
+    if (variants.length === 0) {
+      toast.error('At least one size variant is required');
+      return null;
+    }
+    
+    // Validate all variants
+    for (let i = 0; i < variants.length; i++) {
+      const v = variants[i];
+      if (!validateStock(v.stock)) {
+        toast.error(`Variant ${i + 1}: Stock must be a non-negative number`);
+        return null;
+      }
+      if (!validateExtraPrice(v.extra_price)) {
+        toast.error(`Variant ${i + 1}: Extra price must be a non-negative number`);
+        return null;
+      }
+    }
 
     const fd = new FormData();
     Object.entries(form).forEach(([k, v]) => { if (v !== '') fd.append(k, v); });
@@ -161,8 +226,16 @@ export default function ProductForm() {
           </div>
         </div>
 
+        {/* Loading state for edit mode */}
+        {loadingProduct && (
+          <div style={{ background: '#f8fafc', borderRadius: 14, padding: '40px 20px', textAlign: 'center' }}>
+            <div className="spinner" style={{ marginBottom: 12 }} />
+            <p style={{ color: '#9ca3af' }}>Loading product details...</p>
+          </div>
+        )}
+
         {/* Images */}
-        {section('Product Images', (
+        {!loadingProduct && section('Product Images', (
           <div>
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 12 }}>
               {/* Existing images */}
@@ -195,7 +268,7 @@ export default function ProductForm() {
         ))}
 
         {/* Basic Info */}
-        {section('Product Details', (
+        {!loadingProduct && section('Product Details', (
           <div style={{ display: 'grid', gap: 14 }}>
             <div>
               <Lbl required>Product Title</Lbl>
@@ -259,7 +332,7 @@ export default function ProductForm() {
         ))}
 
         {/* Variants */}
-        {section('Sizes & Stock', (
+        {!loadingProduct && section('Sizes & Stock', (
           <div>
             <div style={{ display: 'grid', gap: 8, marginBottom: 12 }}>
               {variants.map((v, i) => (
@@ -283,6 +356,7 @@ export default function ProductForm() {
         ))}
 
         {/* Action buttons */}
+        {!loadingProduct && (
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           <button onClick={() => save(false)} disabled={saving}
             style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '11px 22px', borderRadius: 9, border: '1.5px solid #0f172a', background: '#fff', color: '#0f172a', fontSize: 13, fontWeight: 700, cursor: 'pointer', opacity: saving ? 0.7 : 1 }}>
@@ -293,6 +367,7 @@ export default function ProductForm() {
             <Send size={14} /> {submitting ? 'Submitting…' : 'Save & Submit for Review'}
           </button>
         </div>
+        )}
       </div>
     </SellerLayout>
   );

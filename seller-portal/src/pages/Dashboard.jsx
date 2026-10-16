@@ -74,8 +74,16 @@ export default function Dashboard() {
     setLoading(true);
     try {
       const r = await api.get('/seller/dashboard');
-      setStats(r.data);
-    } catch { toast.error('Failed to load dashboard'); }
+      if (r.data && typeof r.data === 'object') {
+        setStats(r.data);
+      } else {
+        console.error('Invalid dashboard response:', r.data);
+        toast.error('Dashboard data format error');
+      }
+    } catch (err) {
+      console.error('Dashboard fetch error:', err.message, err.response?.data);
+      toast.error(err.response?.data?.message || 'Failed to load dashboard');
+    }
     finally { setLoading(false); }
   }, []);
 
@@ -91,7 +99,7 @@ export default function Dashboard() {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
           <div>
             <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: '#111827' }}>
-              {profile?.brand_name ? `Welcome, ${profile.brand_name}` : 'Seller Dashboard'}
+              {profile?.brand_name && profile.brand_name.trim() ? `Welcome, ${profile.brand_name}` : 'Seller Dashboard'}
             </h1>
             <p style={{ margin: '4px 0 0', fontSize: 13, color: '#6b7280' }}>Here's your performance overview.</p>
           </div>
@@ -111,12 +119,12 @@ export default function Dashboard() {
           </div>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))', gap: 14 }}>
-            <StatCard icon={Package}     label="Total Products"  value={prod.total}    sub={`${prod.approved} approved`}  color="#6366f1" bg="#eef2ff" />
-            <StatCard icon={Clock}       label="Pending Review"  value={prod.pending_review} sub="awaiting admin"        color="#f59e0b" bg="#fffbeb" />
-            <StatCard icon={ShoppingCart} label="Total Orders"   value={stats?.orders?.total} sub="all time"             color="#0891b2" bg="#ecfeff" />
-            <StatCard icon={TrendingUp}  label="Revenue"         value={`₹${Number(rev.total_revenue||0).toLocaleString('en-IN',{maximumFractionDigits:0})}`} sub="gross"  color="#16a34a" bg="#f0fdf4" />
-            <StatCard icon={Wallet}      label="My Earnings"     value={`₹${Number(rev.total_payout||0).toLocaleString('en-IN',{maximumFractionDigits:0})}`} sub="paid out" color="#7c3aed" bg="#f5f3ff" />
-            <StatCard icon={CheckCircle} label="Pending Payout"  value={`₹${Number(stats?.pending_payout||0).toLocaleString('en-IN',{maximumFractionDigits:0})}`} sub="to be paid" color="#c9a96e" bg="#fffbeb" />
+            <StatCard icon={Package}     label="Total Products"  value={prod?.total ?? 0}    sub={`${prod?.approved ?? 0} approved`}  color="#6366f1" bg="#eef2ff" />
+            <StatCard icon={Clock}       label="Pending Review"  value={prod?.pending_review ?? 0} sub="awaiting admin"        color="#f59e0b" bg="#fffbeb" />
+            <StatCard icon={ShoppingCart} label="Total Orders"   value={stats?.orders?.total ?? 0} sub="all time"             color="#0891b2" bg="#ecfeff" />
+            <StatCard icon={TrendingUp}  label="Revenue"         value={`₹${Number(rev?.total_revenue || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`} sub="gross"  color="#16a34a" bg="#f0fdf4" />
+            <StatCard icon={Wallet}      label="My Earnings"     value={`₹${Number(rev?.total_payout || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`} sub="paid out" color="#7c3aed" bg="#f5f3ff" />
+            <StatCard icon={CheckCircle} label="Pending Payout"  value={`₹${Number(stats?.pending_payout || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`} sub="to be paid" color="#c9a96e" bg="#fffbeb" />
           </div>
         )}
 

@@ -21,16 +21,20 @@ export default function Payouts() {
     setLoading(true);
     try {
       const r = await api.get('/seller/payouts');
-      setPayouts(r.data || []);
-    } catch { toast.error('Failed to load payouts'); }
+      const payoutsData = Array.isArray(r.data) ? r.data : [];
+      setPayouts(payoutsData);
+    } catch (err) {
+      console.error('Payouts fetch error:', err.message, err.response?.data);
+      toast.error(err.response?.data?.message || 'Failed to load payouts');
+    }
     finally { setLoading(false); }
   }, []);
 
   useEffect(() => { fetch(); }, [fetch]);
 
-  const total = payouts.reduce((s, p) => s + Number(p.net_amount), 0);
-  const paid  = payouts.filter(p => p.status === 'paid').reduce((s, p) => s + Number(p.net_amount), 0);
-  const pending = payouts.filter(p => p.status === 'pending').reduce((s, p) => s + Number(p.net_amount), 0);
+  const total = payouts.reduce((s, p) => s + Number(p?.net_amount || 0), 0);
+  const paid  = payouts.filter(p => p?.status === 'paid').reduce((s, p) => s + Number(p?.net_amount || 0), 0);
+  const pending = payouts.filter(p => p?.status === 'pending').reduce((s, p) => s + Number(p?.net_amount || 0), 0);
 
   return (
     <SellerLayout>
@@ -40,9 +44,9 @@ export default function Payouts() {
         {/* Summary */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(160px,1fr))', gap: 12 }}>
           {[
-            { label: 'Total Earned', value: `₹${total.toLocaleString('en-IN',{maximumFractionDigits:2})}`, color: '#0891b2', bg: '#ecfeff' },
-            { label: 'Paid Out', value: `₹${paid.toLocaleString('en-IN',{maximumFractionDigits:2})}`, color: '#16a34a', bg: '#f0fdf4' },
-            { label: 'Pending', value: `₹${pending.toLocaleString('en-IN',{maximumFractionDigits:2})}`, color: '#d97706', bg: '#fffbeb' },
+            { label: 'Total Earned', value: `₹${Number(total).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`, color: '#0891b2', bg: '#ecfeff' },
+            { label: 'Paid Out', value: `₹${Number(paid).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`, color: '#16a34a', bg: '#f0fdf4' },
+            { label: 'Pending', value: `₹${Number(pending).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`, color: '#d97706', bg: '#fffbeb' },
           ].map(({ label, value, color, bg }) => (
             <div key={label} style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 12, padding: '16px 20px' }}>
               <div style={{ fontSize: 11, color: '#9ca3af', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>{label}</div>
@@ -74,15 +78,15 @@ export default function Payouts() {
                   const sc = STATUS_COLORS[p.status] || STATUS_COLORS.pending;
                   return (
                     <tr key={p.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                      <td style={{ padding: '12px 16px', color: '#374151' }}>{new Date(p.created_at).toLocaleDateString('en-IN')}</td>
-                      <td style={{ padding: '12px 16px', fontWeight: 800, color: '#111827' }}>₹{Number(p.net_amount).toLocaleString('en-IN',{maximumFractionDigits:2})}</td>
+                      <td style={{ padding: '12px 16px', color: '#374151' }}>{p?.created_at ? new Date(p.created_at).toLocaleDateString('en-IN') : '—'}</td>
+                      <td style={{ padding: '12px 16px', fontWeight: 800, color: '#111827' }}>₹{Number(p?.net_amount || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</td>
                       <td style={{ padding: '12px 16px', color: '#6b7280', fontSize: 12 }}>
-                        {p.period_start && p.period_end ? `${p.period_start} – ${p.period_end}` : '—'}
+                        {p?.period_start && p?.period_end ? `${p.period_start} – ${p.period_end}` : '—'}
                       </td>
-                      <td style={{ padding: '12px 16px', color: '#374151' }}>{p.payment_method || '—'}</td>
-                      <td style={{ padding: '12px 16px', color: '#6b7280', maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.transaction_ref || '—'}</td>
+                      <td style={{ padding: '12px 16px', color: '#374151' }}>{p?.payment_method || '—'}</td>
+                      <td style={{ padding: '12px 16px', color: '#6b7280', maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p?.transaction_ref || '—'}</td>
                       <td style={{ padding: '12px 16px' }}>
-                        <span style={{ padding: '3px 10px', borderRadius: 999, fontSize: 11, fontWeight: 700, background: sc.bg, color: sc.color }}>{p.status}</span>
+                        <span style={{ padding: '3px 10px', borderRadius: 999, fontSize: 11, fontWeight: 700, background: sc.bg, color: sc.color }}>{p?.status || 'unknown'}</span>
                       </td>
                     </tr>
                   );

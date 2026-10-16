@@ -5,7 +5,7 @@
  * @module controllers/whatsappController
  */
 
-const pool = require('../config/db');
+const { pool } = require('../config/db');
 const whatsappService = require('../services/whatsappService');
 
 /**

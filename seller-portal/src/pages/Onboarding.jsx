@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Navigate } from 'react-router-dom';
 import { Store, MapPin, User, ChevronRight, CheckCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../utils/api';
@@ -14,9 +14,45 @@ const Lbl = ({ children, required }) => (
 
 const STEPS = ['Business Info', 'Address', 'Bank Details'];
 
+// Validation utilities for Indian business documents
+const validateGST = (gst) => {
+  if (!gst) return true; // optional
+  // GST format: 2 digit state + 10 digit PAN + 1 entity code + 1 checksum = 15 chars
+  return /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9]{1}[Z]{1}[0-9]{1}$/.test(gst.toUpperCase().trim());
+};
+
+const validatePAN = (pan) => {
+  if (!pan) return true; // optional
+  // PAN format: 5 letters, 4 digits, 1 letter = 10 chars
+  return /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(pan.toUpperCase().trim());
+};
+
+const validatePincode = (pincode) => {
+  // Indian pincode: exactly 6 digits
+  return /^[0-9]{6}$/.test(pincode.trim());
+};
+
+const validateBankAccount = (account) => {
+  if (!account) return true; // optional
+  // Bank account: 9-18 digits
+  return /^[0-9]{9,18}$/.test(account.trim());
+};
+
+const validateIFSC = (ifsc) => {
+  if (!ifsc) return true; // optional
+  // IFSC: 4 letters + 0 + 6 alphanumeric = 11 chars
+  return /^[A-Z]{4}0[A-Z0-9]{6}$/.test(ifsc.toUpperCase().trim());
+};
+
 export default function Onboarding() {
-  const { refreshProfile } = useSellerAuth();
+  const { profile, refreshProfile } = useSellerAuth();
   const navigate = useNavigate();
+  
+  // If profile already exists, redirect to dashboard
+  if (profile && profile.id) {
+    return <Navigate to="/dashboard" replace />;
+  }
+  
   const [step, setStep] = useState(0);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
@@ -31,8 +67,79 @@ export default function Onboarding() {
   const next = () => setStep(s => Math.min(s + 1, STEPS.length - 1));
   const prev = () => setStep(s => Math.max(s - 1, 0));
 
+  // Validate current step before proceeding
+  const validateStep = () => {
+    if (step === 0) {
+      // Step 0: Business Info
+      if (!form.brand_name.trim()) {
+        toast.error('Brand name is required');
+        return false;
+      }
+      if (form.brand_name.trim().length < 3) {
+        toast.error('Brand name must be at least 3 characters');
+        return false;
+      }
+      if (form.gst_number && !validateGST(form.gst_number)) {
+        toast.error('GST number format invalid (e.g., 22AAAAA0000A1Z5)');
+        return false;
+      }
+      if (form.pan_number && !validatePAN(form.pan_number)) {
+        toast.error('PAN format invalid (e.g., AAAAA0000A)');
+        return false;
+      }
+      return true;
+    }
+
+    if (step === 1) {
+      // Step 1: Address
+      if (!form.pickup_address.trim()) {
+        toast.error('Street address is required');
+        return false;
+      }
+      if (!form.pickup_city.trim()) {
+        toast.error('City is required');
+        return false;
+      }
+      if (!form.pickup_state.trim()) {
+        toast.error('State is required');
+        return false;
+      }
+      if (!form.pickup_pincode.trim()) {
+        toast.error('Pincode is required');
+        return false;
+      }
+      if (!validatePincode(form.pickup_pincode)) {
+        toast.error('Pincode must be exactly 6 digits (e.g., 400001)');
+        return false;
+      }
+      return true;
+    }
+
+    if (step === 2) {
+      // Step 2: Bank Details - all optional but if provided, must be valid
+      if (form.bank_account_number && !validateBankAccount(form.bank_account_number)) {
+        toast.error('Bank account must be 9-18 digits');
+        return false;
+      }
+      if (form.bank_ifsc && !validateIFSC(form.bank_ifsc)) {
+        toast.error('IFSC format invalid (e.g., SBIN0001234)');
+        return false;
+      }
+      return true;
+    }
+
+    return true;
+  };
+
+  const handleNext = () => {
+    if (validateStep()) {
+      next();
+    }
+  };
+
   const submit = async () => {
-    if (!form.brand_name) return toast.error('Brand name is required');
+    if (!validateStep()) return;
+    
     setSaving(true);
     try {
       await api.post('/seller/register', form);
@@ -176,7 +283,7 @@ export default function Onboarding() {
               Back
             </button>
             {step < STEPS.length - 1 ? (
-              <button onClick={next} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 24px', borderRadius: 8, border: 'none', background: '#0f172a', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+              <button onClick={handleNext} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 24px', borderRadius: 8, border: 'none', background: '#0f172a', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
                 Next <ChevronRight size={14} />
               </button>
             ) : (
