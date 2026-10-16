@@ -206,7 +206,7 @@ class WhatsAppService {
         
         // Connected
         if (connection === 'open') {
-            console.log(`✅ WhatsApp connected: ${instanceName}`);
+            console.log(`✅ ✅ ✅ WhatsApp SUCCESSFULLY CONNECTED: ${instanceName} ✅ ✅ ✅`);
             
             instance.state = 'connected';
             instance.connectedAt = new Date();
@@ -215,6 +215,8 @@ class WhatsAppService {
             // Get phone number
             const phoneNumber = instance.socket.user?.id?.split(':')[0] || null;
             instance.phoneNumber = phoneNumber;
+            
+            console.log(`📞 Connected phone number: ${phoneNumber}`);
             
             await pool.query(
                 `UPDATE wa_instances 
@@ -226,6 +228,8 @@ class WhatsAppService {
                  WHERE instance_name = $2`,
                 [phoneNumber, instanceName]
             );
+            
+            console.log(`💾 Database updated - Instance ${instanceName} marked as CONNECTED`);
         }
         
         // Disconnected

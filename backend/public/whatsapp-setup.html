@@ -184,6 +184,12 @@
         .status.success {
             background: #e8f5e9;
             color: #388e3c;
+            animation: successPulse 0.6s ease-in-out;
+        }
+
+        @keyframes successPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
         }
 
         .status.error {
@@ -456,8 +462,8 @@
 
                 showStatus(statusDiv, 'info', '📱 Generating QR code...');
 
-                // Poll for QR code
-                checkInterval = setInterval(checkStatus, 3000);
+                // Poll for QR code every 2 seconds
+                checkInterval = setInterval(checkStatus, 2000);
                 checkStatus(); // Check immediately
 
             } catch (error) {
@@ -496,14 +502,22 @@
                         clearInterval(checkInterval);
                         qrSpinner.style.display = 'none';
                         qrImg.style.display = 'none';
-                        showStatus(statusDiv, 'success', '✅ WhatsApp connected successfully!');
+                        showStatus(statusDiv, 'success', '🎉 WhatsApp connected successfully!');
+                        
+                        // Play success sound (optional - browser may block)
+                        try {
+                            const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYHGGS57+ibUBELTKXh8K1lHgU9k9n0yXQvBSt9zPLaizsIGGi58Oadj==');
+                            audio.play().catch(() => {});
+                        } catch(e) {}
                         
                         setTimeout(() => {
                             document.getElementById('step2').classList.remove('active');
                             document.getElementById('step3').classList.add('active');
                             document.getElementById('connectedPhone').textContent = 
-                                instance.phoneNumber || 'Connected!';
+                                instance.phoneNumber ? `📱 ${instance.phoneNumber}` : '✅ Connected!';
                         }, 1500);
+                    } else if (instance.status === 'connecting') {
+                        showStatus(statusDiv, 'info', '⏳ Connecting... (QR scanned, waiting for confirmation)');
                     }
                 }
             } catch (error) {
