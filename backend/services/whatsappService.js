@@ -38,25 +38,48 @@ class WhatsAppService {
         this.messagesSentThisMinute = 0;
         this.authPath = path.join(__dirname, '..', 'whatsapp_sessions');
         
-        // Create sessions directory
-        this.initializeSessionsDirectory();
+        // Initialize async - don't block constructor
+        this.initializeAsync();
         
-        // Reset rate limit counter every minute
-        setInterval(() => {
-            this.messagesSentThisMinute = 0;
-        }, 60000);
-        
-        // Process queue every 3 seconds
-        setInterval(() => this.processQueue(), 3000);
-        
-        console.log('✅ WhatsApp Service initialized');
+        console.log('✅ WhatsApp Service initialized (async initialization in progress)');
     }
     
-    async initializeSessionsDirectory() {
+    async initializeAsync() {
         try {
-            await fs.mkdir(this.authPath, { recursive: true });
+            // Create sessions directory
+            await this.initializeSessionsDirectory();
+            
+            // Reset rate limit counter every minute
+            setInterval(() => {
+                this.messagesSentThisMinute = 0;
+            }, 60000);
+            
+            // Process queue every 3 seconds
+            setInterval(() => this.processQueue(), 3000);
+            
+            console.log('✅ WhatsApp Service fully initialized');
         } catch (error) {
-            console.error('Error creating sessions directory:', error);
+            console.error('⚠️ WhatsApp Service initialization error (non-fatal):', error.message);
+        }
+    }
+    
+    async initializeAsync() {
+        try {
+            // Create sessions directory
+            await fs.mkdir(this.authPath, { recursive: true });
+            
+            // Reset rate limit counter every minute
+            setInterval(() => {
+                this.messagesSentThisMinute = 0;
+            }, 60000);
+            
+            // Process queue every 3 seconds
+            setInterval(() => this.processQueue(), 3000);
+            
+            this.initialized = true;
+            console.log('✅ WhatsApp Service fully initialized');
+        } catch (error) {
+            console.error('⚠️ WhatsApp Service initialization error (non-fatal):', error.message);
         }
     }
     

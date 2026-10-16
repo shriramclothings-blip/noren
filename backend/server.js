@@ -68,7 +68,12 @@ app.use(express.json({ limit: '1024mb' }));
 app.use(express.urlencoded({ limit: '1024mb', extended: true }));
 // ── WhatsApp Setup Page (public access) ──────────────────────────────────────
 app.get('/whatsapp-setup.html', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'whatsapp-setup.html'));
+  const filePath = path.join(__dirname, 'public', 'whatsapp-setup.html');
+  if (require('fs').existsSync(filePath)) {
+    res.sendFile(filePath);
+  } else {
+    res.status(404).send('WhatsApp setup page not found. Please ensure backend/public/whatsapp-setup.html exists.');
+  }
 });
 
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')), async (req, res) => {
@@ -216,7 +221,16 @@ app.use('/api/support', require('./routes/support'));
 app.use('/api/email', require('./routes/emailPortal'));
 
 // ── WhatsApp Integration API ──────────────────────────────────────────────────
-app.use('/api/whatsapp', require('./routes/whatsapp'));
+// Lazy load to prevent blocking server startup
+app.use('/api/whatsapp', (req, res, next) => {
+  try {
+    const whatsappRoutes = require('./routes/whatsapp');
+    whatsappRoutes(req, res, next);
+  } catch (error) {
+    console.error('WhatsApp route error:', error);
+    res.status(500).json({ success: false, message: 'WhatsApp service temporarily unavailable' });
+  }
+});
 
 // ── Real-time Monitor API + Dashboard ────────────────────────────────────────
 app.use('/api/monitor', require('./routes/monitor'));
