@@ -585,17 +585,18 @@ initDB()
   .then(async () => {
     console.log('✅ Database connection established');
     dbInitialized = true;
-    // Auto-run email portal migration after DB is ready
-    const { autoMigrate } = require('./autoMigrate');
-    try {
-      await autoMigrate();
-      console.log('✅ Database migrations completed');
-    } catch (migErr) {
-      console.warn('⚠️  Migration skipped:', migErr.message);
-      if (migErr.message && migErr.message.includes('quota')) {
-        console.error('❌ DATABASE QUOTA EXCEEDED - Please upgrade your Neon plan or switch database');
-      }
-    }
+    // Run migrations in background after DB is ready (non-blocking)
+    setTimeout(() => {
+      const { autoMigrate } = require('./autoMigrate');
+      autoMigrate().then(() => {
+        console.log('✅ Database migrations completed');
+      }).catch(migErr => {
+        console.warn('⚠️  Migration skipped:', migErr.message);
+        if (migErr.message && migErr.message.includes('quota')) {
+          console.error('❌ DATABASE QUOTA EXCEEDED - Please upgrade your Neon plan or switch database');
+        }
+      });
+    }, 1000); // Run 1 second after DB connects
   })
   .catch(err => {
     console.warn(`⚠️  initDB warning (non-fatal): ${err.message} — server will still start, failover active`);
