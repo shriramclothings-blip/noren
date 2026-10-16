@@ -488,13 +488,22 @@
                 if (data.success && data.instance) {
                     const instance = data.instance;
 
+                    // Show any errors
+                    if (instance.lastError) {
+                        console.error('WhatsApp Error:', instance.lastError);
+                        showStatus(statusDiv, 'error', `❌ Error: ${instance.lastError}`);
+                    }
+
                     if (instance.qrCode && instance.status !== 'connected') {
                         // Show QR code
                         qrSpinner.style.display = 'none';
                         qrImg.src = instance.qrCode;
                         qrImg.style.display = 'block';
                         qrInstructions.style.display = 'block';
-                        showStatus(statusDiv, 'warning', '📱 Scan the QR code with WhatsApp');
+                        
+                        if (!instance.lastError) {
+                            showStatus(statusDiv, 'warning', '📱 Scan the QR code with WhatsApp');
+                        }
                     }
 
                     if (instance.status === 'connected') {
@@ -518,10 +527,15 @@
                         }, 1500);
                     } else if (instance.status === 'connecting') {
                         showStatus(statusDiv, 'info', '⏳ Connecting... (QR scanned, waiting for confirmation)');
+                    } else if (instance.status === 'reconnecting') {
+                        showStatus(statusDiv, 'warning', '🔄 Reconnecting to WhatsApp...');
                     }
+                } else {
+                    showStatus(statusDiv, 'error', `❌ ${data.message || 'Failed to check status'}`);
                 }
             } catch (error) {
                 console.error('Status check error:', error);
+                showStatus(statusDiv, 'error', `❌ Connection error: ${error.message}`);
             }
         }
 

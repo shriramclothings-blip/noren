@@ -157,86 +157,139 @@ class WhatsAppService {
      * Handle connection updates (QR code, connected, disconnected)
      */
     async handleConnectionUpdate(instanceName, update) {
-        const { connection, lastDisconnect, qr } = update;
-        const instance = this.instances.get(instanceName);
-        
-        if (!instance) return;
-        
-        // QR Code received
-        if (qr) {
-            console.log(`📱 QR Code generated for ${instanceName}`);
+        try {
+            const { connection, lastDisconnect, qr } = update;
+            const instance = this.instances.get(instanceName);
             
-            // Generate QR code data URL
-            const QRCode = require('qrcode');
-            const qrDataUrl = await QRCode.toDataURL(qr);
+            if (!instance) {
+                console.error(`❌ Instance ${instanceName} not found in memory`);
+                return;
+            }
             
-            instance.qr = qrDataUrl;
-            instance.state = 'qr_generated';
+            console.log(`📡 Connection update for ${instanceName}:`, {
+                connection,
+                hasQR: !!qr,
+                hasError: !!lastDisconnect?.error
+            });
             
-            // Save to database
-            await pool.query(
-                `UPDATE wa_instances 
-                 SET qr_code = $1, qr_generated_at = CURRENT_TIMESTAMP, 
-                     status = 'connecting', updated_at = CURRENT_TIMESTAMP 
-                 WHERE instance_name = $2`,
-                [qrDataUrl, instanceName]
-            );
-        }
-        
-        // Connected
-        if (connection === 'open') {
-            console.log(`✅ ✅ ✅ WhatsApp SUCCESSFULLY CONNECTED: ${instanceName} ✅ ✅ ✅`);
-            
-            instance.state = 'connected';
-            instance.connectedAt = new Date();
-            instance.qr = null;
-            
-            // Get phone number
-            const phoneNumber = instance.socket.user?.id?.split(':')[0] || null;
-            instance.phoneNumber = phoneNumber;
-            
-            console.log(`📞 Connected phone number: ${phoneNumber}`);
-            
-            await pool.query(
-                `UPDATE wa_instances 
-                 SET status = 'connected', 
-                     phone_number = $1,
-                     connected_at = CURRENT_TIMESTAMP,
-                     qr_code = NULL,
-                     updated_at = CURRENT_TIMESTAMP 
-                 WHERE instance_name = $2`,
-                [phoneNumber, instanceName]
-            );
-            
-            console.log(`💾 Database updated - Instance ${instanceName} marked as CONNECTED`);
-        }
-        
-        // Disconnected
-        if (connection === 'close') {
-            const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
-            
-            console.log(`❌ WhatsApp disconnected: ${instanceName}`, 
-                       shouldReconnect ? '(Reconnecting...)' : '(Logged out)');
-            
-            if (shouldReconnect) {
-                // Reconnect after 5 seconds
-                setTimeout(() => {
-                    console.log(`🔄 Reconnecting ${instanceName}...`);
-                    this.createInstance(instanceName);
-                }, 5000);
-            } else {
-                // Logged out - remove instance
-                this.instances.delete(instanceName);
+            // QR Code received
+            if (qr) {
+                console.log(`📱 QR Code generated for ${instanceName}`);
                 
-                await pool.query(
-                    `UPDATE wa_instances 
-                     SET status = 'disconnected', 
-                         disconnected_at = CURRENT_TIMESTAMP,
-                         qr_code = NULL,
-                         updated_at = CURRENT_TIMESTAMP 
-                     WHERE instance_name = $1`,
-                    [instanceName]
-                );
+                try {
+                    // Generate QR code data URL
+                    const QRCode = require('qrcode');
+                    const qrDataUrl = await QRCode.toDataURL(qr);
+                    
+                    instance.qr = qrDataUrl;
+                    instance.state = 'qr_generated';
+                    instance.lastError = null;
+                    
+                    // Save to database
+                    await pool.query(
+                        `UPDATE wa_instances 
+                         SET qr_code = $1, qr_generated_at = CURRENT_TIMESTAMP, 
+                             status = 'connecting', updated_at = CURRENT_TIMESTAMP 
+                         WHERE instance_name = $2`,
+                        [qrDataUrl, instanceName]
+                    );
+                    
+                    console.log(`✅ QR code saved for ${instanceName}`);
+                } catch (qrError) {
+                    console.error(`❌ Error generating QR for ${instanceName}:`, qrError);
+                    instance.lastError = `QR generation failed: ${qrError.message}`;
+                }
+            }
+            
+            // Connected
+            if (connection === 'open') {
+                console.log(`✅ ✅ ✅ WhatsApp SUCCESSFULLY CONNECTED: ${instanceName} ✅ ✅ ✅`);
+                
+                try {
+                    instance.state = 'connected';
+                    instance.connectedAt = new Date();
+                    instance.qr = null;
+                    instance.lastError = null;
+                    
+                    // Get phone number
+                    const phoneNumber = instance.socket.user?.id?.split(':')[0] || null;
+                    instance.phoneNumber = phoneNumber;
+                    
+                    console.log(`📞 Connected phone number: ${phoneNumber}`);
+                    
+                    await pool.query(
+                        `UPDATE wa_instances 
+                         SET status = 'connected', 
+                             phone_number = $1,
+                             connected_at = CURRENT_TIMESTAMP,
+                             qr_code = NULL,
+                             updated_at = CURRENT_TIMESTAMP 
+                         WHERE instance_name = $2`,
+                        [phoneNumber, instanceName]
+                    );
+                    
+                    console.log(`💾 Database updated - Instance ${instanceName} marked as CONNECTED`);
+                } catch (connError) {
+                    console.error(`❌ Error saving connection status for ${instanceName}:`, connError);
+                    instance.lastError = `Connection save failed: ${connError.message}`;
+                }
+            }
+            
+            // Disconnected
+            if (connection === 'close') {
+                const statusCode = lastDisconnect?.error?.output?.statusCode;
+                const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
+                const errorMessage = lastDisconnect?.error?.message || 'Unknown error';
+                
+                console.log(`❌ WhatsApp disconnected: ${instanceName}`, {
+                    statusCode,
+                    errorMessage,
+                    shouldReconnect
+                });
+                
+                instance.lastError = `Disconnected: ${errorMessage} (Code: ${statusCode || 'N/A'})`;
+                
+                if (shouldReconnect) {
+                    console.log(`🔄 Will reconnect ${instanceName} in 5 seconds...`);
+                    instance.state = 'reconnecting';
+                    
+                    // Update database
+                    await pool.query(
+                        `UPDATE wa_instances 
+                         SET status = 'reconnecting', 
+                             updated_at = CURRENT_TIMESTAMP 
+                         WHERE instance_name = $1`,
+                        [instanceName]
+                    );
+                    
+                    // Reconnect after 5 seconds
+                    setTimeout(() => {
+                        console.log(`🔄 Reconnecting ${instanceName}...`);
+                        this.createInstance(instanceName).catch(err => {
+                            console.error(`❌ Reconnection failed for ${instanceName}:`, err);
+                        });
+                    }, 5000);
+                } else {
+                    console.log(`🚪 ${instanceName} logged out - not reconnecting`);
+                    // Logged out - remove instance
+                    this.instances.delete(instanceName);
+                    
+                    await pool.query(
+                        `UPDATE wa_instances 
+                         SET status = 'disconnected', 
+                             disconnected_at = CURRENT_TIMESTAMP,
+                             qr_code = NULL,
+                             updated_at = CURRENT_TIMESTAMP 
+                         WHERE instance_name = $1`,
+                        [instanceName]
+                    );
+                }
+            }
+        } catch (error) {
+            console.error(`❌ CRITICAL ERROR in handleConnectionUpdate for ${instanceName}:`, error);
+            const instance = this.instances.get(instanceName);
+            if (instance) {
+                instance.lastError = `Critical error: ${error.message}`;
             }
         }
     }
@@ -539,7 +592,8 @@ class WhatsAppService {
                 phoneNumber: instance?.phoneNumber || dbInstance.rows[0].phone_number,
                 qrCode: instance?.qr || dbInstance.rows[0].qr_code,
                 connectedAt: dbInstance.rows[0].connected_at,
-                isActive: !!instance
+                isActive: !!instance,
+                lastError: instance?.lastError || null
             }
         };
     }
