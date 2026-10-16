@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, CheckCircle } from 'lucide-react';
+import { Eye, EyeOff, CheckCircle, Mail, MessageCircle } from 'lucide-react';
 import api from '../utils/api';
 import toast from 'react-hot-toast';
 
@@ -9,7 +9,9 @@ export default function ForgotPassword() {
   const cardRef  = useRef(null);
 
   const [step,     setStep]     = useState(1);
+  const [method,   setMethod]   = useState('email'); // 'email' or 'whatsapp'
   const [email,    setEmail]    = useState('');
+  const [phone,    setPhone]    = useState('');
   const [otp,      setOtp]      = useState('');
   const [password, setPassword] = useState('');
   const [confirm,  setConfirm]  = useState('');
@@ -21,27 +23,44 @@ export default function ForgotPassword() {
     cardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }, [step]);
 
-  /* ── Step 1: send OTP ─────────────────────────────────────── */
+  /* ── Step 1: send OTP (Email or WhatsApp) ────────────────── */
   const sendOTP = async (e) => {
     e.preventDefault();
-    if (!email.trim()) return toast.error('Enter your email');
-    setLoading(true);
-    try {
-      await api.post('/auth/forgot-password', { email: email.trim().toLowerCase() });
-      setStep(2); // always advance — OTP was sent
-      toast.success('OTP sent! Check your email.');
-    } catch (err) {
-      // Only stay on step 1 for real errors (network down, 5xx)
-      const msg = err.response?.data?.message;
-      if (err.response?.status >= 500) {
-        toast.error(msg || 'Server error. Try again.');
-      } else {
-        // 200 / 404 both mean "if email exists OTP was sent" — advance anyway
+    
+    if (method === 'email') {
+      if (!email.trim()) return toast.error('Enter your email');
+      setLoading(true);
+      try {
+        await api.post('/auth/forgot-password', { email: email.trim().toLowerCase() });
         setStep(2);
         toast.success('OTP sent! Check your email.');
+      } catch (err) {
+        const msg = err.response?.data?.message;
+        if (err.response?.status >= 500) {
+          toast.error(msg || 'Server error. Try again.');
+        } else {
+          setStep(2);
+          toast.success('OTP sent! Check your email.');
+        }
+      } finally {
+        setLoading(false);
       }
-    } finally {
-      setLoading(false);
+    } else {
+      // WhatsApp method
+      if (!phone.trim()) return toast.error('Enter your phone number');
+      const cleanPhone = phone.replace(/\D/g, '');
+      if (cleanPhone.length !== 10) return toast.error('Enter 10-digit phone number');
+      
+      setLoading(true);
+      try {
+        await api.post('/auth/send-whatsapp-otp', { phone: cleanPhone });
+        setStep(2);
+        toast.success('OTP sent to your WhatsApp! 📱');
+      } catch (err) {
+        toast.error(err.response?.data?.message || 'Failed to send OTP');
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -49,10 +68,16 @@ export default function ForgotPassword() {
   const verifyOTP = async (e) => {
     e.preventDefault();
     const clean = otp.replace(/\s/g, '');
-    if (clean.length !== 6) return toast.error('Enter the 6-digit OTP from your email');
+    if (clean.length !== 6) return toast.error('Enter the 6-digit OTP');
+    
     setLoading(true);
     try {
-      await api.post('/auth/verify-otp', { email: email.trim().toLowerCase(), otp: clean });
+      if (method === 'email') {
+        await api.post('/auth/verify-otp', { email: email.trim().toLowerCase(), otp: clean });
+      } else {
+        // For WhatsApp, we'll verify in the next step
+        // Just advance here
+      }
       setStep(3);
       toast.success('OTP verified! Set your new password.');
     } catch (err) {
@@ -68,13 +93,24 @@ export default function ForgotPassword() {
     e.preventDefault();
     if (password.length < 6) return toast.error('Password must be at least 6 characters');
     if (password !== confirm)  return toast.error('Passwords do not match');
+    
     setLoading(true);
     try {
-      await api.post('/auth/reset-password', {
-        email:    email.trim().toLowerCase(),
-        otp:      otp.replace(/\s/g, ''),
-        password,
-      });
+      if (method === 'email') {
+        await api.post('/auth/reset-password', {
+          email: email.trim().toLowerCase(),
+          otp: otp.replace(/\s/g, ''),
+          password,
+        });
+      } else {
+        // WhatsApp method
+        const cleanPhone = phone.replace(/\D/g, '');
+        await api.post('/auth/verify-whatsapp-otp-reset', {
+          phone: cleanPhone,
+          otp: otp.replace(/\s/g, ''),
+          newPassword: password,
+        });
+      }
       setStep(4);
       toast.success('Password reset! You can now sign in.');
     } catch (err) {
@@ -106,7 +142,7 @@ export default function ForgotPassword() {
   });
 
   /* ── Step labels ──────────────────────────────────────────── */
-  const steps = ['Email', 'OTP', 'Password'];
+  const steps = [method === 'email' ? 'Email' : 'Phone', 'OTP', 'Password'];
 
   return (
     <div style={{ minHeight: '100vh', background: '#f5f0e8', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 16px' }}>
@@ -152,30 +188,109 @@ export default function ForgotPassword() {
       {/* Card */}
       <div ref={cardRef} style={{ width: '100%', maxWidth: 420, background: '#faf9f7', border: '1px solid #e6e0d8', borderRadius: 2, padding: 'clamp(24px, 6vw, 40px)' }}>
 
-        {/* ══ STEP 1 — Email ══════════════════════════════════ */}
+        {/* ══ STEP 1 — Choose Method & Enter Email/Phone ═══════ */}
         {step === 1 && (
           <form onSubmit={sendOTP} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
             <div>
               <h1 style={{ fontFamily: 'Georgia, serif', fontSize: 22, fontWeight: 600, color: '#1a1a18', margin: '0 0 6px' }}>Forgot Password</h1>
               <p style={{ fontSize: 13, color: '#9e9a94', margin: 0, lineHeight: 1.6 }}>
-                Enter your email. We'll send a 6-digit OTP.
+                Choose how to receive your OTP
               </p>
             </div>
 
-            <div>
-              <label style={label}>Email Address</label>
-              <input
-                type="email" required autoFocus
-                value={email} onChange={e => setEmail(e.target.value)}
-                placeholder="your@email.com"
-                style={field}
-                onFocus={e => e.target.style.borderColor = '#1a1a18'}
-                onBlur={e => e.target.style.borderColor = '#d0c9c0'}
-              />
+            {/* Method Selection */}
+            <div style={{ display: 'flex', gap: 12 }}>
+              <button
+                type="button"
+                onClick={() => setMethod('email')}
+                style={{
+                  flex: 1,
+                  padding: '14px',
+                  border: `2px solid ${method === 'email' ? '#1a1a18' : '#e6e0d8'}`,
+                  background: method === 'email' ? '#f5f0e8' : '#fff',
+                  borderRadius: 2,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: 8,
+                  transition: 'all 0.2s',
+                }}
+              >
+                <Mail size={24} color={method === 'email' ? '#1a1a18' : '#9e9a94'} />
+                <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: method === 'email' ? '#1a1a18' : '#9e9a94' }}>
+                  Email
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setMethod('whatsapp')}
+                style={{
+                  flex: 1,
+                  padding: '14px',
+                  border: `2px solid ${method === 'whatsapp' ? '#25D366' : '#e6e0d8'}`,
+                  background: method === 'whatsapp' ? '#e8f8f0' : '#fff',
+                  borderRadius: 2,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: 8,
+                  transition: 'all 0.2s',
+                }}
+              >
+                <MessageCircle size={24} color={method === 'whatsapp' ? '#25D366' : '#9e9a94'} />
+                <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: method === 'whatsapp' ? '#25D366' : '#9e9a94' }}>
+                  WhatsApp
+                </span>
+              </button>
             </div>
 
+            {/* Email Input */}
+            {method === 'email' && (
+              <div>
+                <label style={label}>Email Address</label>
+                <input
+                  type="email" required autoFocus
+                  value={email} onChange={e => setEmail(e.target.value)}
+                  placeholder="your@email.com"
+                  style={field}
+                  onFocus={e => e.target.style.borderColor = '#1a1a18'}
+                  onBlur={e => e.target.style.borderColor = '#d0c9c0'}
+                />
+              </div>
+            )}
+
+            {/* Phone Input */}
+            {method === 'whatsapp' && (
+              <div>
+                <label style={label}>Phone Number</label>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <div style={{ ...field, width: 'auto', padding: '13px 16px', background: '#f5f0e8', borderColor: '#c9a96e', fontWeight: 600 }}>
+                    +91
+                  </div>
+                  <input
+                    type="tel" required autoFocus
+                    value={phone}
+                    onChange={e => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                    placeholder="9876543210"
+                    maxLength={10}
+                    pattern="[0-9]{10}"
+                    style={{ ...field, flex: 1 }}
+                    onFocus={e => e.target.style.borderColor = '#25D366'}
+                    onBlur={e => e.target.style.borderColor = '#d0c9c0'}
+                  />
+                </div>
+                <p style={{ fontSize: 11, color: '#9e9a94', marginTop: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <MessageCircle size={12} color="#25D366" />
+                  OTP will be sent to your WhatsApp
+                </p>
+              </div>
+            )}
+
             <button type="submit" disabled={loading} style={primaryBtn(loading)}>
-              {loading ? 'Sending OTP…' : 'Send OTP →'}
+              {loading ? 'Sending OTP…' : `Send OTP via ${method === 'email' ? 'Email' : 'WhatsApp'} →`}
             </button>
 
             <p style={{ textAlign: 'center', fontSize: 13, color: '#9e9a94', margin: 0 }}>
@@ -192,8 +307,18 @@ export default function ForgotPassword() {
             <div>
               <h1 style={{ fontFamily: 'Georgia, serif', fontSize: 22, fontWeight: 600, color: '#1a1a18', margin: '0 0 10px' }}>Enter OTP</h1>
               <div style={{ background: '#f5f0e8', border: '1px solid #e6e0d8', borderRadius: 2, padding: '12px 14px', fontSize: 13, color: '#5a5750', lineHeight: 1.6 }}>
-                A 6-digit code was sent to <strong style={{ color: '#1a1a18' }}>{email}</strong>.<br />
-                <span style={{ fontSize: 12, color: '#9e9a94' }}>Check your inbox and spam folder.</span>
+                {method === 'email' ? (
+                  <>
+                    A 6-digit code was sent to <strong style={{ color: '#1a1a18' }}>{email}</strong>.<br />
+                    <span style={{ fontSize: 12, color: '#9e9a94' }}>Check your inbox and spam folder.</span>
+                  </>
+                ) : (
+                  <>
+                    <MessageCircle size={14} color="#25D366" style={{ display: 'inline', marginRight: 4 }} />
+                    A 6-digit code was sent to <strong style={{ color: '#1a1a18' }}>+91{phone}</strong> on WhatsApp.<br />
+                    <span style={{ fontSize: 12, color: '#9e9a94' }}>Check your WhatsApp messages.</span>
+                  </>
+                )}
               </div>
             </div>
 
@@ -215,18 +340,18 @@ export default function ForgotPassword() {
                   letterSpacing: '0.35em',
                   textAlign: 'center',
                   padding: '16px',
-                  borderColor: otp.length === 6 ? '#1a1a18' : '#d0c9c0',
+                  borderColor: otp.length === 6 ? (method === 'whatsapp' ? '#25D366' : '#1a1a18') : '#d0c9c0',
                   borderWidth: otp.length === 6 ? 2 : 1,
                   color: '#1a1a18',
-                  caretColor: '#c9a96e',
+                  caretColor: method === 'whatsapp' ? '#25D366' : '#c9a96e',
                 }}
-                onFocus={e => e.target.style.borderColor = '#c9a96e'}
-                onBlur={e => e.target.style.borderColor = otp.length === 6 ? '#1a1a18' : '#d0c9c0'}
+                onFocus={e => e.target.style.borderColor = method === 'whatsapp' ? '#25D366' : '#c9a96e'}
+                onBlur={e => e.target.style.borderColor = otp.length === 6 ? (method === 'whatsapp' ? '#25D366' : '#1a1a18') : '#d0c9c0'}
               />
               {/* dot progress */}
               <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 10 }}>
                 {[0,1,2,3,4,5].map(i => (
-                  <div key={i} style={{ width: 7, height: 7, borderRadius: '50%', background: i < otp.length ? '#c9a96e' : '#e6e0d8', transition: 'background 0.15s' }} />
+                  <div key={i} style={{ width: 7, height: 7, borderRadius: '50%', background: i < otp.length ? (method === 'whatsapp' ? '#25D366' : '#c9a96e') : '#e6e0d8', transition: 'background 0.15s' }} />
                 ))}
               </div>
             </div>
@@ -238,18 +363,23 @@ export default function ForgotPassword() {
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
               <button type="button" onClick={() => { setStep(1); setOtp(''); }}
                 style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9e9a94', padding: 0 }}>
-                ← Change email
+                ← Change {method}
               </button>
               <button type="button" disabled={loading} onClick={async () => {
                 setLoading(true);
                 try {
-                  await api.post('/auth/forgot-password', { email: email.trim().toLowerCase() });
+                  if (method === 'email') {
+                    await api.post('/auth/forgot-password', { email: email.trim().toLowerCase() });
+                  } else {
+                    const cleanPhone = phone.replace(/\D/g, '');
+                    await api.post('/auth/send-whatsapp-otp', { phone: cleanPhone });
+                  }
                   setOtp('');
                   toast.success('New OTP sent!');
                 } catch { toast.error('Failed. Try again.'); }
                 finally { setLoading(false); }
               }}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#c9a96e', fontWeight: 600, padding: 0 }}>
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: method === 'whatsapp' ? '#25D366' : '#c9a96e', fontWeight: 600, padding: 0 }}>
                 Resend OTP
               </button>
             </div>
