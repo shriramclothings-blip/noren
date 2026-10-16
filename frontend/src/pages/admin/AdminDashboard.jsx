@@ -68,6 +68,7 @@ const AdminConversationMonitor = lazy(() => import('./erp/AdminConversationMonit
 const AdminVideoCalls          = lazy(() => import('./erp/AdminVideoCalls'));
 const AdminVoiceCalls          = lazy(() => import('./erp/AdminVoiceCalls'));
 const AdminEmailCenter         = lazy(() => import('./erp/AdminEmailCenter'));
+const AdminWhatsApp            = lazy(() => import('./AdminWhatsApp'));
 const AdminSellerOverview      = lazy(() => import('./erp/seller/AdminSellerOverview'));
 const AdminSellerAccounts      = lazy(() => import('./erp/seller/AdminSellerAccounts'));
 const AdminSellerKYC           = lazy(() => import('./erp/seller/AdminSellerKYC'));
@@ -160,6 +161,7 @@ function renderSection(section, user, navigate) {
     case 'super-admin':       return <AdminSuperAdmin />;
     case 'chat-support':      return <AdminChatSupport />;
     case 'email-center':      return <AdminEmailCenter />;
+    case 'whatsapp':          return <AdminWhatsApp />;
     case 'private-chat':      return <AdminPrivateChat />;
     case 'conversations':     return <AdminConversationMonitor />;
     case 'video-calls':       return <AdminVideoCalls />;

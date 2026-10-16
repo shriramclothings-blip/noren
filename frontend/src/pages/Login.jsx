@@ -1,6 +1,6 @@
 ﻿import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Eye, EyeOff, ChevronDown, ChevronUp, ShieldAlert, KeyRound, Mail, MessageSquare } from 'lucide-react';
+import { Eye, EyeOff, ChevronDown, ChevronUp, ShieldAlert, KeyRound, Mail, MessageSquare, Phone } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import api from '../utils/api';
 import toast from 'react-hot-toast';
@@ -237,9 +237,13 @@ export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
   const { state } = useLocation();
+  const [loginMethod, setLoginMethod] = useState('email'); // 'email' or 'phone'
   const [form, setForm]     = useState({ email: '', password: '' });
+  const [phoneForm, setPhoneForm] = useState({ phone: '', name: '', otp: '' });
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpLoading, setOtpLoading] = useState(false);
 
   const redirectAfterLogin = (user) => {
     if (user.role === 'influencer') {
@@ -268,6 +272,49 @@ export default function Login() {
     } finally { setLoading(false); }
   };
 
+  // Phone OTP - Send OTP
+  const handleSendOTP = async (e) => {
+    e.preventDefault();
+    if (!phoneForm.phone || phoneForm.phone.length !== 10) {
+      toast.error('Please enter a valid 10-digit phone number');
+      return;
+    }
+    setOtpLoading(true);
+    try {
+      await api.post('/auth/phone-send-otp', { phone: phoneForm.phone });
+      setOtpSent(true);
+      toast.success('OTP sent to your WhatsApp!');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to send OTP');
+    } finally { setOtpLoading(false); }
+  };
+
+  // Phone OTP - Verify OTP and Login/Signup
+  const handleVerifyOTP = async (e) => {
+    e.preventDefault();
+    if (!phoneForm.otp || phoneForm.otp.length !== 6) {
+      toast.error('Please enter the 6-digit OTP');
+      return;
+    }
+    setLoading(true);
+    try {
+      const payload = { 
+        phone: phoneForm.phone, 
+        otp: phoneForm.otp 
+      };
+      // If user provided a name, include it (for new signups)
+      if (phoneForm.name.trim()) {
+        payload.name = phoneForm.name;
+      }
+      const res = await api.post('/auth/phone-verify-otp', payload);
+      login(res.data.token, res.data.user);
+      toast.success(res.data.message || `Welcome, ${res.data.user.name}!`);
+      redirectAfterLogin(res.data.user);
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Invalid OTP');
+    } finally { setLoading(false); }
+  };
+
   const labelStyle = { display: 'block', fontSize: 10, fontWeight: 600, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#5a5750', marginBottom: 8 };
 
   return (
@@ -289,40 +336,259 @@ export default function Login() {
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '20px 0' }}>
             <div style={{ flex: 1, height: 1, background: '#e6e0d8' }} />
-            <span style={{ fontSize: 10, color: '#b8a898', letterSpacing: '0.14em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>or continue with email</span>
+            <span style={{ fontSize: 10, color: '#b8a898', letterSpacing: '0.14em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>or continue with</span>
             <div style={{ flex: 1, height: 1, background: '#e6e0d8' }} />
           </div>
 
-          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-            <div>
-              <label style={labelStyle}>Email Address</label>
-              <input type="email" required value={form.email}
-                onChange={e => setForm(p => ({ ...p, email: e.target.value }))}
-                placeholder="your@email.com"
-                className="input" style={{ fontSize: 16 }} />
-            </div>
-
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                <label style={{ ...labelStyle, marginBottom: 0 }}>Password</label>
-                <Link to="/forgot-password" style={{ fontSize: 11, color: '#c9a96e', textDecoration: 'none', letterSpacing: '0.08em' }}>Forgot?</Link>
-              </div>
-              <div style={{ position: 'relative' }}>
-                <input type={showPw ? 'text' : 'password'} required value={form.password}
-                  onChange={e => setForm(p => ({ ...p, password: e.target.value }))}
-                  placeholder=""
-                  className="input" style={{ paddingRight: 44, fontSize: 16 }} />
-                <button type="button" onClick={() => setShowPw(s => !s)}
-                  style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#9e9a94', display: 'flex', padding: 8, minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }}>
-                  {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
-              </div>
-            </div>
-
-            <button type="submit" disabled={loading} className="btn-primary" style={{ width: '100%', padding: '14px', fontSize: 11, marginTop: 4, minHeight: 48 }}>
-              {loading ? 'Signing in...' : 'Sign In'}
+          {/* Login Method Toggle */}
+          <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+            <button
+              type="button"
+              onClick={() => {
+                setLoginMethod('email');
+                setOtpSent(false);
+                setPhoneForm({ phone: '', name: '', otp: '' });
+              }}
+              style={{
+                flex: 1,
+                padding: '10px',
+                background: loginMethod === 'email' ? '#1a1a18' : '#fff',
+                color: loginMethod === 'email' ? '#faf9f7' : '#9e9a94',
+                border: `1px solid ${loginMethod === 'email' ? '#1a1a18' : '#e6e0d8'}`,
+                cursor: 'pointer',
+                fontSize: 11,
+                fontWeight: 600,
+                letterSpacing: '0.12em',
+                textTransform: 'uppercase',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 6,
+                fontFamily: 'inherit',
+                transition: 'all 0.2s',
+              }}
+            >
+              <Mail size={14} />
+              Email
             </button>
-          </form>
+            <button
+              type="button"
+              onClick={() => {
+                setLoginMethod('phone');
+                setForm({ email: '', password: '' });
+              }}
+              style={{
+                flex: 1,
+                padding: '10px',
+                background: loginMethod === 'phone' ? '#1a1a18' : '#fff',
+                color: loginMethod === 'phone' ? '#faf9f7' : '#9e9a94',
+                border: `1px solid ${loginMethod === 'phone' ? '#1a1a18' : '#e6e0d8'}`,
+                cursor: 'pointer',
+                fontSize: 11,
+                fontWeight: 600,
+                letterSpacing: '0.12em',
+                textTransform: 'uppercase',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 6,
+                fontFamily: 'inherit',
+                transition: 'all 0.2s',
+              }}
+            >
+              <Phone size={14} />
+              Phone
+            </button>
+          </div>
+
+          {/* Email Login Form */}
+          {loginMethod === 'email' && (
+            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+              <div>
+                <label style={labelStyle}>Email Address</label>
+                <input type="email" required value={form.email}
+                  onChange={e => setForm(p => ({ ...p, email: e.target.value }))}
+                  placeholder="your@email.com"
+                  className="input" style={{ fontSize: 16 }} />
+              </div>
+
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <label style={{ ...labelStyle, marginBottom: 0 }}>Password</label>
+                  <Link to="/forgot-password" style={{ fontSize: 11, color: '#c9a96e', textDecoration: 'none', letterSpacing: '0.08em' }}>Forgot?</Link>
+                </div>
+                <div style={{ position: 'relative' }}>
+                  <input type={showPw ? 'text' : 'password'} required value={form.password}
+                    onChange={e => setForm(p => ({ ...p, password: e.target.value }))}
+                    placeholder=""
+                    className="input" style={{ paddingRight: 44, fontSize: 16 }} />
+                  <button type="button" onClick={() => setShowPw(s => !s)}
+                    style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#9e9a94', display: 'flex', padding: 8, minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }}>
+                    {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+              </div>
+
+              <button type="submit" disabled={loading} className="btn-primary" style={{ width: '100%', padding: '14px', fontSize: 11, marginTop: 4, minHeight: 48 }}>
+                {loading ? 'Signing in...' : 'Sign In'}
+              </button>
+            </form>
+          )}
+
+          {/* Phone OTP Login Form */}
+          {loginMethod === 'phone' && (
+            <div>
+              {!otpSent ? (
+                <form onSubmit={handleSendOTP} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                  <div>
+                    <label style={labelStyle}>Phone Number</label>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <div style={{ 
+                        width: 70, 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center',
+                        background: '#f5f0e8',
+                        border: '1.5px solid #e6e0d8',
+                        fontSize: 14,
+                        fontWeight: 600,
+                        color: '#5a5750',
+                      }}>
+                        +91
+                      </div>
+                      <input 
+                        type="tel" 
+                        required 
+                        value={phoneForm.phone}
+                        onChange={e => {
+                          const val = e.target.value.replace(/\D/g, '');
+                          if (val.length <= 10) {
+                            setPhoneForm(p => ({ ...p, phone: val }));
+                          }
+                        }}
+                        placeholder="9876543210"
+                        maxLength={10}
+                        className="input" 
+                        style={{ flex: 1, fontSize: 16 }} 
+                      />
+                    </div>
+                    <p style={{ fontSize: 11, color: '#9e9a94', marginTop: 6, letterSpacing: '0.02em' }}>
+                      OTP will be sent to your WhatsApp
+                    </p>
+                  </div>
+
+                  <button 
+                    type="submit" 
+                    disabled={otpLoading || phoneForm.phone.length !== 10} 
+                    className="btn-primary" 
+                    style={{ width: '100%', padding: '14px', fontSize: 11, minHeight: 48 }}
+                  >
+                    {otpLoading ? 'Sending OTP...' : 'Send OTP via WhatsApp'}
+                  </button>
+                </form>
+              ) : (
+                <form onSubmit={handleVerifyOTP} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                  <div style={{ 
+                    background: '#f0fdf4', 
+                    border: '1px solid #86efac', 
+                    padding: '12px 14px',
+                    fontSize: 12,
+                    color: '#166534',
+                    letterSpacing: '0.02em',
+                  }}>
+                    OTP sent to <strong>+91 {phoneForm.phone}</strong> via WhatsApp
+                  </div>
+
+                  <div>
+                    <label style={labelStyle}>Your Name (Optional for existing users)</label>
+                    <input 
+                      type="text" 
+                      value={phoneForm.name}
+                      onChange={e => setPhoneForm(p => ({ ...p, name: e.target.value }))}
+                      placeholder="Enter your name"
+                      className="input" 
+                      style={{ fontSize: 16 }} 
+                    />
+                    <p style={{ fontSize: 11, color: '#9e9a94', marginTop: 6, letterSpacing: '0.02em' }}>
+                      Required only for first-time signup
+                    </p>
+                  </div>
+
+                  <div>
+                    <label style={labelStyle}>Enter OTP</label>
+                    <input 
+                      type="text" 
+                      required 
+                      value={phoneForm.otp}
+                      onChange={e => {
+                        const val = e.target.value.replace(/\D/g, '');
+                        if (val.length <= 6) {
+                          setPhoneForm(p => ({ ...p, otp: val }));
+                        }
+                      }}
+                      placeholder="123456"
+                      maxLength={6}
+                      className="input" 
+                      style={{ fontSize: 18, letterSpacing: '0.3em', textAlign: 'center' }} 
+                    />
+                  </div>
+
+                  <div style={{ display: 'flex', gap: 10 }}>
+                    <button 
+                      type="button" 
+                      onClick={() => {
+                        setOtpSent(false);
+                        setPhoneForm(p => ({ ...p, otp: '' }));
+                      }}
+                      style={{
+                        flex: 1,
+                        padding: '14px',
+                        background: '#fff',
+                        color: '#9e9a94',
+                        border: '1px solid #e6e0d8',
+                        cursor: 'pointer',
+                        fontSize: 11,
+                        fontWeight: 600,
+                        letterSpacing: '0.12em',
+                        textTransform: 'uppercase',
+                        fontFamily: 'inherit',
+                      }}
+                    >
+                      Change Number
+                    </button>
+                    <button 
+                      type="submit" 
+                      disabled={loading || phoneForm.otp.length !== 6} 
+                      className="btn-primary" 
+                      style={{ flex: 1, padding: '14px', fontSize: 11, minHeight: 48 }}
+                    >
+                      {loading ? 'Verifying...' : 'Verify & Continue'}
+                    </button>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleSendOTP}
+                    disabled={otpLoading}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: '#c9a96e',
+                      fontSize: 11,
+                      fontWeight: 600,
+                      letterSpacing: '0.08em',
+                      textTransform: 'uppercase',
+                      cursor: 'pointer',
+                      padding: '8px',
+                      fontFamily: 'inherit',
+                    }}
+                  >
+                    {otpLoading ? 'Resending...' : 'Resend OTP'}
+                  </button>
+                </form>
+              )}
+            </div>
+          )}
 
           <p style={{ textAlign: 'center', fontSize: 13, color: '#9e9a94', marginTop: 24, letterSpacing: '0.02em' }}>
             New to NOREN?{' '}
