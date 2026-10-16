@@ -17,14 +17,16 @@
 
 const makeWASocket = require('@whiskeysockets/baileys').default;
 const {
+    useMultiFileAuthState,
     DisconnectReason,
     fetchLatestBaileysVersion,
     makeInMemoryStore,
     delay
 } = require('@whiskeysockets/baileys');
 const pino = require('pino');
+const fs = require('fs').promises;
+const path = require('path');
 const { pool } = require('../config/db');
-const { useDatabaseAuthState } = require('../utils/databaseAuthState');
 
 class WhatsAppService {
     constructor() {
@@ -33,15 +35,19 @@ class WhatsAppService {
         this.isProcessingQueue = false;
         this.rateLimitPerMinute = 20; // Baileys safe limit
         this.messagesSentThisMinute = 0;
+        this.authPath = '/tmp/whatsapp_sessions'; // Use /tmp for ephemeral storage
         
         // Initialize async - don't block constructor
         this.initializeAsync();
         
-        console.log('✅ WhatsApp Service initialized (database-backed sessions)');
+        console.log('✅ WhatsApp Service initialized (file-based with /tmp)');
     }
     
     async initializeAsync() {
         try {
+            // Create sessions directory in /tmp
+            await fs.mkdir(this.authPath, { recursive: true });
+            
             // Reset rate limit counter every minute
             setInterval(() => {
                 this.messagesSentThisMinute = 0;
@@ -51,7 +57,7 @@ class WhatsAppService {
             setInterval(() => this.processQueue(), 3000);
             
             this.initialized = true;
-            console.log('✅ WhatsApp Service fully initialized with database persistence');
+            console.log('✅ WhatsApp Service fully initialized with /tmp storage');
         } catch (error) {
             console.error('⚠️ WhatsApp Service initialization error (non-fatal):', error.message);
         }
@@ -63,8 +69,12 @@ class WhatsAppService {
     async createInstance(instanceName) {
         try {
             if (this.instances.has(instanceName)) {
+                console.log(`⚠️  Instance ${instanceName} already exists, skipping`);
                 return { success: false, message: 'Instance already exists' };
             }
+            
+            const sessionPath = path.join(this.authPath, instanceName);
+            await fs.mkdir(sessionPath, { recursive: true });
             
             // Get or create instance in database
             const dbInstance = await pool.query(
@@ -81,11 +91,11 @@ class WhatsAppService {
                 );
             }
             
-            // Use database-backed auth state
-            const { state, saveCreds } = await useDatabaseAuthState(instanceName);
+            // Use file-based auth state (Baileys standard approach)
+            const { state, saveCreds } = await useMultiFileAuthState(sessionPath);
             const { version } = await fetchLatestBaileysVersion();
             
-            console.log(`🔧 Creating WhatsApp socket for ${instanceName} with database auth...`);
+            console.log(`🔧 Creating WhatsApp socket for ${instanceName} with file auth (/tmp)...`);
             
             // Create WhatsApp socket with production-ready settings
             const sock = makeWASocket({
@@ -121,7 +131,8 @@ class WhatsAppService {
                 state: 'connecting',
                 qr: null,
                 phoneNumber: null,
-                connectedAt: null
+                connectedAt: null,
+                sessionPath
             });
             
             console.log(`✅ WhatsApp socket created for ${instanceName}`);
