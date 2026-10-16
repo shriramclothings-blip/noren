@@ -632,6 +632,22 @@ httpServer.listen(PORT, '0.0.0.0', () => {
     }
   }, 3000); // Wait 3 seconds for server to fully start
 
+  // Run WhatsApp migration AFTER server starts
+  setTimeout(() => {
+    try {
+      if (dbInitialized) {
+        const { autoMigrateWhatsApp } = require('./auto-migrate-whatsapp');
+        autoMigrateWhatsApp().catch(err => {
+          console.error('⚠️ WhatsApp auto-migration failed (non-fatal):', err.message);
+        });
+      } else {
+        console.warn('⚠️  WhatsApp migration skipped - database not available');
+      }
+    } catch (err) {
+      console.error('WhatsApp migration error:', err.message);
+    }
+  }, 5000); // Wait 5 seconds after server starts
+
   // Start database sync scheduler (automatic synchronization)
   setTimeout(() => {
     try {
