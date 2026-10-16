@@ -6,6 +6,12 @@ const { Server } = require('socket.io');
 const jwt = require('jsonwebtoken');
 const { initDB, pool } = require('./config/db');
 
+// ── Auto-migrate WhatsApp tables on startup ──────────────────────────────────
+const { autoMigrateWhatsApp } = require('./auto-migrate-whatsapp');
+autoMigrateWhatsApp().catch(err => {
+    console.error('WhatsApp auto-migration failed (non-fatal):', err.message);
+});
+
 // ── Monitor — load before everything so all events are captured ──────────────
 const mon = require('./monitor');
 
@@ -221,8 +227,7 @@ app.use('/api/support', require('./routes/support'));
 app.use('/api/email', require('./routes/emailPortal'));
 
 // ── WhatsApp Integration API ──────────────────────────────────────────────────
-// Temporarily disabled for deployment - will be enabled after server starts
-// app.use('/api/whatsapp', require('./routes/whatsapp'));
+app.use('/api/whatsapp', require('./routes/whatsapp'));
 
 // ── Real-time Monitor API + Dashboard ────────────────────────────────────────
 app.use('/api/monitor', require('./routes/monitor'));
