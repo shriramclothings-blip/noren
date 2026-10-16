@@ -87,7 +87,7 @@ class WhatsAppService {
             
             console.log(`🔧 Creating WhatsApp socket for ${instanceName} with database auth...`);
             
-            // Create WhatsApp socket
+            // Create WhatsApp socket with production-ready settings
             const sock = makeWASocket({
                 version,
                 auth: state,
@@ -98,9 +98,20 @@ class WhatsAppService {
                 syncFullHistory: false,
                 defaultQueryTimeoutMs: undefined,
                 connectTimeoutMs: 60000,
-                keepAliveIntervalMs: 30000,
+                keepAliveIntervalMs: 25000,
+                emitOwnEvents: false,
+                fireInitQueries: true,
+                generateHighQualityLinkPreview: false,
+                shouldSyncHistoryMessage: () => false,
                 getMessage: async (key) => {
                     return { conversation: 'Message not available' };
+                },
+                // WebSocket options for better stability
+                retryRequestDelayMs: 250,
+                maxMsgRetryCount: 3,
+                appStateMacVerification: {
+                    patch: false,
+                    snapshot: false
                 }
             });
             
@@ -249,9 +260,14 @@ class WhatsAppService {
                 
                 instance.lastError = `Disconnected: ${errorMessage} (Code: ${statusCode || 'N/A'})`;
                 
-                // Status 401 (Unauthorized) or 428 means invalid/expired session - don't reconnect
-                if (statusCode === 401 || statusCode === 428 || !shouldReconnect) {
-                    console.log(`🚪 ${instanceName} session invalid or logged out - clearing session`);
+                // Status codes that require session reset
+                const resetCodes = [401, 428, 440, 403]; // Unauthorized, expired, session timeout, forbidden
+                
+                // Status codes that can be retried
+                const retryCodes = [500, 503, 515]; // Server error, unavailable, stream error
+                
+                if (resetCodes.includes(statusCode) || !shouldReconnect) {
+                    console.log(`🚪 ${instanceName} session invalid (${statusCode}) - clearing session`);
                     
                     // Remove instance from memory
                     this.instances.delete(instanceName);
@@ -270,9 +286,10 @@ class WhatsAppService {
                     );
                     
                     console.log(`🧹 Session cleared for ${instanceName} - generate new QR to reconnect`);
-                } else {
+                    
+                } else if (retryCodes.includes(statusCode) || shouldReconnect) {
                     // Temporary error - try to reconnect
-                    console.log(`🔄 Will reconnect ${instanceName} in 5 seconds...`);
+                    console.log(`🔄 Temporary error (${statusCode}) - will reconnect ${instanceName} in 3 seconds...`);
                     instance.state = 'reconnecting';
                     
                     // Update database
@@ -284,13 +301,16 @@ class WhatsAppService {
                         [instanceName]
                     );
                     
-                    // Reconnect after 5 seconds
+                    // Remove old instance
+                    this.instances.delete(instanceName);
+                    
+                    // Reconnect after 3 seconds
                     setTimeout(() => {
                         console.log(`🔄 Reconnecting ${instanceName}...`);
                         this.createInstance(instanceName).catch(err => {
-                            console.error(`❌ Reconnection failed for ${instanceName}:`, err);
+                            console.error(`❌ Reconnection failed for ${instanceName}:`, err.message);
                         });
-                    }, 5000);
+                    }, 3000);
                 }
             }
         } catch (error) {

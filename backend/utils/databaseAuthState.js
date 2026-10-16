@@ -144,6 +144,8 @@ async function useDatabaseAuthState(instanceName) {
                 set: (data) => {
                     try {
                         let updated = false;
+                        let keysAdded = 0;
+                        
                         for (const category in data) {
                             for (const id in data[category]) {
                                 const value = data[category][id];
@@ -151,6 +153,7 @@ async function useDatabaseAuthState(instanceName) {
                                 if (value) {
                                     keys[key] = value;
                                     updated = true;
+                                    keysAdded++;
                                 } else {
                                     delete keys[key];
                                 }
@@ -158,10 +161,18 @@ async function useDatabaseAuthState(instanceName) {
                         }
                         
                         if (updated) {
-                            // Save asynchronously (don't block)
-                            saveCreds().catch(err => {
-                                console.error(`❌ Error in async saveCreds:`, err.message);
-                            });
+                            const totalKeys = Object.keys(keys).length;
+                            console.log(`🔑 Keys updated: +${keysAdded} new, ${totalKeys} total`);
+                            
+                            // Only save if we have meaningful keys (not just empty state)
+                            if (totalKeys > 0) {
+                                // Save asynchronously (don't block)
+                                saveCreds().catch(err => {
+                                    console.error(`❌ Error in async saveCreds:`, err.message);
+                                });
+                            } else {
+                                console.log(`⏭️  Skipping save - no keys yet`);
+                            }
                         }
                     } catch (error) {
                         console.error(`❌ Error setting keys:`, error.message);
